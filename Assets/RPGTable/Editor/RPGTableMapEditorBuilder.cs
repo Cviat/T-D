@@ -105,7 +105,11 @@ namespace RPGTable.Editor
             serializedPalette.FindProperty("contentRoot").objectReferenceValue = contentRect;
             serializedPalette.FindProperty("spawner").objectReferenceValue = spawner;
             serializedPalette.ApplyModifiedPropertiesWithoutUndo();
-            importButton.GetComponent<Button>().onClick.AddListener(palette.ImportImage);
+
+            var importBinder = importButton.AddComponent<MapEditorImportButton>();
+            var serializedImportBinder = new SerializedObject(importBinder);
+            serializedImportBinder.FindProperty("palette").objectReferenceValue = palette;
+            serializedImportBinder.ApplyModifiedPropertiesWithoutUndo();
 
             var bottomPanel = CreatePanel("Bottom Tool Panel", canvasObject.transform, new Color(0.045f, 0.04f, 0.035f, 0.9f));
             var bottomRect = bottomPanel.GetComponent<RectTransform>();
