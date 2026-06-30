@@ -14,7 +14,14 @@ namespace RPGTable.MapEditor
 
         private Camera mainCamera;
         private bool selected;
+        private bool draggingFromPalette;
         private Vector3 dragOffset;
+
+        public void SetDraggingFromPalette(bool value)
+        {
+            draggingFromPalette = value;
+            selected = !value;
+        }
 
         private void Awake()
         {
@@ -23,12 +30,22 @@ namespace RPGTable.MapEditor
 
         private void OnMouseDown()
         {
+            if (draggingFromPalette)
+            {
+                return;
+            }
+
             selected = true;
             dragOffset = transform.position - MouseWorld();
         }
 
         private void OnMouseDrag()
         {
+            if (draggingFromPalette)
+            {
+                return;
+            }
+
             transform.position = MouseWorld() + dragOffset;
         }
 

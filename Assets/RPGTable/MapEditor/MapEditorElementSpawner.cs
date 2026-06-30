@@ -10,11 +10,24 @@ namespace RPGTable.MapEditor
     {
         [SerializeField] private Camera worldCamera;
 
-        private Sprite selectedSprite;
+        private GameObject draggedElement;
+        private PlacedMapElement draggedPlacedElement;
 
-        public void Select(Sprite sprite)
+        public void BeginDrag(Sprite sprite)
         {
-            selectedSprite = sprite;
+            if (sprite == null)
+            {
+                return;
+            }
+
+            if (draggedElement != null)
+            {
+                Destroy(draggedElement);
+            }
+
+            draggedElement = CreateElement(sprite);
+            draggedPlacedElement = draggedElement.GetComponent<PlacedMapElement>();
+            draggedPlacedElement.SetDraggingFromPalette(true);
         }
 
         private void Awake()
@@ -27,42 +40,61 @@ namespace RPGTable.MapEditor
 
         private void Update()
         {
-            if (selectedSprite == null || EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            if (draggedElement == null)
             {
                 return;
             }
 
-            if (PrimaryPressed())
+            MoveDraggedToMouse();
+
+            if (PrimaryReleased() && !IsPointerOverUi())
             {
-                SpawnAtMouse();
+                draggedPlacedElement.SetDraggingFromPalette(false);
+                draggedElement = null;
+                draggedPlacedElement = null;
             }
         }
 
-        private void SpawnAtMouse()
+        private void MoveDraggedToMouse()
+        {
+            draggedElement.transform.position = MouseWorldPosition();
+        }
+
+        private GameObject CreateElement(Sprite sprite)
+        {
+            var element = new GameObject(sprite.name);
+            element.transform.position = MouseWorldPosition();
+            element.transform.localScale = Vector3.one;
+
+            var renderer = element.AddComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+            renderer.sortingOrder = -15;
+
+            element.AddComponent<BoxCollider2D>();
+            element.AddComponent<PlacedMapElement>();
+            return element;
+        }
+
+        private Vector3 MouseWorldPosition()
         {
             var mouse = MousePosition();
             mouse.z = Mathf.Abs(worldCamera.transform.position.z);
             var world = worldCamera.ScreenToWorldPoint(mouse);
             world.z = -0.1f;
-
-            var element = new GameObject(selectedSprite.name);
-            element.transform.position = world;
-            element.transform.localScale = Vector3.one;
-
-            var renderer = element.AddComponent<SpriteRenderer>();
-            renderer.sprite = selectedSprite;
-            renderer.sortingOrder = -15;
-
-            element.AddComponent<BoxCollider2D>();
-            element.AddComponent<PlacedMapElement>();
+            return world;
         }
 
-        private static bool PrimaryPressed()
+        private static bool IsPointerOverUi()
+        {
+            return EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+        }
+
+        private static bool PrimaryReleased()
         {
 #if ENABLE_INPUT_SYSTEM
-            return Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
+            return Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame;
 #else
-            return UnityEngine.Input.GetMouseButtonDown(0);
+            return UnityEngine.Input.GetMouseButtonUp(0);
 #endif
         }
 

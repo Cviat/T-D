@@ -53,7 +53,7 @@ namespace RPGTable.MapEditor
             image.color = Color.white;
 
             var button = item.AddComponent<Button>();
-            button.onClick.AddListener(() => spawner.Select(sprite));
+            button.onClick.AddListener(() => spawner.BeginDrag(sprite));
         }
 
         private void Clear()
