@@ -41,3 +41,6 @@ Desktop.ini
 
 # Local AI/editor state
 .ai/
+
+# Local verification captures
+[Aa]ssets/[Ss]creenshots/
