@@ -2,6 +2,7 @@ using System.IO;
 using RPGTable.Board;
 using RPGTable.Core;
 using RPGTable.GameMaster;
+using RPGTable.Input;
 using RPGTable.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -67,6 +68,7 @@ namespace RPGTable.Editor
             grid.width = 12;
             grid.height = 8;
             grid.cellSize = 1f;
+            board.AddComponent<BoardGridVisual>().Build();
 
             var background = new GameObject("Board Background");
             background.transform.SetParent(board.transform, false);
@@ -104,6 +106,7 @@ namespace RPGTable.Editor
 
             var center = grid.CellToWorld(new Vector2Int(grid.width / 2, grid.height / 2));
             cameraObject.transform.position = new Vector3(center.x - 0.5f, center.y - 0.5f, -10f);
+            cameraObject.AddComponent<MouseCameraController>();
         }
 
         private static void CreateLight()

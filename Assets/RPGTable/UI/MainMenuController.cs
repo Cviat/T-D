@@ -10,6 +10,14 @@ namespace RPGTable.UI
     public sealed class MainMenuController : MonoBehaviour
     {
         [SerializeField] private string prototypeSceneName = "RPGTablePrototype";
+        [SerializeField] private string mapEditorSceneName = "MapEditor";
+        [SerializeField] private GameObject mainMenuPanel;
+        [SerializeField] private GameObject contentMenuPanel;
+
+        private void Awake()
+        {
+            ShowMainMenu();
+        }
 
         public void Execute(MainMenuAction action)
         {
@@ -20,7 +28,16 @@ namespace RPGTable.UI
                     LoadPrototypeTable();
                     break;
                 case MainMenuAction.AddContent:
-                    Debug.Log("Add Content is a placeholder. Content import will be implemented after the table UI.");
+                    ShowContentMenu();
+                    break;
+                case MainMenuAction.CreateMap:
+                    LoadScene(mapEditorSceneName);
+                    break;
+                case MainMenuAction.CreateToken:
+                    Debug.Log("Create Token selected. Token editor screen is the next implementation step.");
+                    break;
+                case MainMenuAction.BackToMain:
+                    ShowMainMenu();
                     break;
                 case MainMenuAction.Quit:
                     QuitApplication();
@@ -28,15 +45,46 @@ namespace RPGTable.UI
             }
         }
 
+        public void ShowMainMenu()
+        {
+            if (mainMenuPanel != null)
+            {
+                mainMenuPanel.SetActive(true);
+            }
+
+            if (contentMenuPanel != null)
+            {
+                contentMenuPanel.SetActive(false);
+            }
+        }
+
+        private void ShowContentMenu()
+        {
+            if (mainMenuPanel != null)
+            {
+                mainMenuPanel.SetActive(false);
+            }
+
+            if (contentMenuPanel != null)
+            {
+                contentMenuPanel.SetActive(true);
+            }
+        }
+
         private void LoadPrototypeTable()
         {
-            if (Application.CanStreamedLevelBeLoaded(prototypeSceneName))
+            LoadScene(prototypeSceneName);
+        }
+
+        private static void LoadScene(string sceneName)
+        {
+            if (Application.CanStreamedLevelBeLoaded(sceneName))
             {
-                SceneManager.LoadScene(prototypeSceneName);
+                SceneManager.LoadScene(sceneName);
                 return;
             }
 
-            Debug.LogWarning($"Scene '{prototypeSceneName}' is not in Build Settings yet.");
+            Debug.LogWarning($"Scene '{sceneName}' is not in Build Settings yet.");
         }
 
         private static void QuitApplication()

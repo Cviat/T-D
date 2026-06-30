@@ -5,6 +5,9 @@ namespace RPGTable.UI
         StartGame,
         ContinueGame,
         AddContent,
+        CreateMap,
+        CreateToken,
+        BackToMain,
         Quit
     }
 }

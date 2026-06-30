@@ -16,24 +16,34 @@ namespace RPGTable.Editor
     {
         private const string ScenePath = "Assets/RPGTable/Scenes/MainMenu.unity";
         private const string BackgroundPath = "Assets/RPGTable/Art/MainMenu/MainMenuBackground.png";
+        private const string ButtonStartPath = "Assets/RPGTable/Art/MainMenu/Buttons/ButtonStartGame.png";
+        private const string ButtonContinuePath = "Assets/RPGTable/Art/MainMenu/Buttons/ButtonContinue.png";
+        private const string ButtonAddContentPath = "Assets/RPGTable/Art/MainMenu/Buttons/ButtonAddContent.png";
+        private const string ButtonQuitPath = "Assets/RPGTable/Art/MainMenu/Buttons/ButtonQuit.png";
+        private const string ContentBackgroundPath = "Assets/RPGTable/Art/MainMenu/Editor/ContentMenuBackground.png";
         private const string PrototypeScenePath = "Assets/RPGTable/Scenes/RPGTablePrototype.unity";
+        private const string MapEditorScenePath = "Assets/RPGTable/Scenes/MapEditor.unity";
 
         [MenuItem("RPG Table/Build Main Menu Scene")]
         public static void BuildMainMenuScene()
         {
             EnsureFolders();
-            ConfigureBackgroundImport();
+            ConfigureSpriteImport(BackgroundPath, false);
+            ConfigureSpriteImport(ButtonStartPath, true);
+            ConfigureSpriteImport(ButtonContinuePath, true);
+            ConfigureSpriteImport(ButtonAddContentPath, true);
+            ConfigureSpriteImport(ButtonQuitPath, true);
+            ConfigureSpriteImport(ContentBackgroundPath, false);
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             scene.name = "MainMenu";
 
             var controller = CreateController();
             var canvas = CreateCanvas();
-            CreateBackground(canvas.transform);
-            CreateLeftShade(canvas.transform);
-            CreateLogo(canvas.transform);
-            CreateButtonStack(canvas.transform, controller);
-            CreateFooter(canvas.transform);
+            var mainPanel = CreateMainMenuPanel(canvas.transform, controller);
+            var contentPanel = CreateContentMenuPanel(canvas.transform, controller);
+            contentPanel.SetActive(false);
+            WireControllerPanels(controller, mainPanel, contentPanel);
             CreateEventSystem();
             CreateCamera();
 
@@ -47,22 +57,23 @@ namespace RPGTable.Editor
         private static void EnsureFolders()
         {
             Directory.CreateDirectory("Assets/RPGTable/Scenes");
-            Directory.CreateDirectory("Assets/RPGTable/Art/MainMenu");
+            Directory.CreateDirectory("Assets/RPGTable/Art/MainMenu/Buttons");
+            Directory.CreateDirectory("Assets/RPGTable/Art/MainMenu/Editor");
         }
 
-        private static void ConfigureBackgroundImport()
+        private static void ConfigureSpriteImport(string path, bool alphaIsTransparency)
         {
-            var importer = AssetImporter.GetAtPath(BackgroundPath) as TextureImporter;
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
 
             if (importer == null)
             {
-                Debug.LogWarning($"Main menu background was not found: {BackgroundPath}");
+                Debug.LogWarning($"Main menu sprite was not found: {path}");
                 return;
             }
 
             importer.textureType = TextureImporterType.Sprite;
             importer.spriteImportMode = SpriteImportMode.Single;
-            importer.alphaIsTransparency = false;
+            importer.alphaIsTransparency = alphaIsTransparency;
             importer.mipmapEnabled = false;
             importer.SaveAndReimport();
         }
@@ -78,7 +89,6 @@ namespace RPGTable.Editor
             var canvasObject = new GameObject("Main Menu Canvas");
             var canvas = canvasObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 0;
 
             var scaler = canvasObject.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -90,13 +100,43 @@ namespace RPGTable.Editor
             return canvas;
         }
 
-        private static void CreateBackground(Transform parent)
+        private static GameObject CreateMainMenuPanel(Transform parent, MainMenuController controller)
+        {
+            var panel = CreateUiObject("Main Menu Panel", parent);
+            Stretch(panel);
+            CreateBackground(panel.transform, BackgroundPath);
+            CreateLeftShade(panel.transform);
+            CreateLogoPlaceholder(panel.transform);
+            CreateButtonStack(panel.transform, controller);
+            CreateFooter(panel.transform);
+            return panel;
+        }
+
+        private static GameObject CreateContentMenuPanel(Transform parent, MainMenuController controller)
+        {
+            var panel = CreateUiObject("Content Menu Panel", parent);
+            Stretch(panel);
+            CreateBackground(panel.transform, ContentBackgroundPath);
+            CreateLeftShade(panel.transform);
+            CreateContentButtonStack(panel.transform, controller);
+            return panel;
+        }
+
+        private static void WireControllerPanels(MainMenuController controller, GameObject mainPanel, GameObject contentPanel)
+        {
+            var serialized = new SerializedObject(controller);
+            serialized.FindProperty("mainMenuPanel").objectReferenceValue = mainPanel;
+            serialized.FindProperty("contentMenuPanel").objectReferenceValue = contentPanel;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void CreateBackground(Transform parent, string spritePath)
         {
             var background = CreateUiObject("Background", parent);
             Stretch(background);
 
             var image = background.AddComponent<Image>();
-            image.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(BackgroundPath);
+            image.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(spritePath);
             image.color = Color.white;
             image.preserveAspect = false;
             image.raycastTarget = false;
@@ -116,9 +156,9 @@ namespace RPGTable.Editor
             image.raycastTarget = false;
         }
 
-        private static void CreateLogo(Transform parent)
+        private static void CreateLogoPlaceholder(Transform parent)
         {
-            var panel = CreateUiObject("Logo panel", parent);
+            var panel = CreateUiObject("Logo placeholder", parent);
             var rect = panel.GetComponent<RectTransform>();
             rect.anchorMin = new Vector2(0f, 1f);
             rect.anchorMax = new Vector2(0f, 1f);
@@ -137,50 +177,72 @@ namespace RPGTable.Editor
             Stretch(inner, new Vector2(20f, 20f), new Vector2(-20f, -20f));
             inner.AddComponent<Image>().color = new Color(0.12f, 0.07f, 0.035f, 0.96f);
 
-            CreateLabel("RPG", inner.transform, 118, FontStyle.Bold, new Color(1f, 0.77f, 0.28f), new Vector2(0f, 22f));
-            CreateLabel("TABLE", inner.transform, 50, FontStyle.Bold, new Color(1f, 0.84f, 0.45f), new Vector2(0f, -74f));
+            CreateLabel("RPG", inner.transform, 118, new Color(1f, 0.77f, 0.28f), new Vector2(0f, 22f));
+            CreateLabel("TABLE", inner.transform, 50, new Color(1f, 0.84f, 0.45f), new Vector2(0f, -74f));
         }
 
         private static void CreateButtonStack(Transform parent, MainMenuController controller)
         {
             var stack = CreateUiObject("Main menu buttons", parent);
-
             var rect = stack.GetComponent<RectTransform>();
             rect.anchorMin = new Vector2(0f, 0.5f);
             rect.anchorMax = new Vector2(0f, 0.5f);
             rect.pivot = new Vector2(0f, 0.5f);
-            rect.anchoredPosition = new Vector2(134f, -138f);
-            rect.sizeDelta = new Vector2(540f, 430f);
+            rect.anchoredPosition = new Vector2(90f, -154f);
+            rect.sizeDelta = new Vector2(660f, 590f);
 
             var layout = stack.AddComponent<VerticalLayoutGroup>();
-            layout.spacing = 28f;
+            layout.spacing = 14f;
             layout.childAlignment = TextAnchor.MiddleLeft;
             layout.childControlWidth = false;
             layout.childControlHeight = false;
             layout.childForceExpandWidth = false;
             layout.childForceExpandHeight = false;
 
-            CreateMenuButton(stack.transform, controller, MainMenuAction.StartGame, "Начать игру", "X", new Color(0.03f, 0.26f, 0.43f), new Color(0.04f, 0.38f, 0.62f));
-            CreateMenuButton(stack.transform, controller, MainMenuAction.ContinueGame, "Продолжить", "S", new Color(0.08f, 0.28f, 0.07f), new Color(0.13f, 0.42f, 0.11f));
-            CreateMenuButton(stack.transform, controller, MainMenuAction.AddContent, "Добавить контент", "C", new Color(0.18f, 0.09f, 0.31f), new Color(0.27f, 0.13f, 0.45f));
-            CreateMenuButton(stack.transform, controller, MainMenuAction.Quit, "Выйти", "D", new Color(0.36f, 0.12f, 0.055f), new Color(0.52f, 0.17f, 0.07f));
+            CreateMenuButton(stack.transform, controller, MainMenuAction.StartGame, "Start Game", ButtonStartPath);
+            CreateMenuButton(stack.transform, controller, MainMenuAction.ContinueGame, "Continue", ButtonContinuePath);
+            CreateMenuButton(stack.transform, controller, MainMenuAction.AddContent, "Add Content", ButtonAddContentPath);
+            CreateMenuButton(stack.transform, controller, MainMenuAction.Quit, "Quit", ButtonQuitPath);
+        }
+
+        private static void CreateContentButtonStack(Transform parent, MainMenuController controller)
+        {
+            var stack = CreateUiObject("Content menu buttons", parent);
+            var rect = stack.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 0.5f);
+            rect.anchorMax = new Vector2(0f, 0.5f);
+            rect.pivot = new Vector2(0f, 0.5f);
+            rect.anchoredPosition = new Vector2(110f, -40f);
+            rect.sizeDelta = new Vector2(460f, 300f);
+
+            var layout = stack.AddComponent<VerticalLayoutGroup>();
+            layout.spacing = 20f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = false;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            CreateTextMenuButton(stack.transform, controller, MainMenuAction.CreateMap, "Создать карту");
+            CreateTextMenuButton(stack.transform, controller, MainMenuAction.CreateToken, "Создать фишку");
+            CreateTextMenuButton(stack.transform, controller, MainMenuAction.BackToMain, "Назад");
         }
 
         private static void CreateMenuButton(
             Transform parent,
             MainMenuController controller,
             MainMenuAction action,
-            string label,
-            string iconText,
-            Color normalColor,
-            Color hoverColor)
+            string name,
+            string spritePath)
         {
-            var root = CreateUiObject($"{label} button", parent);
+            var root = CreateUiObject($"{name} button", parent);
             var rect = root.GetComponent<RectTransform>();
-            rect.sizeDelta = new Vector2(520f, 94f);
+            rect.sizeDelta = new Vector2(620f, 155f);
 
             var image = root.AddComponent<Image>();
-            image.color = normalColor;
+            image.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(spritePath);
+            image.color = Color.white;
+            image.preserveAspect = true;
 
             var button = root.AddComponent<Button>();
             button.targetGraphic = image;
@@ -191,50 +253,48 @@ namespace RPGTable.Editor
             serializedButton.FindProperty("action").enumValueIndex = (int)action;
             serializedButton.FindProperty("controller").objectReferenceValue = controller;
             serializedButton.FindProperty("targetGraphic").objectReferenceValue = image;
-            serializedButton.FindProperty("normalColor").colorValue = normalColor;
-            serializedButton.FindProperty("hoverColor").colorValue = hoverColor;
+            serializedButton.FindProperty("normalColor").colorValue = Color.white;
+            serializedButton.FindProperty("hoverColor").colorValue = new Color(1f, 1f, 1f, 0.86f);
+            serializedButton.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void CreateTextMenuButton(
+            Transform parent,
+            MainMenuController controller,
+            MainMenuAction action,
+            string label)
+        {
+            var root = CreateUiObject($"{label} button", parent);
+            var rect = root.GetComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(390f, 72f);
+
+            var image = root.AddComponent<Image>();
+            image.color = new Color(0.12f, 0.075f, 0.035f, 0.9f);
+
+            var button = root.AddComponent<Button>();
+            button.targetGraphic = image;
+            button.transition = Selectable.Transition.None;
+
+            var menuButton = root.AddComponent<MainMenuButton>();
+            var serializedButton = new SerializedObject(menuButton);
+            serializedButton.FindProperty("action").enumValueIndex = (int)action;
+            serializedButton.FindProperty("controller").objectReferenceValue = controller;
+            serializedButton.FindProperty("targetGraphic").objectReferenceValue = image;
+            serializedButton.FindProperty("normalColor").colorValue = image.color;
+            serializedButton.FindProperty("hoverColor").colorValue = new Color(0.22f, 0.14f, 0.06f, 0.95f);
             serializedButton.ApplyModifiedPropertiesWithoutUndo();
 
-            var border = CreateUiObject("Border", root.transform);
-            Stretch(border, new Vector2(4f, 4f), new Vector2(-4f, -4f));
-            border.AddComponent<Image>().color = new Color(0.88f, 0.68f, 0.38f, 0.34f);
+            var textObject = CreateUiObject("Label", root.transform);
+            Stretch(textObject, new Vector2(22f, 0f), new Vector2(-22f, 0f));
 
-            var inner = CreateUiObject("Inner shade", root.transform);
-            Stretch(inner, new Vector2(10f, 10f), new Vector2(-10f, -10f));
-            inner.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.16f);
-
-            var icon = CreateUiObject("Icon", root.transform);
-            var iconRect = icon.GetComponent<RectTransform>();
-            iconRect.anchorMin = new Vector2(0f, 0.5f);
-            iconRect.anchorMax = new Vector2(0f, 0.5f);
-            iconRect.pivot = new Vector2(0.5f, 0.5f);
-            iconRect.anchoredPosition = new Vector2(72f, 0f);
-            iconRect.sizeDelta = new Vector2(58f, 58f);
-
-            var iconTextComponent = icon.AddComponent<Text>();
-            iconTextComponent.text = iconText;
-            iconTextComponent.alignment = TextAnchor.MiddleCenter;
-            iconTextComponent.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            iconTextComponent.fontStyle = FontStyle.Bold;
-            iconTextComponent.fontSize = 36;
-            iconTextComponent.color = new Color(1f, 0.77f, 0.35f);
-            iconTextComponent.raycastTarget = false;
-
-            var text = CreateUiObject("Label", root.transform);
-            var textRect = text.GetComponent<RectTransform>();
-            textRect.anchorMin = Vector2.zero;
-            textRect.anchorMax = Vector2.one;
-            textRect.offsetMin = new Vector2(132f, 0f);
-            textRect.offsetMax = new Vector2(-24f, 0f);
-
-            var textComponent = text.AddComponent<Text>();
-            textComponent.text = label;
-            textComponent.alignment = TextAnchor.MiddleLeft;
-            textComponent.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            textComponent.fontStyle = FontStyle.Bold;
-            textComponent.fontSize = 32;
-            textComponent.color = Color.white;
-            textComponent.raycastTarget = false;
+            var text = textObject.AddComponent<Text>();
+            text.text = label;
+            text.alignment = TextAnchor.MiddleLeft;
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontStyle = FontStyle.Bold;
+            text.fontSize = 28;
+            text.color = Color.white;
+            text.raycastTarget = false;
         }
 
         private static void CreateFooter(Transform parent)
@@ -298,7 +358,7 @@ namespace RPGTable.Editor
             rect.offsetMax = offsetMax;
         }
 
-        private static void CreateLabel(string text, Transform parent, int fontSize, FontStyle style, Color color, Vector2 position)
+        private static void CreateLabel(string text, Transform parent, int fontSize, Color color, Vector2 position)
         {
             var label = CreateUiObject(text, parent);
             var rect = label.GetComponent<RectTransform>();
@@ -312,7 +372,7 @@ namespace RPGTable.Editor
             labelText.text = text;
             labelText.alignment = TextAnchor.MiddleCenter;
             labelText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            labelText.fontStyle = style;
+            labelText.fontStyle = FontStyle.Bold;
             labelText.fontSize = fontSize;
             labelText.color = color;
             labelText.raycastTarget = false;
@@ -323,7 +383,8 @@ namespace RPGTable.Editor
             var scenes = new[]
             {
                 new EditorBuildSettingsScene(ScenePath, true),
-                new EditorBuildSettingsScene(PrototypeScenePath, true)
+                new EditorBuildSettingsScene(PrototypeScenePath, true),
+                new EditorBuildSettingsScene(MapEditorScenePath, true)
             };
 
             EditorBuildSettings.scenes = scenes;

@@ -11,5 +11,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/RPGTable/Scenes/RPGTablePrototype.unity
     guid: 3b045ed1f790c7e4a9b4cf2b6de48db0
+  - enabled: 1
+    path: Assets/RPGTable/Scenes/MapEditor.unity
+    guid: 0bd7d43de208add4e83e167b6916e971
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
