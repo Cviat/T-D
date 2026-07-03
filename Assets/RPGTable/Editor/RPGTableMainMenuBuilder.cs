@@ -23,6 +23,11 @@ namespace RPGTable.Editor
         private const string ContentBackgroundPath = "Assets/RPGTable/Art/MainMenu/Editor/ContentMenuBackground.png";
         private const string PrototypeScenePath = "Assets/RPGTable/Scenes/RPGTablePrototype.unity";
         private const string MapEditorScenePath = "Assets/RPGTable/Scenes/MapEditor.unity";
+        private const string CampaignEditorScenePath = "Assets/RPGTable/Scenes/CampaignEditor.unity";
+        private const string CampaignSelectionScenePath = "Assets/RPGTable/Scenes/CampaignSelection.unity";
+        private const string CampaignGameScenePath = "Assets/RPGTable/Scenes/CampaignGame.unity";
+        private const string TokenEditorScenePath = "Assets/RPGTable/Scenes/TokenEditor.unity";
+        private const string CharacterEditorScenePath = "Assets/RPGTable/Scenes/CharacterEditor.unity";
 
         [MenuItem("RPG Table/Build Main Menu Scene")]
         public static void BuildMainMenuScene()
@@ -213,7 +218,7 @@ namespace RPGTable.Editor
             rect.anchorMax = new Vector2(0f, 0.5f);
             rect.pivot = new Vector2(0f, 0.5f);
             rect.anchoredPosition = new Vector2(110f, -40f);
-            rect.sizeDelta = new Vector2(460f, 300f);
+            rect.sizeDelta = new Vector2(460f, 470f);
 
             var layout = stack.AddComponent<VerticalLayoutGroup>();
             layout.spacing = 20f;
@@ -223,7 +228,9 @@ namespace RPGTable.Editor
             layout.childForceExpandWidth = false;
             layout.childForceExpandHeight = false;
 
+            CreateTextMenuButton(stack.transform, controller, MainMenuAction.CreateCharacter, "\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u043f\u0435\u0440\u0441\u043e\u043d\u0430\u0436\u0430");
             CreateTextMenuButton(stack.transform, controller, MainMenuAction.CreateMap, "Создать карту");
+            CreateTextMenuButton(stack.transform, controller, MainMenuAction.CreateCampaign, "Создать кампанию");
             CreateTextMenuButton(stack.transform, controller, MainMenuAction.CreateToken, "Создать фишку");
             CreateTextMenuButton(stack.transform, controller, MainMenuAction.BackToMain, "Назад");
         }
@@ -384,7 +391,12 @@ namespace RPGTable.Editor
             {
                 new EditorBuildSettingsScene(ScenePath, true),
                 new EditorBuildSettingsScene(PrototypeScenePath, true),
-                new EditorBuildSettingsScene(MapEditorScenePath, true)
+                new EditorBuildSettingsScene(MapEditorScenePath, true),
+                new EditorBuildSettingsScene(CampaignEditorScenePath, true),
+                new EditorBuildSettingsScene(CampaignSelectionScenePath, true),
+                new EditorBuildSettingsScene(CampaignGameScenePath, true),
+                new EditorBuildSettingsScene(TokenEditorScenePath, true),
+                new EditorBuildSettingsScene(CharacterEditorScenePath, true)
             };
 
             EditorBuildSettings.scenes = scenes;

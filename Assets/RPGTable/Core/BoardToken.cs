@@ -20,6 +20,7 @@ namespace RPGTable.Core
         public bool visibleToPlayers = true;
         public int initiative;
         public Vector2Int gridPosition;
+        public int footprintSize = 1;
 
         private SpriteRenderer spriteRenderer;
 
@@ -30,8 +31,13 @@ namespace RPGTable.Core
                 return;
             }
 
-            gridPosition = grid.WorldToCell(transform.position);
-            transform.position = grid.CellToWorld(gridPosition);
+            var size = Mathf.Max(1, footprintSize);
+            var offset = new Vector3((size - 1) * grid.cellSize * 0.5f, (size - 1) * grid.cellSize * 0.5f, 0f);
+            gridPosition = grid.WorldToCell(transform.position - offset);
+            gridPosition = new Vector2Int(
+                Mathf.Clamp(gridPosition.x, 0, Mathf.Max(0, grid.width - size)),
+                Mathf.Clamp(gridPosition.y, 0, Mathf.Max(0, grid.height - size)));
+            transform.position = grid.CellToWorld(gridPosition) + offset;
         }
 
         public void ApplyViewMode(bool playerView)

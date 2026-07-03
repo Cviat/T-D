@@ -15,6 +15,22 @@ namespace RPGTable.UI
 
         private Button button;
 
+        public MainMenuAction Action => action;
+
+        public void Initialize(
+            MainMenuController menuController,
+            MainMenuAction menuAction,
+            Graphic graphic,
+            Color normal,
+            Color hover)
+        {
+            controller = menuController;
+            action = menuAction;
+            targetGraphic = graphic;
+            normalColor = normal;
+            hoverColor = hover;
+        }
+
         private void Awake()
         {
             button = GetComponent<Button>();

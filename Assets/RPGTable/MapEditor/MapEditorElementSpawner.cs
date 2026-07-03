@@ -13,7 +13,7 @@ namespace RPGTable.MapEditor
         private GameObject draggedElement;
         private PlacedMapElement draggedPlacedElement;
 
-        public void BeginDrag(Sprite sprite)
+        public void BeginDrag(string path, Sprite sprite)
         {
             if (sprite == null)
             {
@@ -25,9 +25,28 @@ namespace RPGTable.MapEditor
                 Destroy(draggedElement);
             }
 
-            draggedElement = CreateElement(sprite);
+            draggedElement = CreateElement(path, sprite, MouseWorldPosition());
             draggedPlacedElement = draggedElement.GetComponent<PlacedMapElement>();
             draggedPlacedElement.SetDraggingFromPalette(true);
+        }
+
+        public void CreatePlacedElement(string path, Sprite sprite, Vector3 position, Vector3 scale)
+        {
+            if (sprite == null)
+            {
+                return;
+            }
+
+            var element = CreateElement(path, sprite, position);
+            element.transform.localScale = scale;
+        }
+
+        public void ClearPlacedElements()
+        {
+            foreach (var element in FindObjectsByType<PlacedMapElement>(FindObjectsSortMode.None))
+            {
+                Destroy(element.gameObject);
+            }
         }
 
         private void Awake()
@@ -60,10 +79,10 @@ namespace RPGTable.MapEditor
             draggedElement.transform.position = MouseWorldPosition();
         }
 
-        private GameObject CreateElement(Sprite sprite)
+        private GameObject CreateElement(string path, Sprite sprite, Vector3 position)
         {
             var element = new GameObject(sprite.name);
-            element.transform.position = MouseWorldPosition();
+            element.transform.position = position;
             element.transform.localScale = Vector3.one;
 
             var renderer = element.AddComponent<SpriteRenderer>();
@@ -71,7 +90,8 @@ namespace RPGTable.MapEditor
             renderer.sortingOrder = -15;
 
             element.AddComponent<BoxCollider2D>();
-            element.AddComponent<PlacedMapElement>();
+            var placedElement = element.AddComponent<PlacedMapElement>();
+            placedElement.InitializeSource(path);
             return element;
         }
 
