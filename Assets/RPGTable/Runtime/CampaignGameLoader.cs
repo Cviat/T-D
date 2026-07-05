@@ -163,9 +163,12 @@ namespace RPGTable.Runtime
             pvManager.RefreshPlayerView(true);
         }
 
+        public string PendingTransitionPlayerId => transitionController.PendingPlayerId;
+        public string PendingTransitionPrompt => transitionController.PendingPromptText;
+
         // ── Transition callbacks ─────────────────────────────────────────
 
-        private void HandleConfirmTransition()
+        public void HandleConfirmTransition()
         {
             var targetNode = transitionController.ConfirmTransition();
             ui.HidePrompt();
@@ -176,7 +179,7 @@ namespace RPGTable.Runtime
             }
         }
 
-        private void HandleCancelTransition()
+        public void HandleCancelTransition()
         {
             transitionController.CancelTransition();
             ui.HidePrompt();

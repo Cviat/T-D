@@ -22,6 +22,9 @@ namespace RPGTable.Runtime
         private CampaignPlayerData pendingTransitionPlayer;
         private SavedCampaignLinkData pendingTransitionLink;
 
+        public string PendingPlayerId => pendingTransitionPlayer?.id;
+        public string PendingPromptText { get; private set; }
+
         internal CampaignTransitionController(
             CampaignGameContext context,
             CampaignGameUI ui,
@@ -196,6 +199,7 @@ namespace RPGTable.Runtime
                 ? $"Перейти на другую карту: {player.name}?"
                 : $"Перейти на карту \"{targetName}\": {player.name}?";
 
+            PendingPromptText = text;
             ui.ShowPrompt(text);
         }
 
@@ -203,6 +207,7 @@ namespace RPGTable.Runtime
         {
             pendingTransitionPlayer = null;
             pendingTransitionLink = null;
+            PendingPromptText = null;
         }
 
         private SavedCampaignLinkData FindLinkFrom(string exitId)

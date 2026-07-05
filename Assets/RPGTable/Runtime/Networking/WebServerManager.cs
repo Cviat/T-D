@@ -38,6 +38,21 @@ namespace RPGTable.Runtime.Networking
             public string photoBase64;
             public string tokenId;
         }
+
+        [Serializable]
+        public class MovePayload
+        {
+            public string playerId;
+            public int dirX;
+            public int dirY;
+        }
+
+        [Serializable]
+        public class TransitionPayload
+        {
+            public string playerId;
+            public string action;
+        }
         
         public List<ConnectedPlayer> ConnectedPlayers = new List<ConnectedPlayer>();
         public bool GameStarted = false;
@@ -373,6 +388,12 @@ namespace RPGTable.Runtime.Networking
                         };
                         characterPath = RPGTable.CharacterEditor.UserCharacterStore.SaveCharacter(payload.name, charData);
                         
+                        // Add to game session so it spawns automatically
+                        var newPlayer = RPGTable.Runtime.CampaignGameSession.AddCharacterPlayer(characterPath, payload.name, photoPath, decodedTokenPath);
+                        
+                        // Update playerId to match the CampaignGameSession id (e.g. "player_1")
+                        playerId = newPlayer.id;
+
                         ConnectedPlayers.Add(new ConnectedPlayer
                         {
                             id = playerId,
@@ -380,9 +401,6 @@ namespace RPGTable.Runtime.Networking
                             characterPath = characterPath,
                             tokenPath = decodedTokenPath
                         });
-
-                        // Add to game session so it spawns automatically
-                        RPGTable.Runtime.CampaignGameSession.AddCharacterPlayer(characterPath, payload.name, photoPath, decodedTokenPath);
                     });
 
                     string responseJson = $"{{\"status\":\"success\", \"playerId\":\"{playerId}\"}}";
@@ -401,6 +419,115 @@ namespace RPGTable.Runtime.Networking
                 string status = GameStarted ? "game_started" : "waiting";
                 string json = $"{{\"status\":\"{status}\"}}";
                 SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(json));
+                return;
+            }
+
+            if (method == "POST" && url == "/api/action/move")
+            {
+                try
+                {
+                    var payload = JsonUtility.FromJson<MovePayload>(requestStr);
+                    if (payload != null && !string.IsNullOrEmpty(payload.playerId))
+                    {
+                        ExecuteOnMainThreadBlocking(() => {
+                            var tokens = GameObject.FindObjectsOfType<RPGTable.Runtime.CampaignRuntimeToken>();
+                            foreach (var t in tokens)
+                            {
+                                if (t.PlayerId == payload.playerId)
+                                {
+                                    var boardToken = t.GetComponent<RPGTable.Core.BoardToken>();
+                                    var gridObj = GameObject.Find("Board Grid");
+                                    if (boardToken != null && gridObj != null)
+                                    {
+                                        var grid = gridObj.GetComponent<RPGTable.Board.BoardGrid>();
+                                        if (grid != null)
+                                        {
+                                            boardToken.gridPosition += new Vector2Int(payload.dirX, payload.dirY);
+                                            // Clamp position
+                                            var size = Mathf.Max(1, boardToken.footprintSize);
+                                            boardToken.gridPosition.x = Mathf.Clamp(boardToken.gridPosition.x, 0, Mathf.Max(0, grid.width - size));
+                                            boardToken.gridPosition.y = Mathf.Clamp(boardToken.gridPosition.y, 0, Mathf.Max(0, grid.height - size));
+                                            
+                                            var offset = new Vector3((size - 1) * grid.cellSize * 0.5f, (size - 1) * grid.cellSize * 0.5f, 0f);
+                                            var newWorldPos = grid.CellToWorld(boardToken.gridPosition) + offset;
+                                            
+                                            var mover = boardToken.GetComponent<RPGTable.Runtime.PlayerViewTokenMover>();
+                                            if (mover == null) mover = boardToken.gameObject.AddComponent<RPGTable.Runtime.PlayerViewTokenMover>();
+                                            mover.Initialize(newWorldPos);
+                                        }
+                                    }
+                                    break;
+                                }
+                            }
+                        });
+                        SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes("{\"status\":\"success\"}"));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[WebServerManager] move error: {ex}");
+                }
+                return;
+            }
+
+            if (method == "GET" && url.StartsWith("/api/game/state?playerId="))
+            {
+                string playerId = url.Substring("/api/game/state?playerId=".Length);
+                string promptText = null;
+
+                ExecuteOnMainThreadBlocking(() => {
+#if UNITY_2023_1_OR_NEWER
+                    var loader = GameObject.FindFirstObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+#else
+                    var loader = GameObject.FindObjectOfType<RPGTable.Runtime.CampaignGameLoader>();
+#endif
+                    if (loader != null && loader.PendingTransitionPlayerId == playerId)
+                    {
+                        promptText = loader.PendingTransitionPrompt;
+                    }
+                });
+
+                string json = "{}";
+                if (!string.IsNullOrEmpty(promptText))
+                {
+                    json = $"{{\"prompt\":\"{promptText.Replace("\"", "\\\"")}\"}}";
+                }
+                SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(json));
+                return;
+            }
+
+            if (method == "POST" && url == "/api/action/transition")
+            {
+                try
+                {
+                    var payload = JsonUtility.FromJson<TransitionPayload>(requestStr);
+                    if (payload != null && !string.IsNullOrEmpty(payload.playerId))
+                    {
+                        ExecuteOnMainThreadBlocking(() => {
+#if UNITY_2023_1_OR_NEWER
+                            var loader = GameObject.FindFirstObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+#else
+                            var loader = GameObject.FindObjectOfType<RPGTable.Runtime.CampaignGameLoader>();
+#endif
+                            if (loader != null && loader.PendingTransitionPlayerId == payload.playerId)
+                            {
+                                if (payload.action == "confirm")
+                                {
+                                    loader.HandleConfirmTransition();
+                                }
+                                else if (payload.action == "cancel")
+                                {
+                                    loader.HandleCancelTransition();
+                                }
+                            }
+                        });
+                        SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes("{\"status\":\"success\"}"));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[WebServerManager] transition error: {ex}");
+                }
                 return;
             }
 

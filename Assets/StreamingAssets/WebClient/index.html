@@ -59,6 +59,54 @@
                 <p class="hint">Посмотрите на экран Мастера!</p>
             </div>
         </div>
+
+        <!-- Экран игры -->
+        <div id="game-screen" class="screen">
+            <div class="game-header">
+                <div class="photo-preview tiny" id="game-photo"></div>
+                <h2 id="game-name">Имя</h2>
+            </div>
+            
+            <div class="dpad-container">
+                <button class="dpad-btn up-left" id="btn-up-left">↖</button>
+                <button class="dpad-btn up" id="btn-up">▲</button>
+                <button class="dpad-btn up-right" id="btn-up-right">↗</button>
+                
+                <button class="dpad-btn left" id="btn-left">◀</button>
+                <div class="dpad-center"></div>
+                <button class="dpad-btn right" id="btn-right">▶</button>
+                
+                <button class="dpad-btn down-left" id="btn-down-left">↙</button>
+                <button class="dpad-btn down" id="btn-down">▼</button>
+                <button class="dpad-btn down-right" id="btn-down-right">↘</button>
+            </div>
+
+            <button class="btn btn-primary abilities-btn" id="btn-abilities">✨ Мои Способности</button>
+        </div>
+
+        <!-- Модальное окно способностей -->
+        <div id="abilities-modal" class="modal">
+            <div class="modal-content">
+                <h3>Способности и Инвентарь</h3>
+                <div class="modal-body">
+                    <p><strong>Описание:</strong> <span id="modal-desc"></span></p>
+                    <hr>
+                    <p class="hint">Здесь будут отображаться ваши игровые характеристики и инвентарь.</p>
+                </div>
+                <button class="btn btn-secondary" id="btn-close-modal">Закрыть</button>
+            </div>
+        </div>
+        
+        <!-- Transition Modal -->
+        <div id="transition-modal" class="modal">
+            <div class="modal-content transition-content">
+                <h2 id="transition-text">Вы хотите перейти?</h2>
+                <div class="transition-buttons">
+                    <button class="btn btn-primary" id="btn-transition-confirm">✅ Перейти</button>
+                    <button class="btn btn-secondary" id="btn-transition-cancel">❌ Отмена</button>
+                </div>
+            </div>
+        </div>
     </div>
     <script src="app.js"></script>
 </body>

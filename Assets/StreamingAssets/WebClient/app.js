@@ -134,6 +134,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    let myPlayerId = null;
+    let globalPlayerName = "";
+    let globalPlayerDesc = "";
+
     // Form submit logic
     joinForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -168,7 +172,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok) {
                 const resultData = await response.json();
-                const myPlayerId = resultData.playerId;
+                myPlayerId = resultData.playerId;
+                globalPlayerName = playerName;
+                globalPlayerDesc = playerDesc;
 
                 joinScreen.classList.remove('active');
                 waitingScreen.classList.add('active');
@@ -198,14 +204,130 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok) {
                 const data = await response.json();
                 if (data.status === 'game_started') {
-                    // Transition to game screen later
-                    waitingName.textContent = 'Игра началась!';
+                    // Transition to game screen
+                    waitingScreen.classList.remove('active');
+                    document.getElementById('game-screen').classList.add('active');
+                    
+                    document.getElementById('game-name').textContent = globalPlayerName;
+                    document.getElementById('game-photo').style.backgroundImage = `url(${currentPhotoBase64})`;
+                    document.getElementById('modal-desc').textContent = globalPlayerDesc;
+                    
+                    startGameStatePolling(playerId);
+                    
                     return; // Stop polling
                 }
             }
-        } catch (e) {
-            console.error('Polling error:', e);
+        } catch (error) {
+            console.error('Error polling status:', error);
         }
+        
         setTimeout(() => pollGameStatus(playerId), 2000);
     }
+
+    async function startGameStatePolling(playerId) {
+        try {
+            const response = await fetch(`/api/game/state?playerId=${playerId}`);
+            if (response.ok) {
+                const data = await response.json();
+                const modal = document.getElementById('transition-modal');
+                if (data.prompt) {
+                    document.getElementById('transition-text').textContent = data.prompt;
+                    modal.classList.add('active');
+                } else {
+                    modal.classList.remove('active');
+                }
+            }
+        } catch (error) {
+            console.error('Error polling game state:', error);
+        }
+        setTimeout(() => startGameStatePolling(playerId), 2000);
+    }
+
+    // --- GAME CONTROLS ---
+
+    async function sendMoveCommand(dx, dy) {
+        if (!myPlayerId) return;
+        try {
+            await fetch('/api/action/move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playerId: myPlayerId, dirX: dx, dirY: dy })
+            });
+        } catch (e) {
+            console.error('Move error:', e);
+        }
+    }
+
+    function bindDpadButton(btnId, dx, dy) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        
+        let intervalId = null;
+
+        const startMoving = (e) => {
+            e.preventDefault(); // Prevents double firing on mobile
+            if (intervalId !== null) return; // Already moving
+            
+            sendMoveCommand(dx, dy); // First immediate step
+            intervalId = setInterval(() => {
+                sendMoveCommand(dx, dy);
+            }, 300); // 300ms per step when holding
+        };
+
+        const stopMoving = (e) => {
+            if (intervalId !== null) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+        };
+
+        btn.addEventListener('mousedown', startMoving);
+        btn.addEventListener('touchstart', startMoving, { passive: false });
+
+        btn.addEventListener('mouseup', stopMoving);
+        btn.addEventListener('mouseleave', stopMoving);
+        btn.addEventListener('touchend', stopMoving);
+        btn.addEventListener('touchcancel', stopMoving);
+    }
+
+    bindDpadButton('btn-up', 0, 1);
+    bindDpadButton('btn-down', 0, -1);
+    bindDpadButton('btn-left', -1, 0);
+    bindDpadButton('btn-right', 1, 0);
+    
+    bindDpadButton('btn-up-left', -1, 1);
+    bindDpadButton('btn-up-right', 1, 1);
+    bindDpadButton('btn-down-left', -1, -1);
+    bindDpadButton('btn-down-right', 1, -1);
+
+    // Modal logic
+    const abilitiesModal = document.getElementById('abilities-modal');
+    document.getElementById('btn-abilities').addEventListener('click', () => {
+        abilitiesModal.classList.add('active');
+    });
+    document.getElementById('btn-close-modal').addEventListener('click', () => {
+        abilitiesModal.classList.remove('active');
+    });
+
+    // Transition Modal logic
+    async function sendTransitionCommand(action) {
+        if (!myPlayerId) return;
+        try {
+            await fetch('/api/action/transition', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playerId: myPlayerId, action: action })
+            });
+            document.getElementById('transition-modal').classList.remove('active');
+        } catch (e) {
+            console.error('Transition error:', e);
+        }
+    }
+
+    document.getElementById('btn-transition-confirm').addEventListener('click', () => {
+        sendTransitionCommand('confirm');
+    });
+    document.getElementById('btn-transition-cancel').addEventListener('click', () => {
+        sendTransitionCommand('cancel');
+    });
 });
