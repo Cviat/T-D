@@ -16,12 +16,16 @@ namespace RPGTable.Runtime
         public int gridX;
         public int gridY;
         public bool isDead;
+        public int currentHp;
+        public int maxHp;
     }
 
     public static class CampaignGameSession
     {
         private static readonly List<CampaignPlayerData> Players = new List<CampaignPlayerData>();
         private static int nextPlayerIndex = 1;
+
+        public static event Action OnPlayersChanged;
 
         public static string SelectedCampaignPath { get; set; }
         public static string PendingTokenPlayerId { get; set; }
@@ -43,6 +47,7 @@ namespace RPGTable.Runtime
             };
 
             Players.Add(player);
+            OnPlayersChanged?.Invoke();
             return player;
         }
 
@@ -63,6 +68,7 @@ namespace RPGTable.Runtime
             };
 
             Players.Add(player);
+            OnPlayersChanged?.Invoke();
             return player;
         }
 
@@ -112,6 +118,21 @@ namespace RPGTable.Runtime
             }
 
             PendingTokenPlayerId = null;
+        }
+
+        public static void RemovePlayer(string playerId)
+        {
+            var count = Players.RemoveAll(p => p.id == playerId);
+            if (count > 0) OnPlayersChanged?.Invoke();
+        }
+
+        public static void ClearPlayers()
+        {
+            if (Players.Count > 0)
+            {
+                Players.Clear();
+                OnPlayersChanged?.Invoke();
+            }
         }
 
         public static void ResetRuntimePositions()

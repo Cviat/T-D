@@ -45,6 +45,12 @@ namespace RPGTable.Runtime
             RefreshPlayerCards();
             RefreshSelectedCampaign();
             SetWarning(null);
+            CampaignGameSession.OnPlayersChanged += RefreshPlayerCards;
+        }
+
+        private void OnDestroy()
+        {
+            CampaignGameSession.OnPlayersChanged -= RefreshPlayerCards;
         }
 
         public void BackToMainMenu()
@@ -76,6 +82,11 @@ namespace RPGTable.Runtime
 
             CampaignGameSession.SelectedCampaignPath = selectedCampaignPath;
             CampaignGameSession.ResetRuntimePositions();
+
+            if (Networking.WebServerManager.Instance != null)
+            {
+                Networking.WebServerManager.Instance.GameStarted = true;
+            }
 
             if (Application.CanStreamedLevelBeLoaded(gameSceneName))
             {

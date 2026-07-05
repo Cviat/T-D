@@ -23,6 +23,12 @@ namespace RPGTable.UI
             EnsureCampaignButton();
             EnsureCharacterButton();
             ShowMainMenu();
+
+            if (FindAnyObjectByType<MainMenuPlayerViewManager>() == null)
+            {
+                var go = new GameObject("MainMenuPlayerViewManager");
+                go.AddComponent<MainMenuPlayerViewManager>();
+            }
         }
 
         public void Execute(MainMenuAction action)

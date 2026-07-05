@@ -12,6 +12,7 @@ namespace RPGTable.MapEditor
     public static class UserElementAssetStore
     {
         private static readonly string[] SupportedExtensions = { ".png", ".jpg", ".jpeg" };
+        private static readonly Dictionary<string, Sprite> spriteCache = new Dictionary<string, Sprite>();
 
         public static string ElementsFolder
         {
@@ -73,9 +74,14 @@ namespace RPGTable.MapEditor
 
         public static Sprite LoadSprite(string path)
         {
-            if (!File.Exists(path))
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
             {
                 return null;
+            }
+
+            if (spriteCache.TryGetValue(path, out var cached) && cached != null)
+            {
+                return cached;
             }
 
             var bytes = File.ReadAllBytes(path);
@@ -89,7 +95,9 @@ namespace RPGTable.MapEditor
 
             texture.name = Path.GetFileNameWithoutExtension(path);
             texture.filterMode = FilterMode.Bilinear;
-            return Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f);
+            var sprite = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f);
+            spriteCache[path] = sprite;
+            return sprite;
         }
 
         public static bool DeleteImage(string path)
@@ -100,6 +108,7 @@ namespace RPGTable.MapEditor
             }
 
             File.Delete(path);
+            spriteCache.Remove(path);
             return true;
         }
 

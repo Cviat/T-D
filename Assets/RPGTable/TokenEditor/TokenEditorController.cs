@@ -23,6 +23,7 @@ namespace RPGTable.TokenEditor
         [SerializeField] private Toggle rangedToggle;
         [SerializeField] private Toggle doubleDamageToggle;
         [SerializeField] private RectTransform abilitiesRoot;
+        private InputField maxHpInput;
 
         private readonly List<string> abilityImagePaths = new List<string>();
         private string currentTokenName;
@@ -62,9 +63,43 @@ namespace RPGTable.TokenEditor
 
         private void Start()
         {
+            CreateMaxHpInput();
             ApplyPendingPlayerDefaults();
             RefreshPortrait();
             RefreshFootprintLabel();
+        }
+
+        private void CreateMaxHpInput()
+        {
+            if (nameInput == null || descriptionInput == null)
+            {
+                return;
+            }
+
+            var hpInputGo = Instantiate(nameInput.gameObject, nameInput.transform.parent, false);
+            hpInputGo.name = "Max HP Input";
+            maxHpInput = hpInputGo.GetComponent<InputField>();
+
+            var nameRect = nameInput.GetComponent<RectTransform>();
+            var descRect = descriptionInput.GetComponent<RectTransform>();
+            var hpRect = hpInputGo.GetComponent<RectTransform>();
+
+            hpRect.anchoredPosition = new Vector2(nameRect.anchoredPosition.x, descRect.anchoredPosition.y - 60f);
+
+            var placeholderText = hpInputGo.transform.Find("Placeholder")?.GetComponent<Text>();
+            if (placeholderText != null)
+            {
+                placeholderText.text = "Max HP";
+            }
+            
+            var textComponent = hpInputGo.transform.Find("Text")?.GetComponent<Text>();
+            if (textComponent != null)
+            {
+                textComponent.text = "10";
+            }
+            
+            maxHpInput.text = "10";
+            maxHpInput.contentType = InputField.ContentType.IntegerNumber;
         }
 
         public void BackToMainMenu()
@@ -141,12 +176,19 @@ namespace RPGTable.TokenEditor
 
         private void SaveToken(string tokenName)
         {
+            int maxHpVal = 10;
+            if (maxHpInput != null && int.TryParse(maxHpInput.text, out var hp))
+            {
+                maxHpVal = hp;
+            }
+
             var data = new SavedTokenData
             {
                 description = descriptionInput == null ? string.Empty : descriptionInput.text,
                 framePath = framePath,
                 portraitPath = portraitPath,
                 footprintSize = footprintSize,
+                maxHp = maxHpVal,
                 hasPortraitMaskLayout = TryReadPortraitMaskLayout(out var maskPositionRatio, out var maskSizeRatio),
                 portraitMaskPositionRatio = maskPositionRatio,
                 portraitMaskSizeRatio = maskSizeRatio,
@@ -205,6 +247,11 @@ namespace RPGTable.TokenEditor
             if (descriptionInput != null)
             {
                 descriptionInput.text = data.description ?? string.Empty;
+            }
+
+            if (maxHpInput != null)
+            {
+                maxHpInput.text = data.maxHp <= 0 ? "10" : data.maxHp.ToString();
             }
 
             WriteSlots(attackSlots, data.attackSlots);

@@ -11,7 +11,6 @@ namespace RPGTable.Input
     [RequireComponent(typeof(BoardToken))]
     public sealed class TokenDragController : MonoBehaviour
     {
-        private BoardGrid grid;
         private BoardToken token;
         private Camera mainCamera;
         private Vector3 dragOffset;
@@ -20,13 +19,12 @@ namespace RPGTable.Input
         private void Awake()
         {
             token = GetComponent<BoardToken>();
-            grid = FindFirstObjectByType<BoardGrid>();
             mainCamera = Camera.main;
         }
 
         private void OnMouseDown()
         {
-            if (RPGTable.Runtime.CampaignGameLoader.PlayerViewCameraControlActive)
+            if (RPGTable.Runtime.CampaignPlayerViewManager.PlayerViewCameraControlActive)
             {
                 return;
             }
@@ -43,6 +41,20 @@ namespace RPGTable.Input
 
             dragging = true;
             dragOffset = transform.position - MouseWorldPosition();
+
+            var runtimeToken = GetComponent<RPGTable.Runtime.CampaignRuntimeToken>();
+            if (runtimeToken != null)
+            {
+#if UNITY_2023_1_OR_NEWER
+                var loader = FindFirstObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+#else
+                var loader = FindObjectOfType<RPGTable.Runtime.CampaignGameLoader>();
+#endif
+                if (loader != null)
+                {
+                    loader.SelectRuntimeToken(runtimeToken);
+                }
+            }
         }
 
         private void OnMouseDrag()
@@ -63,7 +75,23 @@ namespace RPGTable.Input
             }
 
             dragging = false;
-            token.SnapToGrid(grid);
+
+            BoardGrid activeGrid = null;
+            GameObject boardGridObj = GameObject.Find("Board Grid");
+            if (boardGridObj != null)
+            {
+                activeGrid = boardGridObj.GetComponent<BoardGrid>();
+            }
+            if (activeGrid == null)
+            {
+#if UNITY_2023_1_OR_NEWER
+                activeGrid = FindFirstObjectByType<BoardGrid>();
+#else
+                activeGrid = FindObjectOfType<BoardGrid>();
+#endif
+            }
+
+            token.SnapToGrid(activeGrid);
         }
 
         private Vector3 MouseWorldPosition()

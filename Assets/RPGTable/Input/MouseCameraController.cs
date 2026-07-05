@@ -45,7 +45,7 @@ namespace RPGTable.Input
 
         private void HandleDrag()
         {
-            if (CampaignGameLoader.PlayerViewCameraControlActive)
+            if (CampaignPlayerViewManager.PlayerViewCameraControlActive)
             {
                 dragging = false;
                 return;
@@ -81,7 +81,7 @@ namespace RPGTable.Input
 
         private void HandleZoom()
         {
-            if (CampaignGameLoader.PlayerViewCameraControlActive)
+            if (CampaignPlayerViewManager.PlayerViewCameraControlActive)
             {
                 return;
             }

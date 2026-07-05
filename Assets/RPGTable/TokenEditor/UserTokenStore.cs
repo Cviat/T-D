@@ -17,6 +17,7 @@ namespace RPGTable.TokenEditor
         public string framePath;
         public string portraitPath;
         public int footprintSize = 1;
+        public int maxHp = 10;
         public bool hasPortraitMaskLayout;
         public Vector2 portraitMaskPositionRatio;
         public Vector2 portraitMaskSizeRatio;
@@ -32,6 +33,9 @@ namespace RPGTable.TokenEditor
     public static class UserTokenStore
     {
         private const string Extension = ".json";
+
+        private static readonly Dictionary<string, SavedTokenData> tokenCache = new Dictionary<string, SavedTokenData>();
+        private static readonly Dictionary<string, Sprite> spriteCache = new Dictionary<string, Sprite>();
 
         public static string TokensFolder
         {
@@ -73,6 +77,7 @@ namespace RPGTable.TokenEditor
             data.name = safeName;
             var path = Path.Combine(TokensFolder, $"{safeName}{Extension}");
             File.WriteAllText(path, JsonUtility.ToJson(data, true));
+            tokenCache[path] = data;
             return path;
         }
 
@@ -83,7 +88,17 @@ namespace RPGTable.TokenEditor
                 return null;
             }
 
-            return JsonUtility.FromJson<SavedTokenData>(File.ReadAllText(path));
+            if (tokenCache.TryGetValue(path, out var cached))
+            {
+                return cached;
+            }
+
+            var data = JsonUtility.FromJson<SavedTokenData>(File.ReadAllText(path));
+            if (data != null)
+            {
+                tokenCache[path] = data;
+            }
+            return data;
         }
 
         public static string GetDisplayName(string path)
@@ -130,6 +145,11 @@ namespace RPGTable.TokenEditor
                 return null;
             }
 
+            if (spriteCache.TryGetValue(path, out var cached) && cached != null)
+            {
+                return cached;
+            }
+
             var bytes = File.ReadAllBytes(path);
             var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
 
@@ -141,7 +161,9 @@ namespace RPGTable.TokenEditor
 
             texture.name = Path.GetFileNameWithoutExtension(path);
             texture.filterMode = FilterMode.Bilinear;
-            return Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f);
+            var sprite = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f);
+            spriteCache[path] = sprite;
+            return sprite;
         }
 
         private static bool IsSupportedImage(string path)

@@ -12,5 +12,7 @@ namespace RPGTable.Runtime
         public TokenTeam Team { get; set; }
         public bool VisibleToPlayers { get; set; }
         public bool IsDead { get; set; }
+        public int MaxHp { get; set; }
+        public int CurrentHp { get; set; }
     }
 }

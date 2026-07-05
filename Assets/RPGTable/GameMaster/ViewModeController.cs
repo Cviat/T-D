@@ -52,13 +52,9 @@ namespace RPGTable.GameMaster
             }
         }
 
-        private static bool WasTogglePressed()
+        private bool WasTogglePressed()
         {
-#if ENABLE_INPUT_SYSTEM
-            return Keyboard.current != null && Keyboard.current.tabKey.wasPressedThisFrame;
-#else
-            return UnityEngine.Input.GetKeyDown(KeyCode.Tab);
-#endif
+            return UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.tabKey.wasPressedThisFrame;
         }
 
         private void ApplyMode()
