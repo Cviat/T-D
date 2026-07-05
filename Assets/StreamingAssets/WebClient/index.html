@@ -67,6 +67,10 @@
                 <h2 id="game-name">Имя</h2>
             </div>
             
+            <div id="targets-container" class="targets-container">
+                <!-- Сюда динамически добавляются аватарки врагов -->
+            </div>
+
             <div class="dpad-container">
                 <button class="dpad-btn up-left" id="btn-up-left">↖</button>
                 <button class="dpad-btn up" id="btn-up">▲</button>
@@ -104,6 +108,17 @@
                 <div class="transition-buttons">
                     <button class="btn btn-primary" id="btn-transition-confirm">✅ Перейти</button>
                     <button class="btn btn-secondary" id="btn-transition-cancel">❌ Отмена</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Attack Modal -->
+        <div id="attack-modal" class="modal">
+            <div class="modal-content">
+                <h2 id="attack-target-name">Враг</h2>
+                <div class="transition-buttons">
+                    <button class="btn btn-primary" id="btn-attack-confirm">⚔️ Атаковать</button>
+                    <button class="btn btn-secondary" id="btn-attack-cancel">❌ Отмена</button>
                 </div>
             </div>
         </div>

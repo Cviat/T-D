@@ -229,12 +229,30 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(`/api/game/state?playerId=${playerId}`);
             if (response.ok) {
                 const data = await response.json();
-                const modal = document.getElementById('transition-modal');
+                
+                // Handle transition prompt
+                const transitionModal = document.getElementById('transition-modal');
                 if (data.prompt) {
                     document.getElementById('transition-text').textContent = data.prompt;
-                    modal.classList.add('active');
+                    transitionModal.classList.add('active');
                 } else {
-                    modal.classList.remove('active');
+                    transitionModal.classList.remove('active');
+                }
+                
+                // Handle enemies
+                const targetsContainer = document.getElementById('targets-container');
+                targetsContainer.innerHTML = '';
+                if (data.enemies && data.enemies.length > 0) {
+                    data.enemies.forEach(enemy => {
+                        const avatar = document.createElement('div');
+                        avatar.className = 'target-avatar';
+                        avatar.style.backgroundImage = `url('${enemy.portraitUrl}')`;
+                        avatar.title = enemy.name;
+                        avatar.addEventListener('click', () => {
+                            showAttackModal(enemy.id, enemy.name);
+                        });
+                        targetsContainer.appendChild(avatar);
+                    });
                 }
             }
         } catch (error) {
@@ -329,5 +347,36 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('btn-transition-cancel').addEventListener('click', () => {
         sendTransitionCommand('cancel');
+    });
+
+    // Attack Modal logic
+    let currentTargetId = null;
+    const attackModal = document.getElementById('attack-modal');
+
+    function showAttackModal(targetId, targetName) {
+        currentTargetId = targetId;
+        document.getElementById('attack-target-name').textContent = `Атаковать: ${targetName}?`;
+        attackModal.classList.add('active');
+    }
+
+    async function sendAttackCommand() {
+        if (!myPlayerId || !currentTargetId) return;
+        try {
+            await fetch('/api/action/attack', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playerId: myPlayerId, targetId: currentTargetId })
+            });
+            attackModal.classList.remove('active');
+        } catch (e) {
+            console.error('Attack error:', e);
+        }
+    }
+
+    document.getElementById('btn-attack-confirm').addEventListener('click', () => {
+        sendAttackCommand();
+    });
+    document.getElementById('btn-attack-cancel').addEventListener('click', () => {
+        attackModal.classList.remove('active');
     });
 });

@@ -18,9 +18,11 @@ namespace RPGTable.Runtime
 
         private CampaignMapLoader mapLoader;
         private CampaignTokenSpawner spawner;
+        internal CampaignTokenSpawner Spawner => spawner;
         private CampaignPlayerViewManager pvManager;
         private CampaignTransitionController transitionController;
         private CampaignGameUI ui;
+        internal CampaignGameUI UI => ui;
 
         // ── Lifecycle ────────────────────────────────────────────────────
 

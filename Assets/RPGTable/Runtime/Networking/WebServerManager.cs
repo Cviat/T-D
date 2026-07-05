@@ -53,6 +53,13 @@ namespace RPGTable.Runtime.Networking
             public string playerId;
             public string action;
         }
+
+        [Serializable]
+        public class AttackPayload
+        {
+            public string playerId;
+            public string targetId;
+        }
         
         public List<ConnectedPlayer> ConnectedPlayers = new List<ConnectedPlayer>();
         public bool GameStarted = false;
@@ -473,7 +480,9 @@ namespace RPGTable.Runtime.Networking
             if (method == "GET" && url.StartsWith("/api/game/state?playerId="))
             {
                 string playerId = url.Substring("/api/game/state?playerId=".Length);
+                string json = "{}";
                 string promptText = null;
+                var enemiesJson = new List<string>();
 
                 ExecuteOnMainThreadBlocking(() => {
 #if UNITY_2023_1_OR_NEWER
@@ -485,13 +494,87 @@ namespace RPGTable.Runtime.Networking
                     {
                         promptText = loader.PendingTransitionPrompt;
                     }
+
+                    var allBoardTokens = GameObject.FindObjectsOfType<RPGTable.Core.BoardToken>();
+                    var myBoardToken = System.Linq.Enumerable.FirstOrDefault(allBoardTokens, t => 
+                    {
+                        var r = t.GetComponent<RPGTable.Runtime.CampaignRuntimeToken>();
+                        return r != null && r.PlayerId == playerId;
+                    });
+
+                    if (myBoardToken != null)
+                    {
+                        var myRuntimeToken = myBoardToken.GetComponent<RPGTable.Runtime.CampaignRuntimeToken>();
+                        foreach (var targetBoardToken in allBoardTokens)
+                        {
+                            if (targetBoardToken != myBoardToken && targetBoardToken.team != RPGTable.Core.TokenTeam.Player)
+                            {
+                                var targetRuntime = targetBoardToken.GetComponent<RPGTable.Runtime.CampaignRuntimeToken>();
+                                if (targetRuntime == null)
+                                {
+                                    targetRuntime = targetBoardToken.gameObject.AddComponent<RPGTable.Runtime.CampaignRuntimeToken>();
+                                    targetRuntime.RuntimeId = System.Guid.NewGuid().ToString("N");
+                                    targetRuntime.DisplayName = targetBoardToken.displayName;
+                                    targetRuntime.Team = targetBoardToken.team;
+                                    targetRuntime.MaxHp = 10;
+                                    targetRuntime.CurrentHp = 10;
+                                    
+                                    var grid = GameObject.FindObjectOfType<RPGTable.Board.BoardGrid>();
+                                    if (grid != null) targetBoardToken.SnapToGrid(grid);
+                                }
+
+                                if (!targetRuntime.IsDead)
+                                {
+                                    Vector2Int targetGridPos = targetBoardToken.gridPosition;
+                                    var grid = GameObject.FindObjectOfType<RPGTable.Board.BoardGrid>();
+                                    if (grid != null)
+                                    {
+                                        var size = Mathf.Max(1, targetBoardToken.footprintSize);
+                                        var offset = new Vector3((size - 1) * grid.cellSize * 0.5f, (size - 1) * grid.cellSize * 0.5f, 0f);
+                                        targetGridPos = grid.WorldToCell(targetBoardToken.transform.position - offset);
+                                        // Also snap it if it was completely uninitialized
+                                        if (targetBoardToken.gridPosition == Vector2Int.zero && targetBoardToken.transform.position.sqrMagnitude > 0.1f)
+                                        {
+                                            targetBoardToken.SnapToGrid(grid);
+                                        }
+                                    }
+
+                                    int myMinX = myBoardToken.gridPosition.x;
+                                    int myMaxX = myBoardToken.gridPosition.x + myBoardToken.footprintSize - 1;
+                                    int myMinY = myBoardToken.gridPosition.y;
+                                    int myMaxY = myBoardToken.gridPosition.y + myBoardToken.footprintSize - 1;
+
+                                    int tMinX = targetGridPos.x;
+                                    int tMaxX = targetGridPos.x + targetBoardToken.footprintSize - 1;
+                                    int tMinY = targetGridPos.y;
+                                    int tMaxY = targetGridPos.y + targetBoardToken.footprintSize - 1;
+
+                                    int dx = Mathf.Max(0, Mathf.Max(myMinX - tMaxX, tMinX - myMaxX));
+                                    int dy = Mathf.Max(0, Mathf.Max(myMinY - tMaxY, tMinY - myMaxY));
+
+                                    // dx/dy = 1 means touching. dx/dy = 2 means 1 empty cell between them.
+                                    if (dx <= 2 && dy <= 2)
+                                    {
+                                        var data = RPGTable.TokenEditor.UserTokenStore.LoadToken(targetRuntime.TokenPath);
+                                        string pPath = data != null && data.portraitPath != null ? Convert.ToBase64String(Encoding.UTF8.GetBytes(data.portraitPath)) : "";
+                                        string url = $"/api/image?path={pPath}";
+                                        enemiesJson.Add($"{{\"id\":\"{targetRuntime.RuntimeId}\",\"name\":\"{targetRuntime.DisplayName}\",\"portraitUrl\":\"{url}\"}}");
+                                    }
+                                }
+                            }
+                        }
+                    }
                 });
 
-                string json = "{}";
                 if (!string.IsNullOrEmpty(promptText))
                 {
-                    json = $"{{\"prompt\":\"{promptText.Replace("\"", "\\\"")}\"}}";
+                    json = $"{{\"prompt\":\"{promptText.Replace("\"", "\\\"")}\", \"enemies\":[{string.Join(",", enemiesJson)}]}}";
                 }
+                else
+                {
+                    json = $"{{\"enemies\":[{string.Join(",", enemiesJson)}]}}";
+                }
+                
                 SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(json));
                 return;
             }
@@ -531,6 +614,84 @@ namespace RPGTable.Runtime.Networking
                 return;
             }
 
+            if (method == "POST" && url == "/api/action/attack")
+            {
+                try
+                {
+                    var payload = JsonUtility.FromJson<AttackPayload>(requestStr);
+                    if (payload != null && !string.IsNullOrEmpty(payload.playerId) && !string.IsNullOrEmpty(payload.targetId))
+                    {
+                        ExecuteOnMainThreadBlocking(() => {
+                            var tokens = GameObject.FindObjectsOfType<RPGTable.Runtime.CampaignRuntimeToken>();
+                            var myToken = System.Linq.Enumerable.FirstOrDefault(tokens, t => t.PlayerId == payload.playerId);
+                            var targetToken = System.Linq.Enumerable.FirstOrDefault(tokens, t => t.RuntimeId == payload.targetId);
+
+                            if (myToken != null && targetToken != null && !targetToken.IsDead)
+                            {
+                                // Apply damage
+                                targetToken.CurrentHp -= 1;
+                                // Update GM UI
+#if UNITY_2023_1_OR_NEWER
+                                var uiLoader = GameObject.FindFirstObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+#else
+                                var uiLoader = GameObject.FindObjectOfType<RPGTable.Runtime.CampaignGameLoader>();
+#endif
+                                if (uiLoader != null)
+                                {
+                                    uiLoader.UI.RefreshActiveTokensPanel();
+                                }
+
+                                if (targetToken.CurrentHp <= 0)
+                                {
+                                    var targetBoardToken = targetToken.GetComponent<RPGTable.Core.BoardToken>();
+                                    if (uiLoader != null && targetBoardToken != null)
+                                    {
+                                        uiLoader.StartCoroutine(DelayDeathRoutine(targetToken, targetBoardToken.footprintSize, uiLoader));
+                                    }
+                                }
+
+                                // Animate GM token
+                                var animator = myToken.GetComponent<RPGTable.Runtime.TokenAttackAnimator>();
+                                if (animator == null) animator = myToken.gameObject.AddComponent<RPGTable.Runtime.TokenAttackAnimator>();
+                                animator.AnimateAttack(targetToken.transform.position);
+
+                                var targetAnimator = targetToken.GetComponent<RPGTable.Runtime.TokenAttackAnimator>();
+                                if (targetAnimator == null) targetAnimator = targetToken.gameObject.AddComponent<RPGTable.Runtime.TokenAttackAnimator>();
+                                targetAnimator.AnimateDamage(myToken.transform.position);
+
+                                // Animate Player View token (layer 31)
+                                GameObject pvMyToken = null;
+                                GameObject pvTargetToken = null;
+                                foreach (var obj in GameObject.FindObjectsOfType<Transform>())
+                                {
+                                    if (obj.gameObject.layer == 31)
+                                    {
+                                        if (obj.name == myToken.name || obj.name == myToken.DisplayName) pvMyToken = obj.gameObject;
+                                        if (obj.name == targetToken.name || obj.name == targetToken.DisplayName) pvTargetToken = obj.gameObject;
+                                    }
+                                }
+                                if (pvMyToken != null && pvTargetToken != null)
+                                {
+                                    var pvAnimator = pvMyToken.GetComponent<RPGTable.Runtime.TokenAttackAnimator>();
+                                    if (pvAnimator == null) pvAnimator = pvMyToken.AddComponent<RPGTable.Runtime.TokenAttackAnimator>();
+                                    pvAnimator.AnimateAttack(pvTargetToken.transform.position);
+
+                                    var pvTargetAnimator = pvTargetToken.GetComponent<RPGTable.Runtime.TokenAttackAnimator>();
+                                    if (pvTargetAnimator == null) pvTargetAnimator = pvTargetToken.AddComponent<RPGTable.Runtime.TokenAttackAnimator>();
+                                    pvTargetAnimator.AnimateDamage(pvMyToken.transform.position);
+                                }
+                            }
+                        });
+                        SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes("{\"status\":\"success\"}"));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[WebServerManager] attack error: {ex}");
+                }
+                return;
+            }
+
             SendResponse(stream, 404, "Not Found", "text/plain", Encoding.UTF8.GetBytes("API endpoint not found"));
         }
 
@@ -547,6 +708,23 @@ namespace RPGTable.Runtime.Networking
             if (contentBytes.Length > 0)
             {
                 stream.Write(contentBytes, 0, contentBytes.Length);
+            }
+        }
+
+        private System.Collections.IEnumerator DelayDeathRoutine(RPGTable.Runtime.CampaignRuntimeToken token, int footprint, RPGTable.Runtime.CampaignGameLoader loader)
+        {
+            yield return new WaitForSeconds(0.6f);
+            if (token != null)
+            {
+                token.IsDead = true;
+                if (loader != null && loader.Spawner != null)
+                {
+                    loader.Spawner.ApplyDeadVisual(token, footprint);
+                }
+                if (loader != null && loader.UI != null)
+                {
+                    loader.UI.RefreshActiveTokensPanel();
+                }
             }
         }
 
