@@ -260,7 +260,7 @@ namespace RPGTable.Runtime
 
         private static Sprite LoadPlayerSprite(CampaignPlayerData player)
         {
-            var characterSprite = UserCharacterStore.LoadPortraitSprite(player.portraitPath);
+            var characterSprite = UserCharacterStore.LoadSprite(player.portraitPath);
 
             if (characterSprite != null)
             {

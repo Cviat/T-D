@@ -15,17 +15,7 @@ namespace RPGTable.TokenEditor
         [SerializeField] private Text portraitPlusText;
         [SerializeField] private Text footprintLabel;
         [SerializeField] private InputField nameInput;
-        [SerializeField] private InputField descriptionInput;
-        [SerializeField] private InputField[] attackSlots;
-        [SerializeField] private InputField[] defenseSlots;
-        [SerializeField] private Toggle meleeToggle;
-        [SerializeField] private Toggle magicToggle;
-        [SerializeField] private Toggle rangedToggle;
-        [SerializeField] private Toggle doubleDamageToggle;
-        [SerializeField] private RectTransform abilitiesRoot;
-        private InputField maxHpInput;
 
-        private readonly List<string> abilityImagePaths = new List<string>();
         private string currentTokenName;
         private string framePath;
         private string portraitPath;
@@ -36,70 +26,20 @@ namespace RPGTable.TokenEditor
             Image tokenPortrait,
             Text plusText,
             Text sizeLabel,
-            InputField tokenNameInput,
-            InputField tokenDescriptionInput,
-            InputField[] attackInputs,
-            InputField[] defenseInputs,
-            Toggle melee,
-            Toggle magic,
-            Toggle ranged,
-            Toggle doubleDamage,
-            RectTransform abilities)
+            InputField tokenNameInput)
         {
             frameImage = tokenFrame;
             portraitImage = tokenPortrait;
             portraitPlusText = plusText;
             footprintLabel = sizeLabel;
             nameInput = tokenNameInput;
-            descriptionInput = tokenDescriptionInput;
-            attackSlots = attackInputs;
-            defenseSlots = defenseInputs;
-            meleeToggle = melee;
-            magicToggle = magic;
-            rangedToggle = ranged;
-            doubleDamageToggle = doubleDamage;
-            abilitiesRoot = abilities;
         }
 
         private void Start()
         {
-            CreateMaxHpInput();
             ApplyPendingPlayerDefaults();
             RefreshPortrait();
             RefreshFootprintLabel();
-        }
-
-        private void CreateMaxHpInput()
-        {
-            if (nameInput == null || descriptionInput == null)
-            {
-                return;
-            }
-
-            var hpInputGo = Instantiate(nameInput.gameObject, nameInput.transform.parent, false);
-            hpInputGo.name = "Max HP Input";
-            maxHpInput = hpInputGo.GetComponent<InputField>();
-
-            var nameRect = nameInput.GetComponent<RectTransform>();
-            var descRect = descriptionInput.GetComponent<RectTransform>();
-            var hpRect = hpInputGo.GetComponent<RectTransform>();
-
-            hpRect.anchoredPosition = new Vector2(nameRect.anchoredPosition.x, descRect.anchoredPosition.y - 60f);
-
-            var placeholderText = hpInputGo.transform.Find("Placeholder")?.GetComponent<Text>();
-            if (placeholderText != null)
-            {
-                placeholderText.text = "Max HP";
-            }
-            
-            var textComponent = hpInputGo.transform.Find("Text")?.GetComponent<Text>();
-            if (textComponent != null)
-            {
-                textComponent.text = "10";
-            }
-            
-            maxHpInput.text = "10";
-            maxHpInput.contentType = InputField.ContentType.IntegerNumber;
         }
 
         public void BackToMainMenu()
@@ -148,19 +88,6 @@ namespace RPGTable.TokenEditor
             RefreshPortrait();
         }
 
-        public void AddAbilityImage()
-        {
-            var path = UserTokenStore.ImportImageWithDialog("Import ability image");
-
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                return;
-            }
-
-            abilityImagePaths.Add(path);
-            CreateAbilityCard(path);
-        }
-
         public void RequestSaveToken()
         {
             var defaultName = nameInput != null && !string.IsNullOrWhiteSpace(nameInput.text)
@@ -176,29 +103,15 @@ namespace RPGTable.TokenEditor
 
         private void SaveToken(string tokenName)
         {
-            int maxHpVal = 10;
-            if (maxHpInput != null && int.TryParse(maxHpInput.text, out var hp))
-            {
-                maxHpVal = hp;
-            }
-
             var data = new SavedTokenData
             {
-                description = descriptionInput == null ? string.Empty : descriptionInput.text,
+                name = tokenName,
                 framePath = framePath,
                 portraitPath = portraitPath,
                 footprintSize = footprintSize,
-                maxHp = maxHpVal,
                 hasPortraitMaskLayout = TryReadPortraitMaskLayout(out var maskPositionRatio, out var maskSizeRatio),
                 portraitMaskPositionRatio = maskPositionRatio,
-                portraitMaskSizeRatio = maskSizeRatio,
-                attackSlots = ReadSlots(attackSlots),
-                defenseSlots = ReadSlots(defenseSlots),
-                melee = meleeToggle != null && meleeToggle.isOn,
-                magic = magicToggle != null && magicToggle.isOn,
-                ranged = rangedToggle != null && rangedToggle.isOn,
-                doubleDamage = doubleDamageToggle != null && doubleDamageToggle.isOn,
-                abilityImagePaths = abilityImagePaths.ToArray()
+                portraitMaskSizeRatio = maskSizeRatio
             };
 
             var path = UserTokenStore.SaveToken(tokenName, data);
@@ -244,29 +157,10 @@ namespace RPGTable.TokenEditor
                 nameInput.text = data.name ?? string.Empty;
             }
 
-            if (descriptionInput != null)
-            {
-                descriptionInput.text = data.description ?? string.Empty;
-            }
-
-            if (maxHpInput != null)
-            {
-                maxHpInput.text = data.maxHp <= 0 ? "10" : data.maxHp.ToString();
-            }
-
-            WriteSlots(attackSlots, data.attackSlots);
-            WriteSlots(defenseSlots, data.defenseSlots);
-
-            if (meleeToggle != null) meleeToggle.isOn = data.melee;
-            if (magicToggle != null) magicToggle.isOn = data.magic;
-            if (rangedToggle != null) rangedToggle.isOn = data.ranged;
-            if (doubleDamageToggle != null) doubleDamageToggle.isOn = data.doubleDamage;
-
             SetFrame(framePath, LoadAssetSprite(framePath));
             ApplyPortraitMaskLayout(data);
             RefreshPortrait();
             RefreshFootprintLabel();
-            ReloadAbilities(data.abilityImagePaths);
         }
 
         private void RefreshPortrait()
@@ -314,35 +208,6 @@ namespace RPGTable.TokenEditor
             CampaignGameSession.TokenEditorReturnSceneName = null;
             SceneManager.LoadScene(returnSceneName);
             return true;
-        }
-
-        private void ReloadAbilities(string[] paths)
-        {
-            abilityImagePaths.Clear();
-
-            if (abilitiesRoot != null)
-            {
-                for (var i = abilitiesRoot.childCount - 1; i >= 0; i--)
-                {
-                    Destroy(abilitiesRoot.GetChild(i).gameObject);
-                }
-            }
-
-            if (paths == null)
-            {
-                return;
-            }
-
-            foreach (var path in paths)
-            {
-                if (string.IsNullOrWhiteSpace(path))
-                {
-                    continue;
-                }
-
-                abilityImagePaths.Add(path);
-                CreateAbilityCard(path);
-            }
         }
 
         private void RefreshFootprintLabel()
@@ -416,53 +281,6 @@ namespace RPGTable.TokenEditor
             maskRect.sizeDelta = new Vector2(
                 data.portraitMaskSizeRatio.x * rootSize.x,
                 data.portraitMaskSizeRatio.y * rootSize.y);
-        }
-
-        private void CreateAbilityCard(string path)
-        {
-            if (abilitiesRoot == null)
-            {
-                return;
-            }
-
-            var card = new GameObject("Ability", typeof(RectTransform));
-            card.transform.SetParent(abilitiesRoot, false);
-            var rect = card.GetComponent<RectTransform>();
-            rect.sizeDelta = new Vector2(104f, 104f);
-            var image = card.AddComponent<Image>();
-            image.sprite = UserTokenStore.LoadSprite(path);
-            image.color = image.sprite == null ? new Color(0.16f, 0.14f, 0.12f, 1f) : Color.white;
-            image.preserveAspect = true;
-        }
-
-        private static string[] ReadSlots(InputField[] inputs)
-        {
-            var result = new string[6];
-
-            if (inputs == null)
-            {
-                return result;
-            }
-
-            for (var i = 0; i < result.Length && i < inputs.Length; i++)
-            {
-                result[i] = inputs[i] == null ? string.Empty : inputs[i].text;
-            }
-
-            return result;
-        }
-
-        private static void WriteSlots(InputField[] inputs, string[] values)
-        {
-            if (inputs == null)
-            {
-                return;
-            }
-
-            for (var i = 0; i < inputs.Length; i++)
-            {
-                inputs[i].text = values != null && i < values.Length ? values[i] ?? string.Empty : string.Empty;
-            }
         }
 
         private static Sprite LoadAssetSprite(string path)

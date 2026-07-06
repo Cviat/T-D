@@ -13,21 +13,12 @@ namespace RPGTable.TokenEditor
     public sealed class SavedTokenData
     {
         public string name;
-        public string description;
         public string framePath;
         public string portraitPath;
         public int footprintSize = 1;
-        public int maxHp = 10;
         public bool hasPortraitMaskLayout;
         public Vector2 portraitMaskPositionRatio;
         public Vector2 portraitMaskSizeRatio;
-        public string[] attackSlots = new string[6];
-        public string[] defenseSlots = new string[6];
-        public bool melee;
-        public bool magic;
-        public bool ranged;
-        public bool doubleDamage;
-        public string[] abilityImagePaths = Array.Empty<string>();
     }
 
     public static class UserTokenStore

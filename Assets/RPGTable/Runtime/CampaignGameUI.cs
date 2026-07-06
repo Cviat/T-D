@@ -217,10 +217,19 @@ namespace RPGTable.Runtime
                 var isSelected = loader != null && loader.Context != null && loader.Context.SelectedToken == runtimeToken;
                 
                 Sprite portraitSprite = null;
-                var tokenData = UserTokenStore.LoadToken(runtimeToken.TokenPath);
-                if (tokenData != null)
+                if (!string.IsNullOrEmpty(runtimeToken.CharacterPath))
                 {
-                    portraitSprite = UserTokenStore.LoadSprite(tokenData.portraitPath);
+                    var charData = RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(runtimeToken.CharacterPath);
+                    if (charData != null) portraitSprite = RPGTable.CharacterEditor.UserCharacterStore.LoadSprite(charData.portraitPath);
+                }
+                
+                if (portraitSprite == null)
+                {
+                    var tokenData = UserTokenStore.LoadToken(runtimeToken.TokenPath);
+                    if (tokenData != null)
+                    {
+                        portraitSprite = UserTokenStore.LoadSprite(tokenData.portraitPath);
+                    }
                 }
                 
                 cardView.Setup(runtimeToken.DisplayName, portraitSprite, runtimeToken.CurrentHp, runtimeToken.MaxHp, runtimeToken.IsDead, () => {
@@ -240,23 +249,19 @@ namespace RPGTable.Runtime
             var manager = UnityEngine.Object.FindObjectOfType<CampaignUIManager>();
             if (manager == null || manager.TokenBankItemPrefab == null) return;
 
-            foreach (var tokenPath in UserTokenStore.GetTokenPaths())
+            foreach (var charPath in RPGTable.CharacterEditor.UserCharacterStore.GetCharacterPaths())
             {
-                var path = tokenPath;
-                var displayName = UserTokenStore.GetDisplayName(path);
-                
-                Sprite portraitSprite = null;
-                var tokenData = UserTokenStore.LoadToken(path);
-                if (tokenData != null)
-                {
-                    portraitSprite = UserTokenStore.LoadSprite(tokenData.portraitPath);
-                }
+                var charData = RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(charPath);
+                if (charData == null) continue;
+
+                var displayName = charData.name;
+                var portraitSprite = RPGTable.CharacterEditor.UserCharacterStore.LoadSprite(charData.portraitPath);
                 
                 var itemGo = UnityEngine.Object.Instantiate(manager.TokenBankItemPrefab, tokenList);
                 var cardView = itemGo.GetComponent<TokenCardView>();
                 if (cardView != null)
                 {
-                    cardView.Setup(displayName, portraitSprite, 1, 1, false, () => onSelect?.Invoke(path));
+                    cardView.Setup(displayName, portraitSprite, charData.maxHp, charData.maxHp, false, () => onSelect?.Invoke(charPath));
                 }
                 else
                 {
@@ -264,7 +269,7 @@ namespace RPGTable.Runtime
                     var btn = itemGo.GetComponent<Button>();
                     if (btn != null)
                     {
-                        btn.onClick.AddListener(() => onSelect?.Invoke(path));
+                        btn.onClick.AddListener(() => onSelect?.Invoke(charPath));
                     }
                     var text = itemGo.GetComponentInChildren<Text>();
                     if (text != null)
@@ -353,12 +358,13 @@ namespace RPGTable.Runtime
                 if (inspectorView != null)
                 {
                     var tokenData = UserTokenStore.LoadToken(token.TokenPath);
+                    var charData = string.IsNullOrEmpty(token.CharacterPath) ? null : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(token.CharacterPath);
+
                     Sprite portrait = null;
-                    if (tokenData != null)
-                    {
-                        portrait = UserTokenStore.LoadSprite(tokenData.portraitPath);
-                    }
-                    inspectorView.Setup(token, tokenData, portrait, 
+                    if (charData != null) portrait = RPGTable.CharacterEditor.UserCharacterStore.LoadSprite(charData.portraitPath);
+                    if (portrait == null && tokenData != null) portrait = UserTokenStore.LoadSprite(tokenData.portraitPath);
+                    
+                    inspectorView.Setup(token, tokenData, charData, portrait, 
                         damage => ApplyDamage(token, damage), 
                         heal => ApplyHeal(token, heal));
                 }

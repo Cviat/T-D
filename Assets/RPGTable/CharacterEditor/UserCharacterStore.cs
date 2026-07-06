@@ -13,6 +13,47 @@ namespace RPGTable.CharacterEditor
         public string description;
         public string portraitPath;
         public string tokenPath;
+        public int maxHp = 10;
+        public string[] attackSlots = new string[6];
+        public string[] defenseSlots = new string[6];
+        public bool melee;
+        public bool magic;
+        public bool ranged;
+        public bool doubleDamage;
+        public string[] abilityImagePaths = Array.Empty<string>();
+
+        // New stats & level parameters
+        public int level = 1;
+        public int xp = 0;
+        public string characterClass = "Воин";
+        public int skillPoints = 0;
+        public int strength = 10;
+        public int agility = 10;
+        public int intelligence = 10;
+        public int holiness = 10;
+
+        // Armor & Weapons
+        public int maxArmor = 0;
+        public string weaponName = "";
+        public string weaponScaleStat1 = "None";
+        public float weaponCoef1 = 0.6f;
+        public string weaponScaleStat2 = "None";
+        public float weaponCoef2 = 0.0f;
+        public string weaponAttribute = "";
+
+        // Equipment Slots
+        public string eqHelmet = "";
+        public string eqArmor = "";
+        public string eqWeapon = "";
+        public string eqShield = "";
+        public string eqBoots = "";
+        public string eqAmulet = "";
+        public string eqRing = "";
+        public string eqArtifact = "";
+        public string eqBelt = "";
+
+        // Backpack Inventory (8 slots)
+        public string[] backpackSlots = new string[8];
     }
 
     public static class UserCharacterStore
@@ -75,7 +116,7 @@ namespace RPGTable.CharacterEditor
             return UserTokenStore.ImportImageWithDialog("Import character portrait");
         }
 
-        public static Sprite LoadPortraitSprite(string path)
+        public static Sprite LoadSprite(string path)
         {
             return UserTokenStore.LoadSprite(path);
         }

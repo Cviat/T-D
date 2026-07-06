@@ -10,7 +10,8 @@ namespace RPGTable.CharacterEditor
         Open,
         ImportPortrait,
         SelectToken,
-        CreateToken
+        CreateToken,
+        AddAbility
     }
 
     [RequireComponent(typeof(Button))]
@@ -42,7 +43,8 @@ namespace RPGTable.CharacterEditor
             else if (action == CharacterEditorButtonAction.Open) controller.RequestOpen();
             else if (action == CharacterEditorButtonAction.ImportPortrait) controller.ImportPortrait();
             else if (action == CharacterEditorButtonAction.SelectToken) controller.SelectToken();
-            else controller.CreateToken();
+            else if (action == CharacterEditorButtonAction.CreateToken) controller.CreateToken();
+            else controller.AddAbilityImage();
         }
     }
 }

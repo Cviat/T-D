@@ -19,6 +19,7 @@ namespace RPGTable.Runtime
         public void Setup(
             CampaignRuntimeToken token, 
             SavedTokenData tokenData, 
+            RPGTable.CharacterEditor.SavedCharacterData charData,
             Sprite portrait, 
             Action<int> onDamage, 
             Action<int> onHeal)
@@ -37,18 +38,25 @@ namespace RPGTable.Runtime
                 stateLabel.color = token.IsDead ? Color.red : new Color(0.2f, 0.8f, 0.2f, 1f);
             }
 
-            if (descLabel != null && tokenData != null)
+            if (descLabel != null)
             {
-                var desc = string.IsNullOrWhiteSpace(tokenData.description) ? "Нет описания." : tokenData.description;
+                var desc = charData != null ? charData.description : "";
+                desc = string.IsNullOrWhiteSpace(desc) ? "Нет описания." : desc;
                 if (desc.Length > 60) desc = desc.Substring(0, 57) + "...";
                 descLabel.text = desc;
             }
 
-            if (statsLabel != null && tokenData != null)
+            if (statsLabel != null)
             {
-                statsLabel.text = $"Размер сетки: {tokenData.footprintSize}x{tokenData.footprintSize}\n" +
-                                     $"Тип атаки: " + (tokenData.melee ? "Ближний " : "") + (tokenData.magic ? "Магия " : "") + (tokenData.ranged ? "Дальний" : "") + "\n" +
-                                     (tokenData.doubleDamage ? "Двойной урон: Да" : "Двойной урон: Нет");
+                var footprint = tokenData != null ? tokenData.footprintSize : 1;
+                bool melee = charData != null ? charData.melee : false;
+                bool magic = charData != null ? charData.magic : false;
+                bool ranged = charData != null ? charData.ranged : false;
+                bool doubleDmg = charData != null ? charData.doubleDamage : false;
+                
+                statsLabel.text = $"Размер сетки: {footprint}x{footprint}\n" +
+                                     $"Тип атаки: " + (melee ? "Ближний " : "") + (magic ? "Магия " : "") + (ranged ? "Дальний" : "") + "\n" +
+                                     (doubleDmg ? "Двойной урон: Да" : "Двойной урон: Нет");
             }
 
             if (damageButton != null)

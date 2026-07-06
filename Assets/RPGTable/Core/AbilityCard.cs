@@ -23,6 +23,9 @@ namespace RPGTable.Core
     [CreateAssetMenu(menuName = "RPG Table/Ability Card", fileName = "AbilityCard")]
     public sealed class AbilityCard : ScriptableObject
     {
+        [Header("Visuals")]
+        public Sprite icon;
+
         [Header("Player-facing")]
         public string title = "New Ability";
         [TextArea(3, 8)]

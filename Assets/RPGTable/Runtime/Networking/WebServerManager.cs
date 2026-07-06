@@ -483,6 +483,7 @@ namespace RPGTable.Runtime.Networking
                 string json = "{}";
                 string promptText = null;
                 var enemiesJson = new List<string>();
+                string playerHpJson = "";
 
                 ExecuteOnMainThreadBlocking(() => {
 #if UNITY_2023_1_OR_NEWER
@@ -505,6 +506,11 @@ namespace RPGTable.Runtime.Networking
                     if (myBoardToken != null)
                     {
                         var myRuntimeToken = myBoardToken.GetComponent<RPGTable.Runtime.CampaignRuntimeToken>();
+                        if (myRuntimeToken != null)
+                        {
+                            playerHpJson = $"\"hp\":{myRuntimeToken.CurrentHp}, \"maxHp\":{myRuntimeToken.MaxHp}, ";
+                        }
+
                         foreach (var targetBoardToken in allBoardTokens)
                         {
                             if (targetBoardToken != myBoardToken && targetBoardToken.team != RPGTable.Core.TokenTeam.Player)
@@ -558,7 +564,7 @@ namespace RPGTable.Runtime.Networking
                                         var data = RPGTable.TokenEditor.UserTokenStore.LoadToken(targetRuntime.TokenPath);
                                         string pPath = data != null && data.portraitPath != null ? Convert.ToBase64String(Encoding.UTF8.GetBytes(data.portraitPath)) : "";
                                         string url = $"/api/image?path={pPath}";
-                                        enemiesJson.Add($"{{\"id\":\"{targetRuntime.RuntimeId}\",\"name\":\"{targetRuntime.DisplayName}\",\"portraitUrl\":\"{url}\"}}");
+                                        enemiesJson.Add($"{{\"id\":\"{targetRuntime.RuntimeId}\",\"name\":\"{targetRuntime.DisplayName}\",\"portraitUrl\":\"{url}\",\"hp\":{targetRuntime.CurrentHp},\"maxHp\":{targetRuntime.MaxHp}}}");
                                     }
                                 }
                             }
@@ -568,11 +574,11 @@ namespace RPGTable.Runtime.Networking
 
                 if (!string.IsNullOrEmpty(promptText))
                 {
-                    json = $"{{\"prompt\":\"{promptText.Replace("\"", "\\\"")}\", \"enemies\":[{string.Join(",", enemiesJson)}]}}";
+                    json = $"{{{playerHpJson}\"prompt\":\"{promptText.Replace("\"", "\\\"")}\", \"enemies\":[{string.Join(",", enemiesJson)}]}}";
                 }
                 else
                 {
-                    json = $"{{\"enemies\":[{string.Join(",", enemiesJson)}]}}";
+                    json = $"{{{playerHpJson}\"enemies\":[{string.Join(",", enemiesJson)}]}}";
                 }
                 
                 SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(json));

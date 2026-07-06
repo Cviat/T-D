@@ -8,8 +8,7 @@ namespace RPGTable.TokenEditor
         Back,
         Save,
         Open,
-        ImportPortrait,
-        AddAbility
+        ImportPortrait
     }
 
     [RequireComponent(typeof(Button))]
@@ -51,10 +50,6 @@ namespace RPGTable.TokenEditor
             else if (action == TokenEditorButtonAction.ImportPortrait)
             {
                 controller.ImportPortrait();
-            }
-            else
-            {
-                controller.AddAbilityImage();
             }
         }
     }

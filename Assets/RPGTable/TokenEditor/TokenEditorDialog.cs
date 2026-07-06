@@ -33,16 +33,58 @@ namespace RPGTable.TokenEditor
 
             CreateDialogLabel(panel.transform, "Import Token");
 
+            var scrollRoot = new GameObject("Scroll View", typeof(RectTransform));
+            scrollRoot.transform.SetParent(panel.transform, false);
+            var scrollLayoutElement = scrollRoot.AddComponent<LayoutElement>();
+            scrollLayoutElement.flexibleHeight = 1f;
+
+            var scrollRect = scrollRoot.AddComponent<ScrollRect>();
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.scrollSensitivity = 35f;
+
+            var viewport = new GameObject("Viewport", typeof(RectTransform));
+            viewport.transform.SetParent(scrollRoot.transform, false);
+            var viewportRect = viewport.GetComponent<RectTransform>();
+            viewportRect.anchorMin = Vector2.zero;
+            viewportRect.anchorMax = Vector2.one;
+            viewportRect.offsetMin = Vector2.zero;
+            viewportRect.offsetMax = Vector2.zero;
+            viewport.AddComponent<Image>().color = new Color(0,0,0,0.01f);
+            viewport.AddComponent<Mask>().showMaskGraphic = false;
+
+            var content = new GameObject("Content", typeof(RectTransform));
+            content.transform.SetParent(viewport.transform, false);
+            var contentRect = content.GetComponent<RectTransform>();
+            contentRect.anchorMin = new Vector2(0f, 1f);
+            contentRect.anchorMax = new Vector2(1f, 1f);
+            contentRect.pivot = new Vector2(0.5f, 1f);
+            contentRect.anchoredPosition = Vector2.zero;
+
+            var contentLayout = content.AddComponent<VerticalLayoutGroup>();
+            contentLayout.spacing = 14f;
+            contentLayout.childControlWidth = true;
+            contentLayout.childControlHeight = true;
+            contentLayout.childForceExpandWidth = true;
+            contentLayout.childForceExpandHeight = false;
+
+            var fitter = content.AddComponent<ContentSizeFitter>();
+            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            scrollRect.content = contentRect;
+            scrollRect.viewport = viewportRect;
+
             if (tokenPaths.Count == 0)
             {
-                CreateDialogLabel(panel.transform, "No saved tokens");
+                CreateDialogLabel(content.transform, "No saved tokens");
             }
             else
             {
                 foreach (var path in tokenPaths)
                 {
                     var captured = path;
-                    CreateDialogButton(panel.transform, UserTokenStore.GetDisplayName(path), () =>
+                    CreateDialogButton(content.transform, UserTokenStore.GetDisplayName(path), () =>
                     {
                         Destroy(canvasObject);
                         onOpen?.Invoke(captured);
@@ -53,6 +95,16 @@ namespace RPGTable.TokenEditor
             CreateDialogButton(panel.transform, "Cancel", () => Destroy(canvasObject));
         }
 
+        private static Font GetDefaultFont()
+        {
+            var texts = UnityEngine.Object.FindObjectsByType<Text>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            foreach (var t in texts)
+            {
+                if (t.font != null) return t.font;
+            }
+            return Resources.GetBuiltinResource<Font>("Arial.ttf") ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        }
+
         private static void CreateDialogLabel(Transform parent, string label)
         {
             var labelObject = new GameObject(label, typeof(RectTransform));
@@ -60,7 +112,7 @@ namespace RPGTable.TokenEditor
             var text = labelObject.AddComponent<Text>();
             text.text = label;
             text.alignment = TextAnchor.MiddleCenter;
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.font = GetDefaultFont();
             text.fontStyle = FontStyle.Bold;
             text.fontSize = 24;
             text.color = Color.white;
@@ -88,7 +140,7 @@ namespace RPGTable.TokenEditor
             var text = textObject.AddComponent<Text>();
             text.text = label;
             text.alignment = TextAnchor.MiddleCenter;
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.font = GetDefaultFont();
             text.fontStyle = FontStyle.Bold;
             text.fontSize = 20;
             text.color = Color.white;

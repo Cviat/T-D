@@ -171,59 +171,15 @@ namespace RPGTable.Editor
 
             var nameInput = CreateInput("Name Input", rightPanel.transform, "Token name", 22);
             PositionTop(nameInput.GetComponent<RectTransform>(), -18f, new Vector2(520f, 48f));
-            var descriptionInput = CreateInput("Description Input", rightPanel.transform, "Description", 18, true);
-            PositionTop(descriptionInput.GetComponent<RectTransform>(), -78f, new Vector2(520f, 126f));
-
-            var togglesRoot = new GameObject("Type Toggles", typeof(RectTransform));
-            togglesRoot.transform.SetParent(rightPanel.transform, false);
-            var togglesRect = togglesRoot.GetComponent<RectTransform>();
-            PositionTop(togglesRect, -224f, new Vector2(520f, 86f));
-            var toggleLayout = togglesRoot.AddComponent<GridLayoutGroup>();
-            toggleLayout.cellSize = new Vector2(250f, 36f);
-            toggleLayout.spacing = new Vector2(12f, 8f);
-            var meleeToggle = CreateToggle(togglesRoot.transform, "Рукопашная");
-            var magicToggle = CreateToggle(togglesRoot.transform, "Магия");
-            var rangedToggle = CreateToggle(togglesRoot.transform, "Дальний бой");
-            var doubleToggle = CreateToggle(togglesRoot.transform, "Двойной урон");
-
-            var attackInputs = CreateSlotColumn(rightPanel.transform, "⚔", -330f, true);
-            var defenseInputs = CreateSlotColumn(rightPanel.transform, "Щит", -330f, false);
-
-            var bottomPanel = CreatePanel("Abilities Panel", root.transform, new Color(0.075f, 0.068f, 0.058f, 0.98f));
-            var bottomRect = bottomPanel.GetComponent<RectTransform>();
-            bottomRect.anchorMin = new Vector2(0f, 0f);
-            bottomRect.anchorMax = new Vector2(1f, 0f);
-            bottomRect.offsetMin = new Vector2(320f, 20f);
-            bottomRect.offsetMax = new Vector2(-20f, 170f);
-
-            var abilitiesRoot = new GameObject("Abilities Content", typeof(RectTransform));
-            abilitiesRoot.transform.SetParent(bottomPanel.transform, false);
-            var abilitiesRect = abilitiesRoot.GetComponent<RectTransform>();
-            abilitiesRect.anchorMin = new Vector2(0f, 0f);
-            abilitiesRect.anchorMax = new Vector2(1f, 1f);
-            abilitiesRect.offsetMin = new Vector2(18f, 18f);
-            abilitiesRect.offsetMax = new Vector2(-150f, -18f);
-            var abilitiesLayout = abilitiesRoot.AddComponent<HorizontalLayoutGroup>();
-            abilitiesLayout.spacing = 12f;
-            abilitiesLayout.childControlWidth = false;
-            abilitiesLayout.childControlHeight = false;
-
-            var addAbilityButton = CreateTextButton("Add Ability Button", bottomPanel.transform, "+", new Vector2(108f, 108f));
-            var addAbilityRect = addAbilityButton.GetComponent<RectTransform>();
-            addAbilityRect.anchorMin = new Vector2(1f, 0.5f);
-            addAbilityRect.anchorMax = new Vector2(1f, 0.5f);
-            addAbilityRect.pivot = new Vector2(1f, 0.5f);
-            addAbilityRect.anchoredPosition = new Vector2(-20f, 0f);
 
             var controller = canvasObject.AddComponent<TokenEditorController>();
-            controller.Initialize(frameImage, portraitImage, plusText, footprintLabel, nameInput, descriptionInput, attackInputs, defenseInputs, meleeToggle, magicToggle, rangedToggle, doubleToggle, abilitiesRect);
+            controller.Initialize(frameImage, portraitImage, plusText, footprintLabel, nameInput);
 
             backButton.AddComponent<TokenEditorButton>().Initialize(controller, TokenEditorButtonAction.Back);
             saveButton.AddComponent<TokenEditorButton>().Initialize(controller, TokenEditorButtonAction.Save);
             openButton.AddComponent<TokenEditorButton>().Initialize(controller, TokenEditorButtonAction.Open);
             portraitButton.AddComponent<TokenEditorButton>().Initialize(controller, TokenEditorButtonAction.ImportPortrait);
             plusButton.gameObject.AddComponent<TokenEditorButton>().Initialize(controller, TokenEditorButtonAction.ImportPortrait);
-            addAbilityButton.AddComponent<TokenEditorButton>().Initialize(controller, TokenEditorButtonAction.AddAbility);
 
             CreateFootprintButtons(footprintButtonsRoot.transform, controller);
             CreateFrameOptions(frameGrid.transform, controller, frameImage);

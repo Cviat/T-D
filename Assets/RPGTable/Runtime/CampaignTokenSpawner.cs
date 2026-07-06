@@ -37,6 +37,7 @@ namespace RPGTable.Runtime
         {
             public string runtimeId;
             public string displayName;
+            public string characterPath;
             public string tokenPath;
             public TokenTeam team;
             public bool visibleToPlayers;
@@ -119,6 +120,7 @@ namespace RPGTable.Runtime
                 {
                     runtimeId = EnsureRuntimeTokenId(runtimeToken),
                     displayName = runtimeToken.DisplayName,
+                    characterPath = runtimeToken.CharacterPath,
                     tokenPath = runtimeToken.TokenPath,
                     team = runtimeToken.Team,
                     visibleToPlayers = runtimeToken.VisibleToPlayers,
@@ -171,7 +173,7 @@ namespace RPGTable.Runtime
                 var cell = FindFreeCell(new Vector2Int(player.gridX, player.gridY), footprint);
                 player.gridX = cell.x;
                 player.gridY = cell.y;
-                var runtimeToken = CreateTokenObject(player.name, player.tokenPath, cell, TokenTeam.Player, true, player.id);
+                var runtimeToken = CreateTokenObject(player.name, player.characterPath, player.tokenPath, cell, TokenTeam.Player, true, player.id);
                 runtimeToken.IsDead = player.isDead;
 
                 if (player.maxHp <= 0)
@@ -207,7 +209,10 @@ namespace RPGTable.Runtime
                 var tokenData = UserTokenStore.LoadToken(state.tokenPath);
                 var footprint = GetFootprint(tokenData);
                 var cell = FindFreeCell(state.gridPosition, footprint);
-                var runtimeToken = CreateTokenObject(state.displayName, state.tokenPath, cell, state.team, state.visibleToPlayers, null);
+                // For stored tokens, if it's a player, we get character path from player. Otherwise from state.
+                var player = CampaignGameSession.FindPlayer(state.runtimeId);
+                var charPath = player != null ? player.characterPath : state.characterPath;
+                var runtimeToken = CreateTokenObject(state.displayName, charPath, state.tokenPath, cell, state.team, state.visibleToPlayers, null);
                 runtimeToken.RuntimeId = string.IsNullOrWhiteSpace(state.runtimeId) ? NewRuntimeTokenId() : state.runtimeId;
                 runtimeToken.IsDead = state.isDead;
                 runtimeToken.CurrentHp = state.currentHp;
@@ -245,19 +250,23 @@ namespace RPGTable.Runtime
             var mouse = CampaignGameUI.MousePosition();
             mouse.z = Mathf.Abs(context.WorldCamera.transform.position.z);
             var world = context.WorldCamera.ScreenToWorldPoint(mouse);
-            var tokenData = UserTokenStore.LoadToken(SelectedBankTokenPath);
+            var charData = RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(SelectedBankTokenPath);
+            if (charData == null) { SelectedBankTokenPath = null; return; }
+
+            var tokenData = UserTokenStore.LoadToken(charData.tokenPath);
             var footprint = GetFootprint(tokenData);
             var cell = FindFreeCell(context.Grid.WorldToCell(world), footprint);
-            CreateTokenObject(UserTokenStore.GetDisplayName(SelectedBankTokenPath), SelectedBankTokenPath, cell, TokenTeam.Enemy, true, null);
+            CreateTokenObject(charData.name, SelectedBankTokenPath, charData.tokenPath, cell, TokenTeam.Enemy, true, null);
             ReserveCells(null, cell, footprint);
             SelectedBankTokenPath = null;
         }
 
         // ── Token creation ───────────────────────────────────────────────
 
-        public CampaignRuntimeToken CreateTokenObject(string displayName, string tokenPath, Vector2Int cell, TokenTeam team, bool visibleToPlayers, string playerId)
+        public CampaignRuntimeToken CreateTokenObject(string displayName, string characterPath, string tokenPath, Vector2Int cell, TokenTeam team, bool visibleToPlayers, string playerId)
         {
             var tokenData = UserTokenStore.LoadToken(tokenPath);
+            var charData = RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(characterPath);
             var footprint = GetFootprint(tokenData);
             var sortingBase = AllocateSortingOrder();
             var tokenObject = new GameObject(string.IsNullOrWhiteSpace(displayName) ? "Token" : displayName);
@@ -285,10 +294,11 @@ namespace RPGTable.Runtime
             runtime.PlayerId = playerId;
             runtime.RuntimeId = string.IsNullOrWhiteSpace(playerId) ? NewRuntimeTokenId() : playerId;
             runtime.TokenPath = tokenPath;
+            runtime.CharacterPath = characterPath;
             runtime.DisplayName = displayName;
             runtime.Team = team;
             runtime.VisibleToPlayers = visibleToPlayers;
-            runtime.MaxHp = tokenData != null ? tokenData.maxHp : 10;
+            runtime.MaxHp = charData != null ? charData.maxHp : 10;
             runtime.CurrentHp = runtime.MaxHp;
 
             tokenObject.AddComponent<TokenDragController>();
