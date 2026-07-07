@@ -173,13 +173,17 @@ namespace RPGTable.Editor
             eqAmulet.GetComponent<ItemDropSlot>().slotType = RPGTable.Core.ItemType.Amulet;
             PositionCenter(eqAmulet.GetComponent<RectTransform>(), 120f, -150f);
 
-            var eqWeapon = CreateItemSlot("Slot Weapon", charTabPanel.transform, "Оружие", slotSprite);
+            var eqWeapon = CreateItemSlot("Slot Weapon", charTabPanel.transform, "Оружие 1", slotSprite);
             eqWeapon.GetComponent<ItemDropSlot>().slotType = RPGTable.Core.ItemType.Weapon;
-            PositionCenter(eqWeapon.GetComponent<RectTransform>(), 120f, -280f);
+            PositionCenter(eqWeapon.GetComponent<RectTransform>(), 120f, -260f);
+
+            var eqWeapon2 = CreateItemSlot("Slot Weapon 2", charTabPanel.transform, "Оружие 2", slotSprite);
+            eqWeapon2.GetComponent<ItemDropSlot>().slotType = RPGTable.Core.ItemType.Weapon;
+            PositionCenter(eqWeapon2.GetComponent<RectTransform>(), 120f, -370f);
 
             var eqArtifact = CreateItemSlot("Slot Artifact", charTabPanel.transform, "Артефакт", slotSprite);
             eqArtifact.GetComponent<ItemDropSlot>().slotType = RPGTable.Core.ItemType.Artifact;
-            PositionCenter(eqArtifact.GetComponent<RectTransform>(), 120f, -410f);
+            PositionCenter(eqArtifact.GetComponent<RectTransform>(), 120f, -480f);
 
             var eqRing = CreateItemSlot("Slot Ring", charTabPanel.transform, "Кольцо", slotSprite);
             eqRing.GetComponent<ItemDropSlot>().slotType = RPGTable.Core.ItemType.Ring;
@@ -187,11 +191,11 @@ namespace RPGTable.Editor
 
             var eqShield = CreateItemSlot("Slot Shield", charTabPanel.transform, "Щит", slotSprite);
             eqShield.GetComponent<ItemDropSlot>().slotType = RPGTable.Core.ItemType.Shield;
-            PositionCenter(eqShield.GetComponent<RectTransform>(), 560f, -280f);
+            PositionCenter(eqShield.GetComponent<RectTransform>(), 560f, -260f);
 
             var eqBelt = CreateItemSlot("Slot Belt", charTabPanel.transform, "Пояс", slotSprite);
             eqBelt.GetComponent<ItemDropSlot>().slotType = RPGTable.Core.ItemType.Belt;
-            PositionCenter(eqBelt.GetComponent<RectTransform>(), 560f, -410f);
+            PositionCenter(eqBelt.GetComponent<RectTransform>(), 560f, -370f);
 
             // Backpack Section (Middle)
             var backpackTitlePanel = CreatePanel("Backpack Title Panel", charTabPanel.transform, Color.white);
@@ -340,20 +344,7 @@ namespace RPGTable.Editor
             var (intVal, intPlus, intMinus) = CreateStatField(statsTabPanel.transform, "Интеллект (INT)", -210f);
             var (holVal, holPlus, holMinus) = CreateStatField(statsTabPanel.transform, "Святость (HOL)", -250f);
 
-            var statTogglesRoot = new GameObject("Type Toggles", typeof(RectTransform));
-            statTogglesRoot.transform.SetParent(statsTabPanel.transform, false);
-            var togglesRect = statTogglesRoot.GetComponent<RectTransform>();
-            togglesRect.anchorMin = new Vector2(0f, 1f); togglesRect.anchorMax = new Vector2(0f, 1f);
-            togglesRect.pivot = new Vector2(0f, 1f);
-            togglesRect.anchoredPosition = new Vector2(40f, -310f);
-            togglesRect.sizeDelta = new Vector2(320f, 120f);
-            var toggleLayout = statTogglesRoot.AddComponent<GridLayoutGroup>();
-            toggleLayout.cellSize = new Vector2(150f, 36f);
-            toggleLayout.spacing = new Vector2(12f, 8f);
-            var meleeToggle = CreateToggle(statTogglesRoot.transform, "Рукопашная");
-            var magicToggle = CreateToggle(statTogglesRoot.transform, "Магия");
-            var rangedToggle = CreateToggle(statTogglesRoot.transform, "Дальний бой");
-            var doubleToggle = CreateToggle(statTogglesRoot.transform, "Двойной урон");
+
 
             // HP/Armor and Weapons (Column 2 of Stats Tab)
             var hpInput = CreateInput("HP Input", statsTabPanel.transform, "HP (e.g. 10)", false);
@@ -370,107 +361,124 @@ namespace RPGTable.Editor
             armorRect.anchoredPosition = new Vector2(590f, -40f);
             armorRect.sizeDelta = new Vector2(150f, 36f);
 
-            var weaponTitle = CreateText("Оружие", statsTabPanel.transform, 20, FontStyle.Bold, TextAnchor.MiddleLeft);
+            // Weapon 1 details
+            var weaponTitle = CreateText("Оружие 1", statsTabPanel.transform, 18, FontStyle.Bold, TextAnchor.MiddleLeft);
             var weaponTitleRect = weaponTitle.GetComponent<RectTransform>();
             weaponTitleRect.anchorMin = new Vector2(0f, 1f); weaponTitleRect.anchorMax = new Vector2(0f, 1f);
             weaponTitleRect.pivot = new Vector2(0f, 1f);
             weaponTitleRect.anchoredPosition = new Vector2(420f, -90f);
-            weaponTitleRect.sizeDelta = new Vector2(320f, 30f);
+            weaponTitleRect.sizeDelta = new Vector2(320f, 24f);
 
-            var weaponNameInput = CreateInput("Weapon Name Input", statsTabPanel.transform, "Название оружия", false);
-            var wpNameRect = weaponNameInput.GetComponent<RectTransform>();
-            wpNameRect.anchorMin = new Vector2(0f, 1f); wpNameRect.anchorMax = new Vector2(0f, 1f);
-            wpNameRect.pivot = new Vector2(0f, 1f);
-            wpNameRect.anchoredPosition = new Vector2(420f, -130f);
-            wpNameRect.sizeDelta = new Vector2(320f, 36f);
+            var weapon1NameLabel = CreateText("Weapon 1 Name Label", statsTabPanel.transform, 15, FontStyle.Bold, TextAnchor.MiddleLeft);
+            var wp1NameRect = weapon1NameLabel.GetComponent<RectTransform>();
+            wp1NameRect.anchorMin = new Vector2(0f, 1f); wp1NameRect.anchorMax = new Vector2(0f, 1f);
+            wp1NameRect.pivot = new Vector2(0f, 1f);
+            wp1NameRect.anchoredPosition = new Vector2(420f, -114f);
+            wp1NameRect.sizeDelta = new Vector2(320f, 24f);
+            weapon1NameLabel.text = "Название: Нет оружия 1";
+            weapon1NameLabel.color = new Color(0.95f, 0.85f, 0.7f, 1f);
 
-            var scaleStat1Obj = CreateStyledButton("Scale Stat 1 Button", statsTabPanel.transform, "None", new Vector2(150f, 36f), btnSprite);
-            var scale1Rt = scaleStat1Obj.GetComponent<RectTransform>();
-            scale1Rt.anchorMin = new Vector2(0f, 1f); scale1Rt.anchorMax = new Vector2(0f, 1f);
-            scale1Rt.pivot = new Vector2(0f, 1f);
-            scale1Rt.anchoredPosition = new Vector2(420f, -180f);
-            var scaleStat1Text = scaleStat1Obj.GetComponentInChildren<Text>();
-            var scaleStat1Btn = scaleStat1Obj.GetComponent<Button>();
+            var weapon1ScalingLabel = CreateText("Weapon 1 Scaling Label", statsTabPanel.transform, 15, FontStyle.Normal, TextAnchor.MiddleLeft);
+            var wp1ScaleRect = weapon1ScalingLabel.GetComponent<RectTransform>();
+            wp1ScaleRect.anchorMin = new Vector2(0f, 1f); wp1ScaleRect.anchorMax = new Vector2(0f, 1f);
+            wp1ScaleRect.pivot = new Vector2(0f, 1f);
+            wp1ScaleRect.anchoredPosition = new Vector2(420f, -138f);
+            wp1ScaleRect.sizeDelta = new Vector2(320f, 24f);
+            weapon1ScalingLabel.text = "Скейлинг: -";
+            weapon1ScalingLabel.color = new Color(0.85f, 0.8f, 0.75f, 1f);
 
-            var weaponCoef1Input = CreateInput("Weapon Coef 1 Input", statsTabPanel.transform, "0.6", false);
-            var coef1Rt = weaponCoef1Input.GetComponent<RectTransform>();
-            coef1Rt.anchorMin = new Vector2(0f, 1f); coef1Rt.anchorMax = new Vector2(0f, 1f);
-            coef1Rt.pivot = new Vector2(0f, 1f);
-            coef1Rt.anchoredPosition = new Vector2(590f, -180f);
-            coef1Rt.sizeDelta = new Vector2(150f, 36f);
+            var weapon1AttributesLabel = CreateText("Weapon 1 Attributes Label", statsTabPanel.transform, 15, FontStyle.Normal, TextAnchor.MiddleLeft);
+            var wp1AttrRect = weapon1AttributesLabel.GetComponent<RectTransform>();
+            wp1AttrRect.anchorMin = new Vector2(0f, 1f); wp1AttrRect.anchorMax = new Vector2(0f, 1f);
+            wp1AttrRect.pivot = new Vector2(0f, 1f);
+            wp1AttrRect.anchoredPosition = new Vector2(420f, -162f);
+            wp1AttrRect.sizeDelta = new Vector2(320f, 48f);
+            weapon1AttributesLabel.text = "Свойства: -";
+            weapon1AttributesLabel.color = new Color(0.85f, 0.8f, 0.75f, 1f);
 
-            var scaleStat2Obj = CreateStyledButton("Scale Stat 2 Button", statsTabPanel.transform, "None", new Vector2(150f, 36f), btnSprite);
-            var scale2Rt = scaleStat2Obj.GetComponent<RectTransform>();
-            scale2Rt.anchorMin = new Vector2(0f, 1f); scale2Rt.anchorMax = new Vector2(0f, 1f);
-            scale2Rt.pivot = new Vector2(0f, 1f);
-            scale2Rt.anchoredPosition = new Vector2(420f, -230f);
-            var scaleStat2Text = scaleStat2Obj.GetComponentInChildren<Text>();
-            var scaleStat2Btn = scaleStat2Obj.GetComponent<Button>();
+            // Weapon 2 details
+            var weapon2Title = CreateText("Оружие 2", statsTabPanel.transform, 18, FontStyle.Bold, TextAnchor.MiddleLeft);
+            var weapon2TitleRect = weapon2Title.GetComponent<RectTransform>();
+            weapon2TitleRect.anchorMin = new Vector2(0f, 1f); weapon2TitleRect.anchorMax = new Vector2(0f, 1f);
+            weapon2TitleRect.pivot = new Vector2(0f, 1f);
+            weapon2TitleRect.anchoredPosition = new Vector2(420f, -215f);
+            weapon2TitleRect.sizeDelta = new Vector2(320f, 24f);
 
-            var weaponCoef2Input = CreateInput("Weapon Coef 2 Input", statsTabPanel.transform, "0.0", false);
-            var coef2Rt = weaponCoef2Input.GetComponent<RectTransform>();
-            coef2Rt.anchorMin = new Vector2(0f, 1f); coef2Rt.anchorMax = new Vector2(0f, 1f);
-            coef2Rt.pivot = new Vector2(0f, 1f);
-            coef2Rt.anchoredPosition = new Vector2(590f, -230f);
-            coef2Rt.sizeDelta = new Vector2(150f, 36f);
+            var weapon2NameLabel = CreateText("Weapon 2 Name Label", statsTabPanel.transform, 15, FontStyle.Bold, TextAnchor.MiddleLeft);
+            var wp2NameRect = weapon2NameLabel.GetComponent<RectTransform>();
+            wp2NameRect.anchorMin = new Vector2(0f, 1f); wp2NameRect.anchorMax = new Vector2(0f, 1f);
+            wp2NameRect.pivot = new Vector2(0f, 1f);
+            wp2NameRect.anchoredPosition = new Vector2(420f, -239f);
+            wp2NameRect.sizeDelta = new Vector2(320f, 24f);
+            weapon2NameLabel.text = "Название: Нет оружия 2";
+            weapon2NameLabel.color = new Color(0.95f, 0.85f, 0.7f, 1f);
 
-            var weaponAttributeInput = CreateInput("Weapon Attribute Input", statsTabPanel.transform, "Атрибут оружия", false);
-            var wpAttrRt = weaponAttributeInput.GetComponent<RectTransform>();
-            wpAttrRt.anchorMin = new Vector2(0f, 1f); wpAttrRt.anchorMax = new Vector2(0f, 1f);
-            wpAttrRt.pivot = new Vector2(0f, 1f);
-            wpAttrRt.anchoredPosition = new Vector2(420f, -280f);
-            wpAttrRt.sizeDelta = new Vector2(320f, 36f);
+            var weapon2ScalingLabel = CreateText("Weapon 2 Scaling Label", statsTabPanel.transform, 15, FontStyle.Normal, TextAnchor.MiddleLeft);
+            var wp2ScaleRect = weapon2ScalingLabel.GetComponent<RectTransform>();
+            wp2ScaleRect.anchorMin = new Vector2(0f, 1f); wp2ScaleRect.anchorMax = new Vector2(0f, 1f);
+            wp2ScaleRect.pivot = new Vector2(0f, 1f);
+            wp2ScaleRect.anchoredPosition = new Vector2(420f, -263f);
+            wp2ScaleRect.sizeDelta = new Vector2(320f, 24f);
+            weapon2ScalingLabel.text = "Скейлинг: -";
+            weapon2ScalingLabel.color = new Color(0.85f, 0.8f, 0.75f, 1f);
+
+            var weapon2AttributesLabel = CreateText("Weapon 2 Attributes Label", statsTabPanel.transform, 15, FontStyle.Normal, TextAnchor.MiddleLeft);
+            var wp2AttrRect = weapon2AttributesLabel.GetComponent<RectTransform>();
+            wp2AttrRect.anchorMin = new Vector2(0f, 1f); wp2AttrRect.anchorMax = new Vector2(0f, 1f);
+            wp2AttrRect.pivot = new Vector2(0f, 1f);
+            wp2AttrRect.anchoredPosition = new Vector2(420f, -287f);
+            wp2AttrRect.sizeDelta = new Vector2(320f, 48f);
+            weapon2AttributesLabel.text = "Свойства: -";
+            weapon2AttributesLabel.color = new Color(0.85f, 0.8f, 0.75f, 1f);
 
             // D6 slots columns in Stats Tab (Column 3)
-            var attackInputs = CreateSlotColumn(statsTabPanel.transform, "⚔", 180f);
-            var defenseInputs = CreateSlotColumn(statsTabPanel.transform, "Щит", 480f);
+            var attackInputs = CreateSlotColumn(statsTabPanel.transform, "⚔1", 180f, slotSprite);
+            var attack2Inputs = CreateSlotColumn(statsTabPanel.transform, "⚔2", 300f, slotSprite);
+            var defenseInputs = CreateSlotColumn(statsTabPanel.transform, "Щит", 420f, slotSprite);
 
             // Bottom abilities table - CHILD OF statsTabPanel!
             var bottomPanel = CreatePanel("Abilities Panel", statsTabPanel.transform, new Color(0.075f, 0.068f, 0.058f, 0.98f));
             var bottomRect = bottomPanel.GetComponent<RectTransform>();
             bottomRect.anchorMin = new Vector2(0f, 0f);
             bottomRect.anchorMax = new Vector2(1f, 0f);
-            bottomRect.offsetMin = new Vector2(40f, 20f);
-            bottomRect.offsetMax = new Vector2(-40f, 170f);
+            bottomRect.pivot = new Vector2(0.5f, 0f);
+            bottomRect.anchoredPosition = new Vector2(0f, 20f);
+            bottomRect.sizeDelta = new Vector2(-80f, 210f); // 210f height fits exactly 3 rows of 64x64
 
             var abilitiesRoot = new GameObject("Abilities Content", typeof(RectTransform));
             abilitiesRoot.transform.SetParent(bottomPanel.transform, false);
             var abilitiesRect = abilitiesRoot.GetComponent<RectTransform>();
-            abilitiesRect.anchorMin = new Vector2(0f, 0f);
-            abilitiesRect.anchorMax = new Vector2(1f, 1f);
-            abilitiesRect.offsetMin = new Vector2(18f, 18f);
-            abilitiesRect.offsetMax = new Vector2(-150f, -18f);
-            var abilitiesLayout = abilitiesRoot.AddComponent<HorizontalLayoutGroup>();
-            abilitiesLayout.spacing = 12f;
-            abilitiesLayout.childControlWidth = false;
-            abilitiesLayout.childControlHeight = false;
+            abilitiesRect.anchorMin = Vector2.zero;
+            abilitiesRect.anchorMax = Vector2.one;
+            abilitiesRect.offsetMin = Vector2.zero;
+            abilitiesRect.offsetMax = Vector2.zero;
 
-            var addAbilityButton = CreateStyledButton("Add Ability Button", bottomPanel.transform, "+", new Vector2(108f, 108f), btnSprite);
-            var addAbilityRect = addAbilityButton.GetComponent<RectTransform>();
-            addAbilityRect.anchorMin = new Vector2(1f, 0.5f);
-            addAbilityRect.anchorMax = new Vector2(1f, 0.5f);
-            addAbilityRect.pivot = new Vector2(1f, 0.5f);
-            addAbilityRect.anchoredPosition = new Vector2(-20f, 0f);
+            // 10x3 bank grid layout group
+            var grid = abilitiesRoot.AddComponent<GridLayoutGroup>();
+            grid.cellSize = new Vector2(64f, 64f);
+            grid.spacing = new Vector2(6f, 6f);
+            grid.padding = new RectOffset(8, 8, 8, 8);
+            grid.constraint = GridLayoutGroup.Constraint.FixedRowCount;
+            grid.constraintCount = 3;
 
             // Initialize Character Editor Canvas controller with all elements
             var controller = canvasObject.AddComponent<CharacterEditorController>();
             controller.Initialize(
                 nameInput, descriptionInput, portraitImage, tokenLabel, hpInput,
-                attackInputs, defenseInputs, meleeToggle, magicToggle, rangedToggle, doubleToggle, abilitiesRect,
+                attackInputs, attack2Inputs, defenseInputs, abilitiesRect,
 
                 classInput, levelInput, xpInput, armorInput,
                 strVal, agiVal, intVal, holVal,
                 strPlus, strMinus, agiPlus, agiMinus, intPlus, intMinus, holPlus, holMinus,
 
-                weaponNameInput, weaponCoef1Input, weaponCoef2Input, weaponAttributeInput,
-                scaleStat1Text, scaleStat1Btn,
-                scaleStat2Text, scaleStat2Btn,
+                weapon1NameLabel, weapon1ScalingLabel, weapon1AttributesLabel,
+                weapon2NameLabel, weapon2ScalingLabel, weapon2AttributesLabel,
 
                 charTabBtn, statsTabBtn,
                 charTabPanel, statsTabPanel,
                 tokenPortraitImg, tokenFrameImg,
 
-                eqHelmet, eqArmor, eqWeapon, eqShield,
+                eqHelmet, eqArmor, eqWeapon, eqWeapon2, eqShield,
                 eqBoots, eqAmulet, eqRing, eqArtifact,
                 eqBelt, backpackFields, null,
                 frameSprite, dialogBgSprite
@@ -482,7 +490,6 @@ namespace RPGTable.Editor
             portraitObject.AddComponent<CharacterEditorButton>().Initialize(controller, CharacterEditorButtonAction.ImportPortrait);
             selectTokenButton.AddComponent<CharacterEditorButton>().Initialize(controller, CharacterEditorButtonAction.SelectToken);
             createTokenButton.AddComponent<CharacterEditorButton>().Initialize(controller, CharacterEditorButtonAction.CreateToken);
-            addAbilityButton.AddComponent<CharacterEditorButton>().Initialize(controller, CharacterEditorButtonAction.AddAbility);
 
             // Create Tooltip UI object inside Canvas
             var tooltipObj = new GameObject("Item Tooltip", typeof(RectTransform));
@@ -700,7 +707,7 @@ namespace RPGTable.Editor
             camera.backgroundColor = new Color(0.055f, 0.052f, 0.047f);
         }
 
-        private static AbilityDropSlot[] CreateSlotColumn(Transform parent, string title, float x)
+        private static AbilityDropSlot[] CreateSlotColumn(Transform parent, string title, float x, Sprite slotBg)
         {
             var root = new GameObject(title + " Column", typeof(RectTransform));
             root.transform.SetParent(parent, false);
@@ -708,8 +715,8 @@ namespace RPGTable.Editor
             rect.anchorMin = new Vector2(0.5f, 1f);
             rect.anchorMax = new Vector2(0.5f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);
-            rect.anchoredPosition = new Vector2(x, -40f);
-            rect.sizeDelta = new Vector2(250f, 430f);
+            rect.anchoredPosition = new Vector2(x, -20f);
+            rect.sizeDelta = new Vector2(104f, 570f); // 104 width, 570 height
             root.AddComponent<Image>().color = new Color(0.055f, 0.05f, 0.044f, 0.65f);
 
             var titleText = CreateText(title, root.transform, 26, FontStyle.Bold, TextAnchor.MiddleCenter);
@@ -728,32 +735,76 @@ namespace RPGTable.Editor
                 var slotRect = slotObj.GetComponent<RectTransform>();
                 slotRect.anchorMin = new Vector2(0f, 1f);
                 slotRect.anchorMax = new Vector2(1f, 1f);
-                slotRect.offsetMin = new Vector2(12f, -96f - i * 54f);
-                slotRect.offsetMax = new Vector2(-12f, -54f - i * 54f);
+                slotRect.offsetMin = new Vector2(12f, -130f - i * 86f);
+                slotRect.offsetMax = new Vector2(-12f, -50f - i * 86f);
 
+                // Slot border/background frame
                 var bg = slotObj.AddComponent<Image>();
-                bg.color = new Color(0.12f, 0.105f, 0.085f, 1f);
+                bg.sprite = slotBg;
+                bg.color = Color.white;
 
-                var labelObj = new GameObject("Label", typeof(RectTransform));
+                // Center icon overlay
+                var iconObj = new GameObject("Icon", typeof(RectTransform));
+                iconObj.transform.SetParent(slotObj.transform, false);
+                var iconRect = iconObj.GetComponent<RectTransform>();
+                iconRect.anchorMin = Vector2.zero;
+                iconRect.anchorMax = Vector2.one;
+                iconRect.offsetMin = new Vector2(6f, 6f);
+                iconRect.offsetMax = new Vector2(-6f, -6f);
+                var iconImg = iconObj.AddComponent<Image>();
+                iconImg.color = Color.clear;
+                iconImg.raycastTarget = false;
+
+                // Invisible InputField component for saving/loading bindings
+                var input = slotObj.AddComponent<InputField>();
+                input.lineType = InputField.LineType.SingleLine;
+
+                // Transparent text component
+                var labelObj = new GameObject("Text", typeof(RectTransform));
                 labelObj.transform.SetParent(slotObj.transform, false);
                 var labelRect = labelObj.GetComponent<RectTransform>();
                 labelRect.anchorMin = Vector2.zero;
                 labelRect.anchorMax = Vector2.one;
-                labelRect.offsetMin = new Vector2(5f, 5f);
-                labelRect.offsetMax = new Vector2(-5f, -5f);
+                labelRect.offsetMin = Vector2.zero;
+                labelRect.offsetMax = Vector2.zero;
 
                 var text = labelObj.AddComponent<Text>();
-                text.text = $"{i + 1}. Пусто";
+                text.text = "";
                 text.alignment = TextAnchor.MiddleCenter;
                 text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-                text.fontStyle = FontStyle.Normal;
                 text.fontSize = 14;
-                text.color = Color.white;
+                text.color = Color.clear; // Fully transparent!
+
+                // Face number placeholder shown in faint grey when empty
+                var placeholderObj = new GameObject("Placeholder", typeof(RectTransform));
+                placeholderObj.transform.SetParent(slotObj.transform, false);
+                var placeholderRect = placeholderObj.GetComponent<RectTransform>();
+                placeholderRect.anchorMin = Vector2.zero;
+                placeholderRect.anchorMax = Vector2.one;
+                placeholderRect.offsetMin = Vector2.zero;
+                placeholderRect.offsetMax = Vector2.zero;
+
+                var placeholderText = placeholderObj.AddComponent<Text>();
+                placeholderText.text = (i + 1).ToString();
+                placeholderText.alignment = TextAnchor.MiddleCenter;
+                placeholderText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                placeholderText.fontStyle = FontStyle.Bold;
+                placeholderText.fontSize = 24;
+                placeholderText.color = new Color(1f, 1f, 1f, 0.15f); // bld-faint placeholder
+
+                input.textComponent = text;
+                input.placeholder = placeholderText;
 
                 var dropSlot = slotObj.AddComponent<AbilityDropSlot>();
-                dropSlot.labelText = text;
-                dropSlot.slotImage = bg;
+                dropSlot.labelText = placeholderText; // Bind placeholderText so it controls face numbers
+                dropSlot.slotImage = iconImg;
                 dropSlot.abilityName = "";
+                dropSlot.diceFaceNumber = (i + 1).ToString();
+
+                // Bind tooltip trigger
+                var trigger = slotObj.AddComponent<ItemTooltipTrigger>();
+                trigger.boundAbilitySlot = dropSlot;
+
                 slots[i] = dropSlot;
             }
 

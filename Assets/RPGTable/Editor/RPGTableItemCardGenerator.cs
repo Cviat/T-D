@@ -45,12 +45,16 @@ namespace RPGTable.Editor
                     card.itemType = ItemType.Weapon;
 
                     // Set default stats based on item name
+                    var stunAttr = AssetDatabase.LoadAssetAtPath<CombatAttribute>("Assets/RPGTable/Resources/CombatAttributes/Stun.asset");
+                    card.attributes = new System.Collections.Generic.List<CombatAttribute>();
+
                     if (itemName.Contains("Bow"))
                     {
                         card.description = "Быстрый охотничий лук.";
                         card.scaleStat1 = "AGI";
                         card.coef1 = 0.8f;
                         card.attribute = "Дальний бой";
+                        card.attackType = AttackType.Ranged;
                     }
                     else if (itemName.Contains("Sword") || itemName.Contains("Longsword"))
                     {
@@ -59,6 +63,7 @@ namespace RPGTable.Editor
                         card.coef1 = 0.6f;
                         card.scaleStat2 = "AGI";
                         card.coef2 = 0.2f;
+                        card.attackType = AttackType.Melee;
                     }
                     else if (itemName.Contains("Greataxe") || itemName.Contains("One Handed Axe"))
                     {
@@ -66,6 +71,8 @@ namespace RPGTable.Editor
                         card.scaleStat1 = "STR";
                         card.coef1 = 1.0f;
                         card.attribute = "Оглушение";
+                        if (stunAttr != null) card.attributes.Add(stunAttr);
+                        card.attackType = AttackType.Melee;
                     }
                     else if (itemName.Contains("Mace"))
                     {
@@ -73,6 +80,8 @@ namespace RPGTable.Editor
                         card.scaleStat1 = "STR";
                         card.coef1 = 0.9f;
                         card.attribute = "Оглушение";
+                        if (stunAttr != null) card.attributes.Add(stunAttr);
+                        card.attackType = AttackType.Melee;
                     }
                     else if (itemName.Contains("Staff"))
                     {
@@ -80,6 +89,7 @@ namespace RPGTable.Editor
                         card.scaleStat1 = "INT";
                         card.coef1 = 0.8f;
                         card.attribute = "Магия";
+                        card.attackType = AttackType.Magic;
                     }
                     else if (itemName.Contains("Shield"))
                     {

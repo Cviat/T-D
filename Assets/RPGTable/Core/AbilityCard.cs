@@ -37,6 +37,12 @@ namespace RPGTable.Core
         [Header("Master-facing")]
         public AbilityEffectType effectType = AbilityEffectType.Damage;
         public int effectValue = 1;
+        public float multiplier = 1.0f;
+        
+        [Header("Combat Attributes")]
+        public System.Collections.Generic.List<CombatAttribute> attributes = new System.Collections.Generic.List<CombatAttribute>();
+        public AttackType attackType = AttackType.Melee;
+
         [TextArea(2, 5)]
         public string hiddenNotes;
     }

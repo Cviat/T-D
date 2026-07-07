@@ -8,8 +8,13 @@ namespace RPGTable.CharacterEditor
     {
         public string abilityName;
         public Text labelText;
-        public Image slotImage; // Optional icon display
-        private static Sprite defaultIconSprite;
+        public Image slotImage; // Centered icon image
+
+        [Tooltip("The D6 face value (1-6) to show as a faint placeholder when empty.")]
+        public string diceFaceNumber = "";
+
+        [Tooltip("The AttackType filter for this D6 slot.")]
+        public RPGTable.Core.AttackType allowedType = RPGTable.Core.AttackType.Melee;
 
         private void Awake()
         {
@@ -22,26 +27,67 @@ namespace RPGTable.CharacterEditor
         public void SetAbility(string name)
         {
             abilityName = name;
-            if (labelText != null)
-            {
-                labelText.text = string.IsNullOrWhiteSpace(name) ? "Пусто" : name;
-            }
             
-            // Optional: update icon/image if we load ability icons
-            if (slotImage != null)
+            if (string.IsNullOrWhiteSpace(name))
             {
-                var card = FindAbilityCard(name);
-                if (card != null && card.icon != null)
+                // Empty state: show faint dice face number (1-6)
+                if (labelText != null)
                 {
-                    slotImage.sprite = card.icon;
-                    slotImage.color = Color.white;
+                    labelText.text = diceFaceNumber;
+                    labelText.color = new Color(1f, 1f, 1f, 0.15f); // bld-faint placeholder
+                    labelText.fontSize = 24;
                 }
-                else
+
+                if (slotImage != null)
                 {
                     slotImage.sprite = null;
-                    slotImage.color = new Color(0.12f, 0.105f, 0.085f, 1f); // default slot bg
+                    slotImage.color = Color.clear;
                 }
             }
+            else
+            {
+                // Equipped state: hide placeholder text, show skill icon
+                if (labelText != null)
+                {
+                    labelText.color = Color.clear;
+                }
+
+                if (slotImage != null)
+                {
+                    var card = FindAbilityCard(name);
+                    if (card != null && card.icon != null)
+                    {
+                        slotImage.sprite = card.icon;
+                        slotImage.color = Color.white;
+                    }
+                    else
+                    {
+                        slotImage.sprite = null;
+                        slotImage.color = Color.clear;
+                    }
+                }
+            }
+        }
+
+        public bool TryDropAbility(string name)
+        {
+            var card = FindAbilityCard(name);
+            if (card != null && card.attackType != allowedType)
+            {
+                Debug.LogWarning($"Cannot drop ability {name} ({card.attackType}) into slot expecting {allowedType}");
+                return false; // Reject!
+            }
+
+            SetAbility(name);
+            
+            // Trigger event end edit or save
+            var input = GetComponent<InputField>();
+            if (input != null)
+            {
+                input.text = name;
+                input.onEndEdit?.Invoke(name);
+            }
+            return true;
         }
 
         public void OnDrop(PointerEventData eventData)
@@ -49,14 +95,20 @@ namespace RPGTable.CharacterEditor
             var dragItem = eventData.pointerDrag?.GetComponent<AbilityDragItem>();
             if (dragItem != null)
             {
-                SetAbility(dragItem.abilityName);
+                TryDropAbility(dragItem.abilityName);
             }
         }
 
         public void OnPointerClick(PointerEventData eventData)
         {
-            // Clear on left click/tap
             SetAbility(string.Empty);
+            
+            var input = GetComponent<InputField>();
+            if (input != null)
+            {
+                input.text = string.Empty;
+                input.onEndEdit?.Invoke(string.Empty);
+            }
         }
 
         private RPGTable.Core.AbilityCard FindAbilityCard(string title)

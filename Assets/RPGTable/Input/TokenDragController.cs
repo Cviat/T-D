@@ -132,3 +132,4 @@ namespace RPGTable.Input
         }
     }
 }
+

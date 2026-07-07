@@ -15,6 +15,7 @@ namespace RPGTable.CharacterEditor
         public string tokenPath;
         public int maxHp = 10;
         public string[] attackSlots = new string[6];
+        public string[] attack2Slots = new string[6];
         public string[] defenseSlots = new string[6];
         public bool melee;
         public bool magic;
@@ -41,10 +42,18 @@ namespace RPGTable.CharacterEditor
         public float weaponCoef2 = 0.0f;
         public string weaponAttribute = "";
 
+        public string weapon2Name = "";
+        public string weapon2ScaleStat1 = "None";
+        public float weapon2Coef1 = 0.6f;
+        public string weapon2ScaleStat2 = "None";
+        public float weapon2Coef2 = 0.0f;
+        public string weapon2Attribute = "";
+
         // Equipment Slots
         public string eqHelmet = "";
         public string eqArmor = "";
         public string eqWeapon = "";
+        public string eqWeapon2 = "";
         public string eqShield = "";
         public string eqBoots = "";
         public string eqAmulet = "";

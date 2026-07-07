@@ -27,3 +27,5 @@ MonoBehaviour:
   bonusInt: 0
   bonusHol: 0
   attribute: 
+  attributes: []
+  attackType: 0

@@ -27,3 +27,5 @@ MonoBehaviour:
   bonusInt: 0
   bonusHol: 0
   attribute: "\u041C\u0430\u0433\u0438\u044F"
+  attributes: []
+  attackType: 2

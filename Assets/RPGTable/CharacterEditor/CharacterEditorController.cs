@@ -20,11 +20,9 @@ namespace RPGTable.CharacterEditor
 
         [SerializeField] private InputField maxHpInput;
         [SerializeField] private AbilityDropSlot[] attackSlots;
+        [SerializeField] private AbilityDropSlot[] attack2Slots;
         [SerializeField] private AbilityDropSlot[] defenseSlots;
-        [SerializeField] private Toggle meleeToggle;
-        [SerializeField] private Toggle magicToggle;
-        [SerializeField] private Toggle rangedToggle;
-        [SerializeField] private Toggle doubleDamageToggle;
+
         [SerializeField] private RectTransform abilitiesRoot;
 
         // New stats inputs & fields
@@ -38,12 +36,12 @@ namespace RPGTable.CharacterEditor
         [SerializeField] private Text intelligenceValueLabel;
         [SerializeField] private Text holinessValueLabel;
 
-        [SerializeField] private InputField weaponNameInput;
-        [SerializeField] private InputField weaponCoef1Input;
-        [SerializeField] private InputField weaponCoef2Input;
-        [SerializeField] private InputField weaponAttributeInput;
-        [SerializeField] private Text weaponScaleStat1Label;
-        [SerializeField] private Text weaponScaleStat2Label;
+        [SerializeField] private Text weaponNameLabel;
+        [SerializeField] private Text weaponScalingLabel;
+        [SerializeField] private Text weaponAttributesLabel;
+        [SerializeField] private Text weapon2NameLabel;
+        [SerializeField] private Text weapon2ScalingLabel;
+        [SerializeField] private Text weapon2AttributesLabel;
 
         // Tab UI Fields
         [SerializeField] private Button characterTabButton;
@@ -63,13 +61,13 @@ namespace RPGTable.CharacterEditor
         [SerializeField] private Button intMinusBtn;
         [SerializeField] private Button holPlusBtn;
         [SerializeField] private Button holMinusBtn;
-        [SerializeField] private Button scaleStat1Button;
-        [SerializeField] private Button scaleStat2Button;
+
 
         // Equipment & Inventory Slots
         [SerializeField] private InputField eqHelmetInput;
         [SerializeField] private InputField eqArmorInput;
         [SerializeField] private InputField eqWeaponInput;
+        [SerializeField] private InputField eqWeapon2Input;
         [SerializeField] private InputField eqShieldInput;
         [SerializeField] private InputField eqBootsInput;
         [SerializeField] private InputField eqAmuletInput;
@@ -107,11 +105,8 @@ namespace RPGTable.CharacterEditor
             Text selectedTokenLabel,
             InputField hpField,
             AbilityDropSlot[] attackInputs,
+            AbilityDropSlot[] attack2Inputs,
             AbilityDropSlot[] defenseInputs,
-            Toggle melee,
-            Toggle magic,
-            Toggle ranged,
-            Toggle doubleDamage,
             RectTransform abilities,
 
             InputField classField,
@@ -125,18 +120,19 @@ namespace RPGTable.CharacterEditor
             Button intPlus, Button intMinus,
             Button holPlus, Button holMinus,
 
-            InputField weaponNameField,
-            InputField weaponCoef1Field,
-            InputField weaponCoef2Field,
-            InputField weaponAttributeField,
-            Text scaleStat1Text, Button scaleStat1Btn,
-            Text scaleStat2Text, Button scaleStat2Btn,
+            Text weaponNameText,
+            Text weaponScalingText,
+            Text weaponAttributesText,
+
+            Text weapon2NameText,
+            Text weapon2ScalingText,
+            Text weapon2AttributesText,
 
             Button charTabBtn, Button stTabBtn,
             GameObject charTabPanelObj, GameObject stTabPanelObj,
             Image tkPortraitPreview, Image tkFramePreview,
 
-            InputField helmetField, InputField armorEquipField, InputField weaponEquipField, InputField shieldField,
+            InputField helmetField, InputField armorEquipField, InputField weaponEquipField, InputField weapon2EquipField, InputField shieldField,
             InputField bootsField, InputField amuletField, InputField ringField, InputField artifactField,
             InputField beltField, InputField[] backpackFields,
             RectTransform items,
@@ -148,11 +144,8 @@ namespace RPGTable.CharacterEditor
             tokenLabel = selectedTokenLabel;
             maxHpInput = hpField;
             attackSlots = attackInputs;
+            attack2Slots = attack2Inputs;
             defenseSlots = defenseInputs;
-            meleeToggle = melee;
-            magicToggle = magic;
-            rangedToggle = ranged;
-            doubleDamageToggle = doubleDamage;
             abilitiesRoot = abilities;
 
             classInput = classField;
@@ -165,12 +158,12 @@ namespace RPGTable.CharacterEditor
             intelligenceValueLabel = intVal;
             holinessValueLabel = holVal;
 
-            weaponNameInput = weaponNameField;
-            weaponCoef1Input = weaponCoef1Field;
-            weaponCoef2Input = weaponCoef2Field;
-            weaponAttributeInput = weaponAttributeField;
-            weaponScaleStat1Label = scaleStat1Text;
-            weaponScaleStat2Label = scaleStat2Text;
+            weaponNameLabel = weaponNameText;
+            weaponScalingLabel = weaponScalingText;
+            weaponAttributesLabel = weaponAttributesText;
+            weapon2NameLabel = weapon2NameText;
+            weapon2ScalingLabel = weapon2ScalingText;
+            weapon2AttributesLabel = weapon2AttributesText;
 
             characterTabButton = charTabBtn;
             statsTabButton = stTabBtn;
@@ -188,12 +181,11 @@ namespace RPGTable.CharacterEditor
             intMinusBtn = intMinus;
             holPlusBtn = holPlus;
             holMinusBtn = holMinus;
-            scaleStat1Button = scaleStat1Btn;
-            scaleStat2Button = scaleStat2Btn;
 
             eqHelmetInput = helmetField;
             eqArmorInput = armorEquipField;
             eqWeaponInput = weaponEquipField;
+            eqWeapon2Input = weapon2EquipField;
             eqShieldInput = shieldField;
             eqBootsInput = bootsField;
             eqAmuletInput = amuletField;
@@ -227,8 +219,7 @@ namespace RPGTable.CharacterEditor
             if (holPlusBtn != null) holPlusBtn.onClick.AddListener(() => ModifyStat("HOL", 1));
             if (holMinusBtn != null) holMinusBtn.onClick.AddListener(() => ModifyStat("HOL", -1));
 
-            if (scaleStat1Button != null) scaleStat1Button.onClick.AddListener(() => CycleScaleStat(1));
-            if (scaleStat2Button != null) scaleStat2Button.onClick.AddListener(() => CycleScaleStat(2));
+
 
             if (characterTabButton != null) characterTabButton.onClick.AddListener(() => SwitchTab(true));
             if (statsTabButton != null) statsTabButton.onClick.AddListener(() => SwitchTab(false));
@@ -237,6 +228,7 @@ namespace RPGTable.CharacterEditor
             if (eqHelmetInput != null) eqHelmetInput.onEndEdit.AddListener((val) => RecalculateEquippedBonuses());
             if (eqArmorInput != null) eqArmorInput.onEndEdit.AddListener((val) => RecalculateEquippedBonuses());
             if (eqWeaponInput != null) eqWeaponInput.onEndEdit.AddListener((val) => RecalculateEquippedBonuses());
+            if (eqWeapon2Input != null) eqWeapon2Input.onEndEdit.AddListener((val) => RecalculateEquippedBonuses());
             if (eqShieldInput != null) eqShieldInput.onEndEdit.AddListener((val) => RecalculateEquippedBonuses());
             if (eqBootsInput != null) eqBootsInput.onEndEdit.AddListener((val) => RecalculateEquippedBonuses());
             if (eqAmuletInput != null) eqAmuletInput.onEndEdit.AddListener((val) => RecalculateEquippedBonuses());
@@ -313,28 +305,7 @@ namespace RPGTable.CharacterEditor
             RecalculateEquippedBonuses();
         }
 
-        private void CycleScaleStat(int index)
-        {
-            if (index == 1)
-            {
-                weaponScaleStat1 = NextScaleStat(weaponScaleStat1);
-                if (weaponScaleStat1Label != null) weaponScaleStat1Label.text = weaponScaleStat1;
-            }
-            else
-            {
-                weaponScaleStat2 = NextScaleStat(weaponScaleStat2);
-                if (weaponScaleStat2Label != null) weaponScaleStat2Label.text = weaponScaleStat2;
-            }
-        }
 
-        private string NextScaleStat(string current)
-        {
-            if (current == "None") return "STR";
-            if (current == "STR") return "AGI";
-            if (current == "AGI") return "INT";
-            if (current == "INT") return "HOL";
-            return "None";
-        }
 
         private void UpdateStatLabels()
         {
@@ -352,14 +323,14 @@ namespace RPGTable.CharacterEditor
             if (characterTabButton != null)
             {
                 characterTabButton.GetComponent<Image>().color = isCharacter
-                    ? new Color(0.26f, 0.22f, 0.17f, 1f)
-                    : new Color(0.12f, 0.11f, 0.1f, 1f);
+                    ? Color.white
+                    : new Color(0.55f, 0.5f, 0.45f, 1f);
             }
             if (statsTabButton != null)
             {
                 statsTabButton.GetComponent<Image>().color = !isCharacter
-                    ? new Color(0.26f, 0.22f, 0.17f, 1f)
-                    : new Color(0.12f, 0.11f, 0.1f, 1f);
+                    ? Color.white
+                    : new Color(0.55f, 0.5f, 0.45f, 1f);
             }
         }
 
@@ -466,17 +437,16 @@ namespace RPGTable.CharacterEditor
                 armorVal = arm;
             }
 
-            float coef1 = 0.6f;
-            if (weaponCoef1Input != null && float.TryParse(weaponCoef1Input.text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var c1))
-            {
-                coef1 = c1;
-            }
+            var weapon1Card = FindItemCard(eqWeaponInput != null ? eqWeaponInput.text : "");
+            var weapon2Card = FindItemCard(eqWeapon2Input != null ? eqWeapon2Input.text : "");
 
-            float coef2 = 0.0f;
-            if (weaponCoef2Input != null && float.TryParse(weaponCoef2Input.text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var c2))
-            {
-                coef2 = c2;
-            }
+            bool calcMelee = (weapon1Card == null && weapon2Card == null)
+                || (weapon1Card != null && weapon1Card.attackType == RPGTable.Core.AttackType.Melee)
+                || (weapon2Card != null && weapon2Card.attackType == RPGTable.Core.AttackType.Melee);
+            bool calcRanged = (weapon1Card != null && weapon1Card.attackType == RPGTable.Core.AttackType.Ranged)
+                || (weapon2Card != null && weapon2Card.attackType == RPGTable.Core.AttackType.Ranged);
+            bool calcMagic = (weapon1Card != null && weapon1Card.attackType == RPGTable.Core.AttackType.Magic)
+                || (weapon2Card != null && weapon2Card.attackType == RPGTable.Core.AttackType.Magic);
 
             var data = new SavedCharacterData
             {
@@ -485,11 +455,12 @@ namespace RPGTable.CharacterEditor
                 tokenPath = tokenPath,
                 maxHp = maxHpVal,
                 attackSlots = ReadSlots(attackSlots),
+                attack2Slots = ReadSlots(attack2Slots),
                 defenseSlots = ReadSlots(defenseSlots),
-                melee = meleeToggle != null && meleeToggle.isOn,
-                magic = magicToggle != null && magicToggle.isOn,
-                ranged = rangedToggle != null && rangedToggle.isOn,
-                doubleDamage = doubleDamageToggle != null && doubleDamageToggle.isOn,
+                melee = calcMelee,
+                magic = calcMagic,
+                ranged = calcRanged,
+                doubleDamage = false,
                 abilityImagePaths = Array.Empty<string>(),
 
                 // Save Stats & Level
@@ -503,17 +474,25 @@ namespace RPGTable.CharacterEditor
 
                 // Save Armor & Weapon
                 maxArmor = armorVal,
-                weaponName = weaponNameInput == null ? "" : weaponNameInput.text,
-                weaponScaleStat1 = weaponScaleStat1,
-                weaponCoef1 = coef1,
-                weaponScaleStat2 = weaponScaleStat2,
-                weaponCoef2 = coef2,
-                weaponAttribute = weaponAttributeInput == null ? "" : weaponAttributeInput.text,
+                weaponName = eqWeaponInput != null ? eqWeaponInput.text : "",
+                weaponScaleStat1 = weapon1Card != null ? weapon1Card.scaleStat1 : "None",
+                weaponCoef1 = weapon1Card != null ? weapon1Card.coef1 : 0.0f,
+                weaponScaleStat2 = weapon1Card != null ? weapon1Card.scaleStat2 : "None",
+                weaponCoef2 = weapon1Card != null ? weapon1Card.coef2 : 0.0f,
+                weaponAttribute = weapon1Card != null ? (weapon1Card.attributes != null && weapon1Card.attributes.Count > 0 ? weapon1Card.attributes[0].attributeName : weapon1Card.attribute) : "",
+
+                weapon2Name = eqWeapon2Input != null ? eqWeapon2Input.text : "",
+                weapon2ScaleStat1 = weapon2Card != null ? weapon2Card.scaleStat1 : "None",
+                weapon2Coef1 = weapon2Card != null ? weapon2Card.coef1 : 0.0f,
+                weapon2ScaleStat2 = weapon2Card != null ? weapon2Card.scaleStat2 : "None",
+                weapon2Coef2 = weapon2Card != null ? weapon2Card.coef2 : 0.0f,
+                weapon2Attribute = weapon2Card != null ? (weapon2Card.attributes != null && weapon2Card.attributes.Count > 0 ? weapon2Card.attributes[0].attributeName : weapon2Card.attribute) : "",
 
                 // Save Equipment Slots
                 eqHelmet = eqHelmetInput == null ? "" : eqHelmetInput.text,
                 eqArmor = eqArmorInput == null ? "" : eqArmorInput.text,
                 eqWeapon = eqWeaponInput == null ? "" : eqWeaponInput.text,
+                eqWeapon2 = eqWeapon2Input == null ? "" : eqWeapon2Input.text,
                 eqShield = eqShieldInput == null ? "" : eqShieldInput.text,
                 eqBoots = eqBootsInput == null ? "" : eqBootsInput.text,
                 eqAmulet = eqAmuletInput == null ? "" : eqAmuletInput.text,
@@ -580,21 +559,14 @@ namespace RPGTable.CharacterEditor
             holiness = data.holiness;
             UpdateStatLabels();
 
-            // Load Weapon Scaling
-            if (weaponNameInput != null) weaponNameInput.text = data.weaponName ?? "";
-            weaponScaleStat1 = string.IsNullOrEmpty(data.weaponScaleStat1) ? "None" : data.weaponScaleStat1;
-            weaponScaleStat2 = string.IsNullOrEmpty(data.weaponScaleStat2) ? "None" : data.weaponScaleStat2;
-            if (weaponScaleStat1Label != null) weaponScaleStat1Label.text = weaponScaleStat1;
-            if (weaponScaleStat2Label != null) weaponScaleStat2Label.text = weaponScaleStat2;
-
-            if (weaponCoef1Input != null) weaponCoef1Input.text = data.weaponCoef1.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            if (weaponCoef2Input != null) weaponCoef2Input.text = data.weaponCoef2.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            if (weaponAttributeInput != null) weaponAttributeInput.text = data.weaponAttribute ?? "";
+            // Update read-only weapon scaling labels
+            UpdateWeaponStatsDisplay(FindItemCard(data.eqWeapon), FindItemCard(data.eqWeapon2));
 
             // Load Equipment Slots
             if (eqHelmetInput != null) eqHelmetInput.text = data.eqHelmet ?? "";
             if (eqArmorInput != null) eqArmorInput.text = data.eqArmor ?? "";
             if (eqWeaponInput != null) eqWeaponInput.text = data.eqWeapon ?? "";
+            if (eqWeapon2Input != null) eqWeapon2Input.text = data.eqWeapon2 ?? "";
             if (eqShieldInput != null) eqShieldInput.text = data.eqShield ?? "";
             if (eqBootsInput != null) eqBootsInput.text = data.eqBoots ?? "";
             if (eqAmuletInput != null) eqAmuletInput.text = data.eqAmulet ?? "";
@@ -606,12 +578,10 @@ namespace RPGTable.CharacterEditor
             WriteBackpack(backpackInputSlots, data.backpackSlots);
 
             WriteSlots(attackSlots, data.attackSlots);
+            WriteSlots(attack2Slots, data.attack2Slots);
             WriteSlots(defenseSlots, data.defenseSlots);
 
-            if (meleeToggle != null) meleeToggle.isOn = data.melee;
-            if (magicToggle != null) magicToggle.isOn = data.magic;
-            if (rangedToggle != null) rangedToggle.isOn = data.ranged;
-            if (doubleDamageToggle != null) doubleDamageToggle.isOn = data.doubleDamage;
+
 
             RefreshPortrait();
             RefreshTokenPreview();
@@ -686,24 +656,56 @@ namespace RPGTable.CharacterEditor
                 }
             }
 
+            var weapon1Card = FindItemCard(eqWeaponInput != null ? eqWeaponInput.text : "");
+            var weapon2Card = FindItemCard(eqWeapon2Input != null ? eqWeapon2Input.text : "");
+
+            var allowedTypes = new System.Collections.Generic.HashSet<RPGTable.Core.AttackType>();
+            allowedTypes.Add(RPGTable.Core.AttackType.Defense);
+
+            if (weapon1Card != null)
+            {
+                allowedTypes.Add(weapon1Card.attackType);
+            }
+            if (weapon2Card != null)
+            {
+                allowedTypes.Add(weapon2Card.attackType);
+            }
+
             var cards = Resources.LoadAll<RPGTable.Core.AbilityCard>("AbilityCards");
-            if (cards != null && cards.Length > 0)
+            var matchingCards = new System.Collections.Generic.List<RPGTable.Core.AbilityCard>();
+            if (cards != null)
             {
                 foreach (var card in cards)
                 {
                     if (card != null && !string.IsNullOrEmpty(card.title))
                     {
-                        CreateAbilityCard(card.title);
+                        if (allowedTypes.Contains(card.attackType))
+                        {
+                            matchingCards.Add(card);
+                        }
                     }
                 }
             }
-            else
+
+            // Create cards for all available abilities
+            foreach (var card in matchingCards)
             {
-                var defaultAbilities = new string[] { "Удар", "Крит", "Промах", "Блок", "Уворот", "Контратака" };
-                foreach (var name in defaultAbilities)
-                {
-                    CreateAbilityCard(name);
-                }
+                CreateAbilityCard(card.title);
+            }
+
+            // Pad the remaining slots to exactly 60 cells (20x3 grid)
+            var slotFrame = FindSlotFrameSprite();
+            int remaining = 60 - matchingCards.Count;
+            for (var i = 0; i < remaining; i++)
+            {
+                var emptyCell = new GameObject("EmptySlot", typeof(RectTransform));
+                emptyCell.transform.SetParent(abilitiesRoot, false);
+                var rect = emptyCell.GetComponent<RectTransform>();
+                rect.sizeDelta = new Vector2(64f, 64f);
+
+                var img = emptyCell.AddComponent<Image>();
+                img.sprite = slotFrame;
+                img.color = Color.white;
             }
         }
 
@@ -714,29 +716,64 @@ namespace RPGTable.CharacterEditor
             var card = new GameObject(name, typeof(RectTransform));
             card.transform.SetParent(abilitiesRoot, false);
             var rect = card.GetComponent<RectTransform>();
-            rect.sizeDelta = new Vector2(110f, 110f);
+            rect.sizeDelta = new Vector2(64f, 64f);
 
             var image = card.AddComponent<Image>();
-            image.color = new Color(0.18f, 0.16f, 0.14f, 1f);
+            image.sprite = FindSlotFrameSprite();
+            image.color = Color.white;
 
-            var textObj = new GameObject("Label", typeof(RectTransform));
-            textObj.transform.SetParent(card.transform, false);
-            var textRect = textObj.GetComponent<RectTransform>();
-            textRect.anchorMin = Vector2.zero;
-            textRect.anchorMax = Vector2.one;
-            textRect.offsetMin = new Vector2(5f, 5f);
-            textRect.offsetMax = new Vector2(-5f, -5f);
+            var abilityCard = FindAbilityCard(name);
 
-            var text = textObj.AddComponent<Text>();
-            text.text = name;
-            text.alignment = TextAnchor.MiddleCenter;
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            text.fontStyle = FontStyle.Bold;
-            text.fontSize = 14;
-            text.color = Color.white;
+            // Icon child
+            if (abilityCard != null && abilityCard.icon != null)
+            {
+                var iconObj = new GameObject("Icon", typeof(RectTransform));
+                iconObj.transform.SetParent(card.transform, false);
+                var iconRect = iconObj.GetComponent<RectTransform>();
+                iconRect.anchorMin = Vector2.zero;
+                iconRect.anchorMax = Vector2.one;
+                iconRect.offsetMin = new Vector2(6f, 6f);
+                iconRect.offsetMax = new Vector2(-6f, -6f);
+                var iconImg = iconObj.AddComponent<Image>();
+                iconImg.sprite = abilityCard.icon;
+                iconImg.color = Color.white;
+                iconImg.preserveAspect = true;
+                iconImg.raycastTarget = false;
+            }
 
             var drag = card.AddComponent<AbilityDragItem>();
             drag.Initialize(name);
+
+            var trigger = card.AddComponent<ItemTooltipTrigger>();
+            trigger.itemName = name;
+        }
+
+        private Sprite FindSlotFrameSprite()
+        {
+            var inputs = UnityEngine.Object.FindObjectsByType<InputField>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var inp in inputs)
+            {
+                var drop = inp.GetComponent<ItemDropSlot>();
+                if (drop != null && drop.GetComponent<Image>() != null)
+                {
+                    return drop.GetComponent<Image>().sprite;
+                }
+            }
+            return null;
+        }
+
+        private RPGTable.Core.AbilityCard FindAbilityCard(string title)
+        {
+            if (string.IsNullOrEmpty(title)) return null;
+            var cards = Resources.LoadAll<RPGTable.Core.AbilityCard>("AbilityCards");
+            foreach (var card in cards)
+            {
+                if (card != null && string.Equals(card.title, title, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    return card;
+                }
+            }
+            return null;
         }
 
         private void ReloadAvailableItems()
@@ -835,6 +872,7 @@ namespace RPGTable.CharacterEditor
                 eqHelmetInput != null ? eqHelmetInput.text : "",
                 eqArmorInput != null ? eqArmorInput.text : "",
                 eqWeaponInput != null ? eqWeaponInput.text : "",
+                eqWeapon2Input != null ? eqWeapon2Input.text : "",
                 eqShieldInput != null ? eqShieldInput.text : "",
                 eqBootsInput != null ? eqBootsInput.text : "",
                 eqAmuletInput != null ? eqAmuletInput.text : "",
@@ -843,7 +881,8 @@ namespace RPGTable.CharacterEditor
                 eqBeltInput != null ? eqBeltInput.text : ""
             };
 
-            RPGTable.Core.ItemCard weaponCard = null;
+            RPGTable.Core.ItemCard weapon1Card = null;
+            RPGTable.Core.ItemCard weapon2Card = null;
 
             foreach (var itemName in equippedNames)
             {
@@ -860,7 +899,14 @@ namespace RPGTable.CharacterEditor
 
                     if (card.itemType == RPGTable.Core.ItemType.Weapon)
                     {
-                        weaponCard = card;
+                        if (itemName == (eqWeaponInput != null ? eqWeaponInput.text : ""))
+                        {
+                            weapon1Card = card;
+                        }
+                        else
+                        {
+                            weapon2Card = card;
+                        }
                     }
                 }
             }
@@ -889,19 +935,152 @@ namespace RPGTable.CharacterEditor
                 maxArmorInput.text = totalArmor.ToString();
             }
 
-            // Update Weapon Stats if a weapon item is equipped!
+            // Update read-only weapon scaling labels
+            UpdateWeaponStatsDisplay(weapon1Card, weapon2Card);
+
+            // Set D6 slots filters based on equipped weapons
+            var type1 = weapon1Card != null ? weapon1Card.attackType : RPGTable.Core.AttackType.Melee;
+            var type2 = weapon2Card != null ? weapon2Card.attackType : RPGTable.Core.AttackType.Melee;
+
+            if (attackSlots != null)
+            {
+                foreach (var slot in attackSlots)
+                {
+                    if (slot != null)
+                    {
+                        slot.allowedType = type1;
+                        if (!string.IsNullOrEmpty(slot.abilityName))
+                        {
+                            var abilityCard = FindAbilityCard(slot.abilityName);
+                            if (abilityCard != null && abilityCard.attackType != type1)
+                            {
+                                slot.SetAbility(string.Empty);
+                                var input = slot.GetComponent<InputField>();
+                                if (input != null) input.text = string.Empty;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (attack2Slots != null)
+            {
+                foreach (var slot in attack2Slots)
+                {
+                    if (slot != null)
+                    {
+                        slot.allowedType = type2;
+                        if (!string.IsNullOrEmpty(slot.abilityName))
+                        {
+                            var abilityCard = FindAbilityCard(slot.abilityName);
+                            if (abilityCard != null && abilityCard.attackType != type2)
+                            {
+                                slot.SetAbility(string.Empty);
+                                var input = slot.GetComponent<InputField>();
+                                if (input != null) input.text = string.Empty;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (defenseSlots != null)
+            {
+                foreach (var slot in defenseSlots)
+                {
+                    if (slot != null)
+                    {
+                        slot.allowedType = RPGTable.Core.AttackType.Defense;
+                    }
+                }
+            }
+
+            // Dynamically refresh the bottom bank skills based on equipped weapons
+            ReloadAvailableAbilities();
+        }
+
+        private void UpdateWeaponStatsDisplay(RPGTable.Core.ItemCard weaponCard, RPGTable.Core.ItemCard weaponCard2)
+        {
             if (weaponCard != null)
             {
-                if (weaponNameInput != null) weaponNameInput.text = weaponCard.title;
-                weaponScaleStat1 = weaponCard.scaleStat1;
-                if (weaponScaleStat1Label != null) weaponScaleStat1Label.text = weaponScaleStat1;
-                if (weaponCoef1Input != null) weaponCoef1Input.text = weaponCard.coef1.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                if (weaponNameLabel != null) weaponNameLabel.text = "Название: " + weaponCard.title;
 
-                weaponScaleStat2 = weaponCard.scaleStat2;
-                if (weaponScaleStat2Label != null) weaponScaleStat2Label.text = weaponScaleStat2;
-                if (weaponCoef2Input != null) weaponCoef2Input.text = weaponCard.coef2.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                var scalingStr = "";
+                if (weaponCard.scaleStat1 != "None" && !string.IsNullOrEmpty(weaponCard.scaleStat1))
+                {
+                    scalingStr += weaponCard.scaleStat1 + " (x" + weaponCard.coef1.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + ")";
+                }
+                if (weaponCard.scaleStat2 != "None" && !string.IsNullOrEmpty(weaponCard.scaleStat2))
+                {
+                    if (scalingStr.Length > 0) scalingStr += " + ";
+                    scalingStr += weaponCard.scaleStat2 + " (x" + weaponCard.coef2.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + ")";
+                }
+                if (string.IsNullOrEmpty(scalingStr)) scalingStr = "Нет скейлинга";
+                if (weaponScalingLabel != null) weaponScalingLabel.text = "Скейлинг: " + scalingStr;
 
-                if (weaponAttributeInput != null) weaponAttributeInput.text = weaponCard.attribute;
+                var attrList = new System.Collections.Generic.List<string>();
+                if (weaponCard.attributes != null && weaponCard.attributes.Count > 0)
+                {
+                    foreach (var a in weaponCard.attributes)
+                    {
+                        if (a != null) attrList.Add(a.attributeName);
+                    }
+                }
+                else if (!string.IsNullOrEmpty(weaponCard.attribute))
+                {
+                    attrList.Add(weaponCard.attribute);
+                }
+                if (weaponAttributesLabel != null)
+                {
+                    weaponAttributesLabel.text = "Свойства: " + (attrList.Count > 0 ? string.Join(", ", attrList) : "Нет");
+                }
+            }
+            else
+            {
+                if (weaponNameLabel != null) weaponNameLabel.text = "Название: Нет оружия 1";
+                if (weaponScalingLabel != null) weaponScalingLabel.text = "Скейлинг: -";
+                if (weaponAttributesLabel != null) weaponAttributesLabel.text = "Свойства: -";
+            }
+
+            if (weaponCard2 != null)
+            {
+                if (weapon2NameLabel != null) weapon2NameLabel.text = "Название: " + weaponCard2.title;
+
+                var scalingStr = "";
+                if (weaponCard2.scaleStat1 != "None" && !string.IsNullOrEmpty(weaponCard2.scaleStat1))
+                {
+                    scalingStr += weaponCard2.scaleStat1 + " (x" + weaponCard2.coef1.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + ")";
+                }
+                if (weaponCard2.scaleStat2 != "None" && !string.IsNullOrEmpty(weaponCard2.scaleStat2))
+                {
+                    if (scalingStr.Length > 0) scalingStr += " + ";
+                    scalingStr += weaponCard2.scaleStat2 + " (x" + weaponCard2.coef2.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + ")";
+                }
+                if (string.IsNullOrEmpty(scalingStr)) scalingStr = "Нет скейлинга";
+                if (weapon2ScalingLabel != null) weapon2ScalingLabel.text = "Скейлинг: " + scalingStr;
+
+                var attrList = new System.Collections.Generic.List<string>();
+                if (weaponCard2.attributes != null && weaponCard2.attributes.Count > 0)
+                {
+                    foreach (var a in weaponCard2.attributes)
+                    {
+                        if (a != null) attrList.Add(a.attributeName);
+                    }
+                }
+                else if (!string.IsNullOrEmpty(weaponCard2.attribute))
+                {
+                    attrList.Add(weaponCard2.attribute);
+                }
+                if (weapon2AttributesLabel != null)
+                {
+                    weapon2AttributesLabel.text = "Свойства: " + (attrList.Count > 0 ? string.Join(", ", attrList) : "Нет");
+                }
+            }
+            else
+            {
+                if (weapon2NameLabel != null) weapon2NameLabel.text = "Название: Нет оружия 2";
+                if (weapon2ScalingLabel != null) weapon2ScalingLabel.text = "Скейлинг: -";
+                if (weapon2AttributesLabel != null) weapon2AttributesLabel.text = "Свойства: -";
             }
         }
 
