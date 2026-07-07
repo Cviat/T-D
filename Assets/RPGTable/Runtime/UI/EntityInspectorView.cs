@@ -49,14 +49,31 @@ namespace RPGTable.Runtime
             if (statsLabel != null)
             {
                 var footprint = tokenData != null ? tokenData.footprintSize : 1;
-                bool melee = charData != null ? charData.melee : false;
-                bool magic = charData != null ? charData.magic : false;
-                bool ranged = charData != null ? charData.ranged : false;
-                bool doubleDmg = charData != null ? charData.doubleDamage : false;
                 
+                var weapon1Card = charData != null ? FindItemCard(charData.eqWeapon) : null;
+                var weapon2Card = charData != null ? FindItemCard(charData.eqWeapon2) : null;
+
+                bool melee = (charData != null) && (
+                    (weapon1Card == null && weapon2Card == null)
+                    || (weapon1Card != null && weapon1Card.attackType == RPGTable.Core.AttackType.Melee)
+                    || (weapon2Card != null && weapon2Card.attackType == RPGTable.Core.AttackType.Melee)
+                );
+                bool ranged = charData != null && (
+                    (weapon1Card != null && weapon1Card.attackType == RPGTable.Core.AttackType.Ranged)
+                    || (weapon2Card != null && weapon2Card.attackType == RPGTable.Core.AttackType.Ranged)
+                );
+                bool magic = charData != null && (
+                    (weapon1Card != null && weapon1Card.attackType == RPGTable.Core.AttackType.Magic)
+                    || (weapon2Card != null && weapon2Card.attackType == RPGTable.Core.AttackType.Magic)
+                );
+
+                string moveStr = CampaignGameSession.IsCombatActive
+                    ? $"{token.CurrentMovementPoints}/{token.MaxMovementPoints}"
+                    : "∞";
+
                 statsLabel.text = $"Размер сетки: {footprint}x{footprint}\n" +
-                                     $"Тип атаки: " + (melee ? "Ближний " : "") + (magic ? "Магия " : "") + (ranged ? "Дальний" : "") + "\n" +
-                                     (doubleDmg ? "Двойной урон: Да" : "Двойной урон: Нет");
+                                  $"Тип атаки: " + (melee ? "Ближний " : "") + (magic ? "Магия " : "") + (ranged ? "Дальний" : "") + "\n" +
+                                  $"Движение: {moveStr}";
             }
 
             if (damageButton != null)
@@ -80,6 +97,20 @@ namespace RPGTable.Runtime
                     }
                 });
             }
+        }
+
+        private RPGTable.Core.ItemCard FindItemCard(string title)
+        {
+            if (string.IsNullOrEmpty(title)) return null;
+            var cards = Resources.LoadAll<RPGTable.Core.ItemCard>("ItemCards");
+            foreach (var card in cards)
+            {
+                if (card != null && string.Equals(card.title, title, StringComparison.OrdinalIgnoreCase))
+                {
+                    return card;
+                }
+            }
+            return null;
         }
     }
 }

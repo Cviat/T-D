@@ -17,10 +17,6 @@ namespace RPGTable.CharacterEditor
         public string[] attackSlots = new string[6];
         public string[] attack2Slots = new string[6];
         public string[] defenseSlots = new string[6];
-        public bool melee;
-        public bool magic;
-        public bool ranged;
-        public bool doubleDamage;
         public string[] abilityImagePaths = Array.Empty<string>();
 
         // New stats & level parameters
@@ -33,21 +29,8 @@ namespace RPGTable.CharacterEditor
         public int intelligence = 10;
         public int holiness = 10;
 
-        // Armor & Weapons
+        // Armor
         public int maxArmor = 0;
-        public string weaponName = "";
-        public string weaponScaleStat1 = "None";
-        public float weaponCoef1 = 0.6f;
-        public string weaponScaleStat2 = "None";
-        public float weaponCoef2 = 0.0f;
-        public string weaponAttribute = "";
-
-        public string weapon2Name = "";
-        public string weapon2ScaleStat1 = "None";
-        public float weapon2Coef1 = 0.6f;
-        public string weapon2ScaleStat2 = "None";
-        public float weapon2Coef2 = 0.0f;
-        public string weapon2Attribute = "";
 
         // Equipment Slots
         public string eqHelmet = "";

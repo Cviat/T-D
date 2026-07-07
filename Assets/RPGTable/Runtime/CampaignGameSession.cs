@@ -30,6 +30,7 @@ namespace RPGTable.Runtime
         public static string SelectedCampaignPath { get; set; }
         public static string PendingTokenPlayerId { get; set; }
         public static string TokenEditorReturnSceneName { get; set; }
+        public static bool IsCombatActive { get; set; } = false;
         public static string PendingCharacterTokenPath { get; set; }
         public static string PendingCharacterDraftName { get; set; }
         public static string PendingCharacterDraftDescription { get; set; }

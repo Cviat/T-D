@@ -104,6 +104,7 @@ namespace RPGTable.Runtime
             grid.width = Mathf.Max(4, Mathf.CeilToInt(mapBounds.size.x / CellSize));
             grid.height = Mathf.Max(4, Mathf.CeilToInt(mapBounds.size.y / CellSize));
             gridObject.AddComponent<BoardGridVisual>();
+            gridObject.AddComponent<RPGTable.Board.GridHighlighter>();
 
             return grid;
         }

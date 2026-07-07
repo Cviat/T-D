@@ -15,5 +15,7 @@ namespace RPGTable.Runtime
         public bool IsDead { get; set; }
         public int MaxHp { get; set; }
         public int CurrentHp { get; set; }
+        public int MaxMovementPoints { get; set; } = 3;
+        public int CurrentMovementPoints { get; set; } = 3;
     }
 }

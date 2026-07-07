@@ -42,6 +42,7 @@ namespace RPGTable.Runtime
         private Action onPromptCancelCallback;
 
         private static Sprite defaultUiSprite;
+        private CampaignRuntimeToken selectedToken;
 
         public bool IsPromptVisible => promptPanel != null && promptPanel.activeSelf;
 
@@ -70,6 +71,7 @@ namespace RPGTable.Runtime
                 if (bottomToolsView != null)
                 {
                     playerViewControlButton = bottomToolsView.playerViewCameraButton.gameObject;
+                    CreateCombatToggleButton(bottomToolsView);
                 }
 
                 uiManager.Initialize(onPromptConfirm, onPromptCancel, onTogglePVCamera, onBankTokenSelected);
@@ -341,6 +343,7 @@ namespace RPGTable.Runtime
 
                public void RefreshEntityInspector(CampaignRuntimeToken token)
         {
+            selectedToken = token;
             if (rightInspectorRoot == null) return;
             if (token == null)
             {
@@ -374,6 +377,24 @@ namespace RPGTable.Runtime
         private void ApplyDamage(CampaignRuntimeToken token, int amount)
         {
             if (token == null) return;
+
+            if (!CampaignGameSession.IsCombatActive && amount > 0)
+            {
+                CampaignGameSession.IsCombatActive = true;
+                var combatBtn = GameObject.Find("Combat Toggle Button");
+                if (combatBtn != null)
+                {
+                    var btn = combatBtn.GetComponent<Button>();
+                    var text = combatBtn.GetComponentInChildren<Text>();
+                    UpdateCombatButtonState(btn, text);
+                }
+
+                if (RPGTable.Board.GridHighlighter.Instance != null)
+                {
+                    RPGTable.Board.GridHighlighter.Instance.HighlightTokenRanges(token);
+                }
+            }
+
             token.CurrentHp = Mathf.Max(0, token.CurrentHp - amount);
 
             var loader = GameObject.FindAnyObjectByType<CampaignGameLoader>();
@@ -678,6 +699,80 @@ namespace RPGTable.Runtime
             rect.offsetMin = offsetMin;
             rect.offsetMax = offsetMax;
             return rect;
+        }
+
+        private void CreateCombatToggleButton(GMBottomToolsView bottomTools)
+        {
+            if (bottomTools == null || bottomTools.playerViewCameraButton == null) return;
+
+            var camBtn = bottomTools.playerViewCameraButton;
+            var combatBtnGo = UnityEngine.Object.Instantiate(camBtn.gameObject, camBtn.transform.parent, false);
+            combatBtnGo.name = "Combat Toggle Button";
+            
+            combatBtnGo.transform.SetSiblingIndex(camBtn.transform.GetSiblingIndex() + 1);
+
+            var text = combatBtnGo.GetComponentInChildren<Text>();
+            if (text == null)
+            {
+                var textObj = new GameObject("Label", typeof(RectTransform));
+                textObj.transform.SetParent(combatBtnGo.transform, false);
+                var textRect = textObj.GetComponent<RectTransform>();
+                textRect.anchorMin = Vector2.zero;
+                textRect.anchorMax = Vector2.one;
+                textRect.offsetMin = Vector2.zero;
+                textRect.offsetMax = Vector2.zero;
+                text = textObj.AddComponent<Text>();
+                text.alignment = TextAnchor.MiddleCenter;
+                text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                text.fontStyle = FontStyle.Bold;
+                text.fontSize = 14;
+                text.color = Color.white;
+            }
+            
+            var btn = combatBtnGo.GetComponent<Button>();
+            btn.onClick.RemoveAllListeners();
+            btn.onClick.AddListener(() => ToggleCombatActiveState(btn, text));
+
+            UpdateCombatButtonState(btn, text);
+        }
+
+        private void ToggleCombatActiveState(Button btn, Text text)
+        {
+            CampaignGameSession.IsCombatActive = !CampaignGameSession.IsCombatActive;
+            UpdateCombatButtonState(btn, text);
+            
+            if (selectedToken != null)
+            {
+                RefreshEntityInspector(selectedToken);
+                if (RPGTable.Board.GridHighlighter.Instance != null)
+                {
+                    RPGTable.Board.GridHighlighter.Instance.HighlightTokenRanges(selectedToken);
+                }
+            }
+            else
+            {
+                if (RPGTable.Board.GridHighlighter.Instance != null)
+                {
+                    RPGTable.Board.GridHighlighter.Instance.Clear();
+                }
+            }
+        }
+
+        private void UpdateCombatButtonState(Button btn, Text text)
+        {
+            bool active = CampaignGameSession.IsCombatActive;
+            if (text != null)
+            {
+                text.text = active ? "Бой: ВКЛ" : "Бой: ВЫКЛ";
+            }
+
+            var image = btn.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = active
+                    ? new Color(0.6f, 0.15f, 0.15f, 1f)
+                    : new Color(0.2f, 0.2f, 0.2f, 1f);
+            }
         }
     }
 }

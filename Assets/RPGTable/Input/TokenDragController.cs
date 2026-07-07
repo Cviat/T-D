@@ -15,6 +15,7 @@ namespace RPGTable.Input
         private Camera mainCamera;
         private Vector3 dragOffset;
         private bool dragging;
+        private Vector2Int startGridPos;
 
         private void Awake()
         {
@@ -41,6 +42,7 @@ namespace RPGTable.Input
 
             dragging = true;
             dragOffset = transform.position - MouseWorldPosition();
+            startGridPos = token.gridPosition;
 
             var runtimeToken = GetComponent<RPGTable.Runtime.CampaignRuntimeToken>();
             if (runtimeToken != null)
@@ -92,6 +94,26 @@ namespace RPGTable.Input
             }
 
             token.SnapToGrid(activeGrid);
+
+            var runtimeToken = GetComponent<RPGTable.Runtime.CampaignRuntimeToken>();
+            if (runtimeToken != null)
+            {
+                int distance = Mathf.Max(Mathf.Abs(token.gridPosition.x - startGridPos.x), Mathf.Abs(token.gridPosition.y - startGridPos.y));
+                if (distance > 0 && RPGTable.Runtime.CampaignGameSession.IsCombatActive)
+                {
+                    runtimeToken.CurrentMovementPoints = Mathf.Max(0, runtimeToken.CurrentMovementPoints - distance);
+                }
+
+#if UNITY_2023_1_OR_NEWER
+                var loader = FindFirstObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+#else
+                var loader = FindObjectOfType<RPGTable.Runtime.CampaignGameLoader>();
+#endif
+                if (loader != null)
+                {
+                    loader.SelectRuntimeToken(runtimeToken);
+                }
+            }
         }
 
         private Vector3 MouseWorldPosition()

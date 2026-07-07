@@ -202,6 +202,11 @@ namespace RPGTable.Runtime
             context.SelectedToken = runtimeToken;
             ui.RefreshEntityInspector(runtimeToken);
             ui.RefreshActiveTokensPanel();
+
+            if (RPGTable.Board.GridHighlighter.Instance != null)
+            {
+                RPGTable.Board.GridHighlighter.Instance.HighlightTokenRanges(runtimeToken);
+            }
         }
 
         public void DeleteRuntimeToken(CampaignRuntimeToken runtimeToken)

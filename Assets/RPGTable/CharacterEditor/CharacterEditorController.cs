@@ -457,10 +457,6 @@ namespace RPGTable.CharacterEditor
                 attackSlots = ReadSlots(attackSlots),
                 attack2Slots = ReadSlots(attack2Slots),
                 defenseSlots = ReadSlots(defenseSlots),
-                melee = calcMelee,
-                magic = calcMagic,
-                ranged = calcRanged,
-                doubleDamage = false,
                 abilityImagePaths = Array.Empty<string>(),
 
                 // Save Stats & Level
@@ -472,21 +468,8 @@ namespace RPGTable.CharacterEditor
                 intelligence = intelligence,
                 holiness = holiness,
 
-                // Save Armor & Weapon
+                // Save Armor
                 maxArmor = armorVal,
-                weaponName = eqWeaponInput != null ? eqWeaponInput.text : "",
-                weaponScaleStat1 = weapon1Card != null ? weapon1Card.scaleStat1 : "None",
-                weaponCoef1 = weapon1Card != null ? weapon1Card.coef1 : 0.0f,
-                weaponScaleStat2 = weapon1Card != null ? weapon1Card.scaleStat2 : "None",
-                weaponCoef2 = weapon1Card != null ? weapon1Card.coef2 : 0.0f,
-                weaponAttribute = weapon1Card != null ? (weapon1Card.attributes != null && weapon1Card.attributes.Count > 0 ? weapon1Card.attributes[0].attributeName : weapon1Card.attribute) : "",
-
-                weapon2Name = eqWeapon2Input != null ? eqWeapon2Input.text : "",
-                weapon2ScaleStat1 = weapon2Card != null ? weapon2Card.scaleStat1 : "None",
-                weapon2Coef1 = weapon2Card != null ? weapon2Card.coef1 : 0.0f,
-                weapon2ScaleStat2 = weapon2Card != null ? weapon2Card.scaleStat2 : "None",
-                weapon2Coef2 = weapon2Card != null ? weapon2Card.coef2 : 0.0f,
-                weapon2Attribute = weapon2Card != null ? (weapon2Card.attributes != null && weapon2Card.attributes.Count > 0 ? weapon2Card.attributes[0].attributeName : weapon2Card.attribute) : "",
 
                 // Save Equipment Slots
                 eqHelmet = eqHelmetInput == null ? "" : eqHelmetInput.text,
