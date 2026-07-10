@@ -1,0 +1,10 @@
+.character-card {
+    width: 100%;
+    color: var(--text);
+    text-align: left;
+}
+
+.character-card strong {
+    display: block;
+    margin-bottom: 2px;
+}

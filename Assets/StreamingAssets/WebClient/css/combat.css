@@ -1,0 +1,82 @@
+.game-top {
+    display: grid;
+    grid-template-columns: 54px 1fr 44px;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.combat-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.combat-stats div {
+    padding: 10px 6px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    text-align: center;
+}
+
+.combat-stats span {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.targets-container {
+    min-height: 62px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.target-avatar {
+    width: 58px;
+    height: 58px;
+    border: 2px solid var(--danger);
+    border-radius: 50%;
+    background: #15181d center / cover no-repeat;
+}
+
+.dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 76px);
+    grid-template-rows: repeat(3, 76px);
+    gap: 8px;
+    justify-content: center;
+    margin: 18px 0;
+}
+
+.dpad-button {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    color: var(--text);
+    background: var(--surface-2);
+    font-size: 24px;
+}
+
+.dpad-center {
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.game-footer {
+    position: sticky;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    padding: 10px 0 0;
+    background: var(--bg);
+}
+
+.game-footer .button {
+    min-height: 42px;
+    font-size: 13px;
+}

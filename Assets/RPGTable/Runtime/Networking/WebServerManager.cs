@@ -28,7 +28,9 @@ namespace RPGTable.Runtime.Networking
             public string id;
             public string name;
             public string characterPath;
+            public string portraitPath;
             public string tokenPath;
+            public bool isReady;
         }
 
         [Serializable]
@@ -38,6 +40,34 @@ namespace RPGTable.Runtime.Networking
             public string description;
             public string photoBase64;
             public string tokenId;
+        }
+
+        [Serializable]
+        public class RegisterPayload
+        {
+            public string name;
+            public string photoBase64;
+        }
+
+        [Serializable]
+        public class ImportCharacterPayload
+        {
+            public string playerId;
+            public string characterPath;
+            public bool usePlayerPhoto;
+        }
+
+        [Serializable]
+        public class ReadyPayload
+        {
+            public string playerId;
+            public bool ready;
+        }
+
+        [Serializable]
+        public class CameraFocusPayload
+        {
+            public string playerId;
         }
 
         [Serializable]
@@ -138,6 +168,141 @@ namespace RPGTable.Runtime.Networking
             }
             
             cachedTokensJson = "[" + string.Join(",", tokens) + "]";
+        }
+
+        private static string JsonString(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return "";
+            }
+
+            return value
+                .Replace("\\", "\\\\")
+                .Replace("\"", "\\\"")
+                .Replace("\r", "\\r")
+                .Replace("\n", "\\n");
+        }
+
+        private string SavePlayerPhoto(string playerName, string photoBase64, string playerId)
+        {
+            if (string.IsNullOrWhiteSpace(photoBase64))
+            {
+                return null;
+            }
+
+            if (photoBase64.Contains(","))
+            {
+                photoBase64 = photoBase64.Substring(photoBase64.IndexOf(",") + 1);
+            }
+
+            byte[] photoBytes = Convert.FromBase64String(photoBase64);
+            string safeName = string.Join("_", (playerName ?? "player").Split(System.IO.Path.GetInvalidFileNameChars()));
+            string photoPath = System.IO.Path.Combine(cachedTokenImagesFolder, $"player_photo_{safeName}_{playerId}.jpg");
+            System.IO.File.WriteAllBytes(photoPath, photoBytes);
+            return photoPath;
+        }
+
+        private ConnectedPlayer FindConnectedPlayer(string playerId)
+        {
+            if (string.IsNullOrWhiteSpace(playerId))
+            {
+                return null;
+            }
+
+            return ConnectedPlayers.Find(player => player.id == playerId);
+        }
+
+        private static bool TryFindRuntimeTokenByPlayerId(string playerId, out RPGTable.Runtime.CampaignRuntimeToken runtimeToken)
+        {
+            runtimeToken = null;
+            var tokens = GameObject.FindObjectsByType<RPGTable.Runtime.CampaignRuntimeToken>(FindObjectsInactive.Exclude);
+            foreach (var token in tokens)
+            {
+                if (token != null
+                    && !token.IsPlayerViewClone
+                    && !token.IsDead
+                    && token.PlayerId == playerId)
+                {
+                    runtimeToken = token;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryMovePlayerToken(string playerId, int dirX, int dirY)
+        {
+            if (dirX == 0 && dirY == 0)
+            {
+                return false;
+            }
+
+            if (!TryFindRuntimeTokenByPlayerId(playerId, out var runtimeToken))
+            {
+                return false;
+            }
+
+            if (RPGTable.Runtime.CampaignGameSession.IsCombatActive)
+            {
+                if (RPGTable.Runtime.CombatManager.Instance == null
+                    || RPGTable.Runtime.CombatManager.Instance.ActiveToken != runtimeToken
+                    || runtimeToken.CurrentMovementPoints <= 0)
+                {
+                    return false;
+                }
+            }
+
+            var boardToken = runtimeToken.GetComponent<RPGTable.Core.BoardToken>();
+            var grid = GameObject.FindAnyObjectByType<RPGTable.Board.BoardGrid>();
+            if (boardToken == null || grid == null)
+            {
+                return false;
+            }
+
+            var size = Mathf.Max(1, boardToken.footprintSize);
+            var next = boardToken.gridPosition + new Vector2Int(Mathf.Clamp(dirX, -1, 1), Mathf.Clamp(dirY, -1, 1));
+            next.x = Mathf.Clamp(next.x, 0, Mathf.Max(0, grid.width - size));
+            next.y = Mathf.Clamp(next.y, 0, Mathf.Max(0, grid.height - size));
+
+            int distance = Mathf.Max(Mathf.Abs(next.x - boardToken.gridPosition.x), Mathf.Abs(next.y - boardToken.gridPosition.y));
+            if (distance <= 0)
+            {
+                return false;
+            }
+
+            if (RPGTable.Runtime.CampaignGameSession.IsCombatActive && distance > runtimeToken.CurrentMovementPoints)
+            {
+                return false;
+            }
+
+            boardToken.gridPosition = next;
+            var offset = new Vector3((size - 1) * grid.cellSize * 0.5f, (size - 1) * grid.cellSize * 0.5f, 0f);
+            runtimeToken.transform.position = grid.CellToWorld(next) + offset;
+
+            if (RPGTable.Runtime.CampaignGameSession.IsCombatActive)
+            {
+                runtimeToken.CurrentMovementPoints = Mathf.Max(0, runtimeToken.CurrentMovementPoints - distance);
+            }
+
+            var player = RPGTable.Runtime.CampaignGameSession.FindPlayer(playerId);
+            if (player != null)
+            {
+                player.gridX = next.x;
+                player.gridY = next.y;
+                player.currentHp = runtimeToken.CurrentHp;
+                player.maxHp = runtimeToken.MaxHp;
+            }
+
+            var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+            if (loader != null && loader.UI != null)
+            {
+                loader.UI.RefreshActiveTokensPanel();
+                loader.UI.RefreshEntityInspector(runtimeToken);
+            }
+
+            return true;
         }
 
         private float nextTokenRefreshTime = 0f;
@@ -324,6 +489,242 @@ namespace RPGTable.Runtime.Networking
 
         private void ProcessApiRequest(string method, string url, string requestStr, NetworkStream stream)
         {
+            if (method == "POST" && url == "/api/session/register")
+            {
+                try
+                {
+                    var payload = JsonUtility.FromJson<RegisterPayload>(requestStr);
+                    if (payload == null || string.IsNullOrWhiteSpace(payload.name) || string.IsNullOrWhiteSpace(payload.photoBase64))
+                    {
+                        SendResponse(stream, 400, "Bad Request", "text/plain", Encoding.UTF8.GetBytes("Invalid payload"));
+                        return;
+                    }
+
+                    string playerId = null;
+                    string photoPath = null;
+
+                    ExecuteOnMainThreadBlocking(() =>
+                    {
+                        playerId = Guid.NewGuid().ToString("N");
+                        photoPath = SavePlayerPhoto(payload.name, payload.photoBase64, playerId);
+                        var sessionPlayer = RPGTable.Runtime.CampaignGameSession.AddRegisteredPlayer(payload.name, photoPath);
+                        playerId = sessionPlayer.id;
+
+                        ConnectedPlayers.Add(new ConnectedPlayer
+                        {
+                            id = playerId,
+                            name = payload.name,
+                            portraitPath = photoPath,
+                            characterPath = null,
+                            tokenPath = null,
+                            isReady = false
+                        });
+                    });
+
+                    string portraitUrl = string.IsNullOrWhiteSpace(photoPath)
+                        ? ""
+                        : $"/api/image?path={Convert.ToBase64String(Encoding.UTF8.GetBytes(photoPath))}";
+                    string responseJson = $"{{\"status\":\"success\",\"playerId\":\"{JsonString(playerId)}\",\"name\":\"{JsonString(payload.name)}\",\"portraitUrl\":\"{JsonString(portraitUrl)}\",\"hasCharacter\":false,\"isReady\":false}}";
+                    SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(responseJson));
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[WebServerManager] /api/session/register error: {ex}");
+                    SendResponse(stream, 500, "Internal Server Error", "text/plain", Encoding.UTF8.GetBytes(ex.Message));
+                }
+                return;
+            }
+
+            if (method == "GET" && url.StartsWith("/api/session/restore?playerId="))
+            {
+                string playerId = Uri.UnescapeDataString(url.Substring("/api/session/restore?playerId=".Length));
+                string json = "{\"status\":\"missing\"}";
+
+                ExecuteOnMainThreadBlocking(() =>
+                {
+                    var player = RPGTable.Runtime.CampaignGameSession.FindPlayer(playerId);
+                    if (player == null)
+                    {
+                        return;
+                    }
+
+                    string portraitUrl = string.IsNullOrWhiteSpace(player.portraitPath)
+                        ? ""
+                        : $"/api/image?path={Convert.ToBase64String(Encoding.UTF8.GetBytes(player.portraitPath))}";
+                    json = $"{{\"status\":\"success\",\"playerId\":\"{JsonString(player.id)}\",\"name\":\"{JsonString(player.name)}\",\"portraitUrl\":\"{JsonString(portraitUrl)}\",\"hasCharacter\":{(!string.IsNullOrWhiteSpace(player.characterPath)).ToString().ToLowerInvariant()},\"isReady\":{player.isReady.ToString().ToLowerInvariant()},\"gameStarted\":{GameStarted.ToString().ToLowerInvariant()}}}";
+                });
+
+                SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(json));
+                return;
+            }
+
+            if (method == "GET" && url == "/api/lobby/state")
+            {
+                string json = "{}";
+
+                ExecuteOnMainThreadBlocking(() =>
+                {
+                    var playersJson = new List<string>();
+                    foreach (var player in RPGTable.Runtime.CampaignGameSession.CurrentPlayers)
+                    {
+                        string portraitUrl = string.IsNullOrWhiteSpace(player.portraitPath)
+                            ? ""
+                            : $"/api/image?path={Convert.ToBase64String(Encoding.UTF8.GetBytes(player.portraitPath))}";
+                        bool hasCharacter = !string.IsNullOrWhiteSpace(player.characterPath);
+                        playersJson.Add($"{{\"id\":\"{JsonString(player.id)}\",\"name\":\"{JsonString(player.name)}\",\"portraitUrl\":\"{JsonString(portraitUrl)}\",\"hasCharacter\":{hasCharacter.ToString().ToLowerInvariant()},\"isReady\":{player.isReady.ToString().ToLowerInvariant()}}}");
+                    }
+
+                    string selectedCampaign = RPGTable.Runtime.CampaignGameSession.SelectedCampaignPath ?? "";
+                    json = $"{{\"gameStarted\":{GameStarted.ToString().ToLowerInvariant()},\"selectedCampaign\":\"{JsonString(selectedCampaign)}\",\"players\":[{string.Join(",", playersJson)}]}}";
+                });
+
+                SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(json));
+                return;
+            }
+
+            if (method == "GET" && url == "/api/characters")
+            {
+                string json = "[]";
+
+                ExecuteOnMainThreadBlocking(() =>
+                {
+                    var entries = new List<string>();
+                    foreach (var path in RPGTable.CharacterEditor.UserCharacterStore.GetCharacterPaths())
+                    {
+                        var character = RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(path);
+                        if (character == null)
+                        {
+                            continue;
+                        }
+
+                        string id = Convert.ToBase64String(Encoding.UTF8.GetBytes(path));
+                        string portraitUrl = string.IsNullOrWhiteSpace(character.portraitPath)
+                            ? ""
+                            : $"/api/image?path={Convert.ToBase64String(Encoding.UTF8.GetBytes(character.portraitPath))}";
+                        entries.Add($"{{\"id\":\"{JsonString(id)}\",\"name\":\"{JsonString(character.name)}\",\"portraitUrl\":\"{JsonString(portraitUrl)}\",\"level\":{character.level}}}");
+                    }
+
+                    json = "[" + string.Join(",", entries) + "]";
+                });
+
+                SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(json));
+                return;
+            }
+
+            if (method == "POST" && url == "/api/character/import")
+            {
+                try
+                {
+                    var payload = JsonUtility.FromJson<ImportCharacterPayload>(requestStr);
+                    if (payload == null || string.IsNullOrWhiteSpace(payload.playerId) || string.IsNullOrWhiteSpace(payload.characterPath))
+                    {
+                        SendResponse(stream, 400, "Bad Request", "text/plain", Encoding.UTF8.GetBytes("Invalid payload"));
+                        return;
+                    }
+
+                    bool success = false;
+                    ExecuteOnMainThreadBlocking(() =>
+                    {
+                        string characterPath = payload.characterPath;
+                        try
+                        {
+                            characterPath = Encoding.UTF8.GetString(Convert.FromBase64String(Uri.UnescapeDataString(payload.characterPath)));
+                        }
+                        catch
+                        {
+                            // Already a raw path.
+                        }
+
+                        var character = RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(characterPath);
+                        var player = RPGTable.Runtime.CampaignGameSession.FindPlayer(payload.playerId);
+                        if (character == null || player == null)
+                        {
+                            return;
+                        }
+
+                        string portraitPath = payload.usePlayerPhoto && !string.IsNullOrWhiteSpace(player.portraitPath)
+                            ? player.portraitPath
+                            : character.portraitPath;
+
+                        success = RPGTable.Runtime.CampaignGameSession.AssignCharacterToPlayer(
+                            payload.playerId,
+                            characterPath,
+                            character.name,
+                            portraitPath,
+                            character.tokenPath);
+
+                        var connected = FindConnectedPlayer(payload.playerId);
+                        if (connected != null)
+                        {
+                            connected.name = character.name;
+                            connected.characterPath = characterPath;
+                            connected.portraitPath = portraitPath;
+                            connected.tokenPath = character.tokenPath;
+                            connected.isReady = success;
+                        }
+                    });
+
+                    if (!success)
+                    {
+                        SendResponse(stream, 404, "Not Found", "text/plain", Encoding.UTF8.GetBytes("Character or player not found"));
+                        return;
+                    }
+
+                    SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes("{\"status\":\"success\"}"));
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[WebServerManager] /api/character/import error: {ex}");
+                    SendResponse(stream, 500, "Internal Server Error", "text/plain", Encoding.UTF8.GetBytes(ex.Message));
+                }
+                return;
+            }
+
+            if (method == "POST" && url == "/api/player/ready")
+            {
+                var payload = JsonUtility.FromJson<ReadyPayload>(requestStr);
+                if (payload == null || string.IsNullOrWhiteSpace(payload.playerId))
+                {
+                    SendResponse(stream, 400, "Bad Request", "text/plain", Encoding.UTF8.GetBytes("Invalid payload"));
+                    return;
+                }
+
+                ExecuteOnMainThreadBlocking(() =>
+                {
+                    RPGTable.Runtime.CampaignGameSession.SetPlayerReady(payload.playerId, payload.ready);
+                    var connected = FindConnectedPlayer(payload.playerId);
+                    if (connected != null)
+                    {
+                        connected.isReady = payload.ready;
+                    }
+                });
+
+                SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes("{\"status\":\"success\"}"));
+                return;
+            }
+
+            if (method == "POST" && url == "/api/camera/focus")
+            {
+                var payload = JsonUtility.FromJson<CameraFocusPayload>(requestStr);
+                if (payload == null || string.IsNullOrWhiteSpace(payload.playerId))
+                {
+                    SendResponse(stream, 400, "Bad Request", "text/plain", Encoding.UTF8.GetBytes("Invalid payload"));
+                    return;
+                }
+
+                ExecuteOnMainThreadBlocking(() =>
+                {
+                    var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+                    if (loader != null)
+                    {
+                        loader.FocusPlayerViewOnPlayer(payload.playerId);
+                    }
+                });
+
+                SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes("{\"status\":\"success\"}"));
+                return;
+            }
+
             if (method == "GET" && url == "/api/lobby/tokens")
             {
                 SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(cachedTokensJson));
@@ -407,7 +808,9 @@ namespace RPGTable.Runtime.Networking
                             id = playerId,
                             name = payload.name,
                             characterPath = characterPath,
-                            tokenPath = decodedTokenPath
+                            portraitPath = photoPath,
+                            tokenPath = decodedTokenPath,
+                            isReady = true
                         });
                     });
 
@@ -437,38 +840,16 @@ namespace RPGTable.Runtime.Networking
                     var payload = JsonUtility.FromJson<MovePayload>(requestStr);
                     if (payload != null && !string.IsNullOrEmpty(payload.playerId))
                     {
-                        ExecuteOnMainThreadBlocking(() => {
-                            var tokens = GameObject.FindObjectsByType<RPGTable.Runtime.CampaignRuntimeToken>(FindObjectsInactive.Exclude);
-                            foreach (var t in tokens)
-                            {
-                                if (t.PlayerId == payload.playerId)
-                                {
-                                    var boardToken = t.GetComponent<RPGTable.Core.BoardToken>();
-                                    var gridObj = GameObject.Find("Board Grid");
-                                    if (boardToken != null && gridObj != null)
-                                    {
-                                        var grid = gridObj.GetComponent<RPGTable.Board.BoardGrid>();
-                                        if (grid != null)
-                                        {
-                                            boardToken.gridPosition += new Vector2Int(payload.dirX, payload.dirY);
-                                            // Clamp position
-                                            var size = Mathf.Max(1, boardToken.footprintSize);
-                                            boardToken.gridPosition.x = Mathf.Clamp(boardToken.gridPosition.x, 0, Mathf.Max(0, grid.width - size));
-                                            boardToken.gridPosition.y = Mathf.Clamp(boardToken.gridPosition.y, 0, Mathf.Max(0, grid.height - size));
-                                            
-                                            var offset = new Vector3((size - 1) * grid.cellSize * 0.5f, (size - 1) * grid.cellSize * 0.5f, 0f);
-                                            var newWorldPos = grid.CellToWorld(boardToken.gridPosition) + offset;
-                                            
-                                            var mover = boardToken.GetComponent<RPGTable.Runtime.PlayerViewTokenMover>();
-                                            if (mover == null) mover = boardToken.gameObject.AddComponent<RPGTable.Runtime.PlayerViewTokenMover>();
-                                            mover.Initialize(newWorldPos);
-                                        }
-                                    }
-                                    break;
-                                }
-                            }
+                        bool moved = false;
+                        ExecuteOnMainThreadBlocking(() =>
+                        {
+                            moved = TryMovePlayerToken(payload.playerId, payload.dirX, payload.dirY);
                         });
-                        SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes("{\"status\":\"success\"}"));
+
+                        string responseJson = moved
+                            ? "{\"status\":\"success\"}"
+                            : "{\"status\":\"blocked\"}";
+                        SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(responseJson));
                     }
                 }
                 catch (Exception ex)
@@ -484,7 +865,7 @@ namespace RPGTable.Runtime.Networking
                 string json = "{}";
                 string promptText = null;
                 var enemiesJson = new List<string>();
-                string playerHpJson = "";
+                string playerStateJson = "";
 
                 ExecuteOnMainThreadBlocking(() => {
 #if UNITY_2023_1_OR_NEWER
@@ -509,7 +890,44 @@ namespace RPGTable.Runtime.Networking
                         var myRuntimeToken = myBoardToken.GetComponent<RPGTable.Runtime.CampaignRuntimeToken>();
                         if (myRuntimeToken != null)
                         {
-                            playerHpJson = $"\"hp\":{myRuntimeToken.CurrentHp}, \"maxHp\":{myRuntimeToken.MaxHp}, ";
+                            var charData = string.IsNullOrWhiteSpace(myRuntimeToken.CharacterPath)
+                                ? null
+                                : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(myRuntimeToken.CharacterPath);
+                            string activeWeapon = "";
+                            if (charData != null)
+                            {
+                                activeWeapon = myRuntimeToken.ActiveWeaponIndex == 0 ? charData.eqWeapon : charData.eqWeapon2;
+                            }
+
+                            var statusJson = new List<string>();
+                            foreach (var effect in myRuntimeToken.statusEffects)
+                            {
+                                if (effect == null)
+                                {
+                                    continue;
+                                }
+
+                                statusJson.Add($"{{\"name\":\"{JsonString(effect.effectName)}\",\"turns\":{effect.durationTurns},\"value\":{effect.value}}}");
+                            }
+
+                            bool isMyTurn = RPGTable.Runtime.CampaignGameSession.IsCombatActive
+                                && RPGTable.Runtime.CombatManager.Instance != null
+                                && RPGTable.Runtime.CombatManager.Instance.ActiveToken == myRuntimeToken;
+
+                            playerStateJson =
+                                $"\"hp\":{myRuntimeToken.CurrentHp}," +
+                                $"\"maxHp\":{myRuntimeToken.MaxHp}," +
+                                $"\"armor\":{myRuntimeToken.CurrentArmor}," +
+                                $"\"maxArmor\":{myRuntimeToken.MaxArmor}," +
+                                $"\"movement\":{myRuntimeToken.CurrentMovementPoints}," +
+                                $"\"maxMovement\":{myRuntimeToken.MaxMovementPoints}," +
+                                $"\"rolls\":{myRuntimeToken.CurrentRolls}," +
+                                $"\"maxRolls\":{myRuntimeToken.MaxRolls}," +
+                                $"\"activeWeapon\":\"{JsonString(activeWeapon)}\"," +
+                                $"\"activeWeaponIndex\":{myRuntimeToken.ActiveWeaponIndex}," +
+                                $"\"isMyTurn\":{isMyTurn.ToString().ToLowerInvariant()}," +
+                                $"\"isCombatActive\":{RPGTable.Runtime.CampaignGameSession.IsCombatActive.ToString().ToLowerInvariant()}," +
+                                $"\"statuses\":[{string.Join(",", statusJson)}],";
                         }
 
                         foreach (var targetBoardToken in allBoardTokens)
@@ -575,11 +993,11 @@ namespace RPGTable.Runtime.Networking
 
                 if (!string.IsNullOrEmpty(promptText))
                 {
-                    json = $"{{{playerHpJson}\"prompt\":\"{promptText.Replace("\"", "\\\"")}\", \"enemies\":[{string.Join(",", enemiesJson)}]}}";
+                    json = $"{{{playerStateJson}\"prompt\":\"{JsonString(promptText)}\", \"enemies\":[{string.Join(",", enemiesJson)}]}}";
                 }
                 else
                 {
-                    json = $"{{{playerHpJson}\"enemies\":[{string.Join(",", enemiesJson)}]}}";
+                    json = $"{{{playerStateJson}\"enemies\":[{string.Join(",", enemiesJson)}]}}";
                 }
                 
                 SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(json));

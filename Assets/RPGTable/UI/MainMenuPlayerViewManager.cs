@@ -199,7 +199,12 @@ namespace RPGTable.UI
                     {
                         var p = players[i];
                         Sprite portrait = null;
-                        if (!string.IsNullOrEmpty(p.characterPath))
+                        if (!string.IsNullOrEmpty(p.portraitPath))
+                        {
+                            portrait = RPGTable.TokenEditor.UserTokenStore.LoadSprite(p.portraitPath);
+                        }
+
+                        if (portrait == null && !string.IsNullOrEmpty(p.characterPath))
                         {
                             var charData = RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(p.characterPath);
                             if (charData != null && !string.IsNullOrEmpty(charData.portraitPath))

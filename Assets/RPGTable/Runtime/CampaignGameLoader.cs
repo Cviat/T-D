@@ -173,6 +173,11 @@ namespace RPGTable.Runtime
             pvManager.RefreshPlayerView(true);
         }
 
+        public void FocusPlayerViewOnPlayer(string playerId)
+        {
+            SelectPlayer(CampaignGameSession.FindPlayer(playerId));
+        }
+
         public string PendingTransitionPlayerId => transitionController.PendingPlayerId;
         public string PendingTransitionPrompt => transitionController.PendingPromptText;
 

@@ -1,0 +1,50 @@
+.player-list,
+.card-list {
+    display: grid;
+    gap: 10px;
+}
+
+.player-card,
+.character-card {
+    display: grid;
+    grid-template-columns: 54px 1fr;
+    gap: 12px;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.player-card.not-ready {
+    filter: grayscale(1);
+    opacity: 0.65;
+}
+
+.player-card .avatar,
+.character-card .avatar {
+    width: 54px;
+    height: 54px;
+}
+
+.status-pill {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    color: #15120b;
+    background: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.status-pill.ready {
+    background: var(--ready);
+}
+
+.check-row {
+    display: grid;
+    grid-template-columns: 22px 1fr;
+    gap: 8px;
+    align-items: center;
+}

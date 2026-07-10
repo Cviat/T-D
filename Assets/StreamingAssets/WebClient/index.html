@@ -3,126 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>RPG Table Lobby</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <title>RPG Table Controller</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/lobby.css">
+    <link rel="stylesheet" href="css/combat.css">
+    <link rel="stylesheet" href="css/character-editor.css">
 </head>
 <body>
-    <div class="container">
-        <!-- Экран входа / создания персонажа -->
-        <div id="join-screen" class="screen active">
-            <h1 class="glow-text">RPG TABLE</h1>
-            <p class="subtitle">Подключение к столу</p>
+    <main class="app-shell">
+        <section id="screen-register" class="screen active">
+            <header class="screen-header">
+                <p class="eyebrow">RPG Table</p>
+                <h1>Подключение к столу</h1>
+                <p class="muted">Введите имя и фото. Персонажа выберем следующим шагом.</p>
+            </header>
 
-            <form id="join-form">
-                <div class="input-group">
-                    <label for="player-name">Имя персонажа</label>
-                    <input type="text" id="player-name" placeholder="Например: Гэндальф" required autocomplete="off">
-                </div>
+            <form id="register-form" class="panel">
+                <label class="field">
+                    <span>Имя игрока</span>
+                    <input id="player-name" type="text" placeholder="Например: Андрей" required autocomplete="off">
+                </label>
 
-                <div class="input-group">
-                    <label for="player-desc">Описание (кратко)</label>
-                    <textarea id="player-desc" placeholder="Мудрый маг с длинной бородой..."></textarea>
-                </div>
+                <label class="field">
+                    <span>Фото</span>
+                    <input id="player-photo" type="file" accept="image/*" required>
+                </label>
 
-                <div class="input-group">
-                    <label for="player-photo">Ваше фото (аватар)</label>
-                    <input type="file" id="player-photo" accept="image/*" required>
-                    <div id="photo-preview-container" class="photo-preview-container" style="display:none;">
-                        <img id="photo-preview-img" class="photo-preview-img">
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <label>Выберите фишку персонажа</label>
-                    <div class="token-carousel-container">
-                        <button type="button" class="carousel-btn left" id="carousel-left">◀</button>
-                        <div class="token-carousel" id="token-carousel">
-                            <div class="loader"></div>
-                        </div>
-                        <button type="button" class="carousel-btn right" id="carousel-right">▶</button>
-                    </div>
-                    <input type="hidden" id="selected-token-id" required>
-                </div>
-
-                <button type="submit" class="btn btn-primary" id="join-btn" disabled>Загрузка фишек...</button>
+                <div id="photo-preview" class="photo-preview hidden"></div>
+                <button id="register-button" class="button primary" type="submit">Войти</button>
             </form>
-        </div>
+        </section>
 
-        <!-- Экран ожидания (после входа) -->
-        <div id="waiting-screen" class="screen">
-            <div class="waiting-card">
-                <div class="photo-preview small" id="waiting-photo"></div>
-                <h2 id="waiting-name">Имя</h2>
-                <div class="loader"></div>
-                <p>Ждем начала игры...</p>
-                <p class="hint">Посмотрите на экран Мастера!</p>
-            </div>
-        </div>
+        <section id="screen-lobby" class="screen">
+            <header class="screen-header">
+                <p class="eyebrow">Лобби</p>
+                <h1 id="lobby-title">Ожидание GM</h1>
+                <p id="lobby-subtitle" class="muted">Когда GM выберет кампанию, здесь появится подготовка персонажа.</p>
+            </header>
 
-        <!-- Экран игры -->
-        <div id="game-screen" class="screen">
-            <div class="game-header">
-                <div class="photo-preview tiny" id="game-photo"></div>
-                <h2 id="game-name">Имя</h2>
-            </div>
-            
-            <div id="targets-container" class="targets-container">
-                <!-- Сюда динамически добавляются аватарки врагов -->
+            <div class="panel">
+                <div class="self-row">
+                    <div id="self-photo" class="avatar"></div>
+                    <div>
+                        <strong id="self-name">Игрок</strong>
+                        <p id="self-status" class="muted">Без персонажа</p>
+                    </div>
+                </div>
             </div>
 
-            <div class="dpad-container">
-                <button class="dpad-btn up-left" id="btn-up-left">↖</button>
-                <button class="dpad-btn up" id="btn-up">▲</button>
-                <button class="dpad-btn up-right" id="btn-up-right">↗</button>
-                
-                <button class="dpad-btn left" id="btn-left">◀</button>
+            <div class="panel">
+                <div class="panel-title">Игроки</div>
+                <div id="lobby-players" class="player-list"></div>
+            </div>
+
+            <div id="character-actions" class="action-stack">
+                <button id="open-import-button" class="button primary" type="button">Импортировать персонажа</button>
+                <button id="open-create-button" class="button secondary" type="button">Создать персонажа</button>
+            </div>
+        </section>
+
+        <section id="screen-import" class="screen">
+            <header class="screen-header">
+                <p class="eyebrow">Персонаж</p>
+                <h1>Импорт</h1>
+                <p class="muted">Выберите готового персонажа. Фото игрока можно оставить как портрет.</p>
+            </header>
+
+            <div class="panel">
+                <label class="check-row">
+                    <input id="use-player-photo" type="checkbox" checked>
+                    <span>Использовать фото игрока как портрет</span>
+                </label>
+            </div>
+
+            <div id="character-list" class="card-list"></div>
+            <button class="button secondary" data-route="lobby" type="button">Назад</button>
+        </section>
+
+        <section id="screen-character-editor" class="screen">
+            <header class="screen-header">
+                <p class="eyebrow">Персонаж</p>
+                <h1>Редактор</h1>
+                <p class="muted">Полный мобильный редактор будет следующим этапом. Сейчас рабочий путь - импорт готового персонажа.</p>
+            </header>
+
+            <div class="panel">
+                <p>Здесь будут характеристики, оружие, способности, атрибуты и инвентарь.</p>
+            </div>
+
+            <button class="button secondary" data-route="lobby" type="button">Назад</button>
+        </section>
+
+        <section id="screen-game" class="screen">
+            <header class="game-top">
+                <div id="game-photo" class="avatar"></div>
+                <div>
+                    <strong id="game-name">Игрок</strong>
+                    <p id="game-state" class="muted">Кампания</p>
+                </div>
+                <button id="focus-camera-button" class="icon-button" type="button" title="Камера">◎</button>
+            </header>
+
+            <div class="combat-stats">
+                <div><span>HP</span><strong id="stat-hp">-</strong></div>
+                <div><span>Броня</span><strong id="stat-armor">-</strong></div>
+                <div><span>Ходы</span><strong id="stat-move">-</strong></div>
+                <div><span>Броски</span><strong id="stat-rolls">-</strong></div>
+            </div>
+
+            <div class="panel compact">
+                <div class="panel-title" id="turn-state">Ожидание</div>
+                <p class="muted" id="active-weapon">Оружие: -</p>
+            </div>
+
+            <div id="targets-container" class="targets-container"></div>
+
+            <div class="dpad">
+                <button class="dpad-button" data-move="-1,1" type="button">↖</button>
+                <button class="dpad-button" data-move="0,1" type="button">▲</button>
+                <button class="dpad-button" data-move="1,1" type="button">↗</button>
+                <button class="dpad-button" data-move="-1,0" type="button">◀</button>
                 <div class="dpad-center"></div>
-                <button class="dpad-btn right" id="btn-right">▶</button>
-                
-                <button class="dpad-btn down-left" id="btn-down-left">↙</button>
-                <button class="dpad-btn down" id="btn-down">▼</button>
-                <button class="dpad-btn down-right" id="btn-down-right">↘</button>
+                <button class="dpad-button" data-move="1,0" type="button">▶</button>
+                <button class="dpad-button" data-move="-1,-1" type="button">↙</button>
+                <button class="dpad-button" data-move="0,-1" type="button">▼</button>
+                <button class="dpad-button" data-move="1,-1" type="button">↘</button>
             </div>
 
-            <button class="btn btn-primary abilities-btn" id="btn-abilities">✨ Мои Способности</button>
-        </div>
+            <footer class="game-footer">
+                <button id="weapon-button" class="button secondary" type="button">Сменить оружие</button>
+                <button id="settings-button" class="button secondary" type="button">Персонаж</button>
+                <button id="inventory-button" class="button secondary" type="button">Инвентарь</button>
+            </footer>
+        </section>
 
-        <!-- Модальное окно способностей -->
-        <div id="abilities-modal" class="modal">
-            <div class="modal-content">
-                <h3>Способности и Инвентарь</h3>
-                <div class="modal-body">
-                    <p><strong>Описание:</strong> <span id="modal-desc"></span></p>
-                    <hr>
-                    <p class="hint">Здесь будут отображаться ваши игровые характеристики и инвентарь.</p>
-                </div>
-                <button class="btn btn-secondary" id="btn-close-modal">Закрыть</button>
-            </div>
-        </div>
-        
-        <!-- Transition Modal -->
-        <div id="transition-modal" class="modal">
-            <div class="modal-content transition-content">
-                <h2 id="transition-text">Вы хотите перейти?</h2>
-                <div class="transition-buttons">
-                    <button class="btn btn-primary" id="btn-transition-confirm">✅ Перейти</button>
-                    <button class="btn btn-secondary" id="btn-transition-cancel">❌ Отмена</button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Attack Modal -->
-        <div id="attack-modal" class="modal">
-            <div class="modal-content">
-                <h2 id="attack-target-name">Враг</h2>
-                <div class="transition-buttons">
-                    <button class="btn btn-primary" id="btn-attack-confirm">⚔️ Атаковать</button>
-                    <button class="btn btn-secondary" id="btn-attack-cancel">❌ Отмена</button>
-                </div>
-            </div>
+        <section id="screen-inventory" class="screen">
+            <header class="screen-header">
+                <p class="eyebrow">Инвентарь</p>
+                <h1>Скоро</h1>
+            </header>
+            <button class="button secondary" data-route="game" type="button">Назад</button>
+        </section>
+    </main>
+
+    <div id="transition-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="transition-text">Перейти?</h2>
+            <button id="transition-confirm" class="button primary" type="button">Перейти</button>
+            <button id="transition-cancel" class="button secondary" type="button">Отмена</button>
         </div>
     </div>
-    <script src="app.js"></script>
+
+    <div id="attack-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="attack-target-name">Атака</h2>
+            <button id="attack-confirm" class="button primary" type="button">Атаковать</button>
+            <button id="attack-cancel" class="button secondary" type="button">Отмена</button>
+        </div>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>

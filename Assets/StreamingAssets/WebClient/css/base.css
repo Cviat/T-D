@@ -1,0 +1,86 @@
+:root {
+    --bg: #101216;
+    --surface: #1b2028;
+    --surface-2: #242b35;
+    --line: rgba(255, 255, 255, 0.12);
+    --text: #f5f2ea;
+    --muted: #a9adb7;
+    --accent: #d9a441;
+    --danger: #d95757;
+    --ready: #62c486;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+input {
+    font: inherit;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.muted {
+    color: var(--muted);
+}
+
+.eyebrow {
+    margin: 0 0 6px;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.button {
+    width: 100%;
+    min-height: 46px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--text);
+    background: var(--surface-2);
+    font-weight: 700;
+}
+
+.button.primary {
+    border-color: rgba(217, 164, 65, 0.7);
+    background: var(--accent);
+    color: #15120b;
+}
+
+.button.secondary {
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.button:active,
+.icon-button:active,
+.dpad-button:active {
+    transform: scale(0.98);
+}
+
+.icon-button {
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    color: var(--text);
+    background: var(--surface-2);
+    font-size: 22px;
+}
+
+.icon-button.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(217, 164, 65, 0.25);
+}

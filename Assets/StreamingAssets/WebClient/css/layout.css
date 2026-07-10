@@ -1,0 +1,123 @@
+.app-shell {
+    width: min(430px, 100%);
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: 18px;
+}
+
+.screen {
+    display: none;
+}
+
+.screen.active {
+    display: block;
+}
+
+.screen-header {
+    margin: 14px 0 18px;
+}
+
+.screen-header h1 {
+    margin: 0 0 8px;
+    font-size: 30px;
+    line-height: 1.05;
+}
+
+.screen-header p {
+    margin: 0;
+}
+
+.panel {
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+    margin-bottom: 14px;
+}
+
+.panel-title {
+    margin-bottom: 12px;
+    font-weight: 700;
+}
+
+.panel.compact {
+    padding: 12px;
+}
+
+.panel.compact .panel-title {
+    margin-bottom: 4px;
+}
+
+.panel.compact p {
+    margin: 0;
+}
+
+.field {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.field span {
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.field input {
+    width: 100%;
+    min-height: 44px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0 12px;
+    color: var(--text);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.action-stack {
+    display: grid;
+    gap: 10px;
+}
+
+.avatar,
+.photo-preview {
+    width: 64px;
+    height: 64px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: #0b0d10 center / cover no-repeat;
+}
+
+.photo-preview {
+    width: 112px;
+    height: 112px;
+    margin: 0 auto 14px;
+}
+
+.self-row {
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    gap: 12px;
+    align-items: center;
+}
+
+.modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(0, 0, 0, 0.72);
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    width: min(380px, 100%);
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+}

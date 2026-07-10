@@ -16,6 +16,7 @@ namespace RPGTable.Runtime
         public int gridX;
         public int gridY;
         public bool isDead;
+        public bool isReady;
         public int currentHp;
         public int maxHp;
     }
@@ -71,6 +72,61 @@ namespace RPGTable.Runtime
             Players.Add(player);
             OnPlayersChanged?.Invoke();
             return player;
+        }
+
+        public static CampaignPlayerData AddRegisteredPlayer(string playerName, string portraitPath)
+        {
+            var player = new CampaignPlayerData
+            {
+                id = $"player_{nextPlayerIndex++}",
+                name = string.IsNullOrWhiteSpace(playerName) ? "Player" : playerName,
+                avatarResourceName = "DefaultPlayer",
+                portraitPath = portraitPath,
+                isReady = false
+            };
+
+            Players.Add(player);
+            OnPlayersChanged?.Invoke();
+            return player;
+        }
+
+        public static bool AssignCharacterToPlayer(
+            string playerId,
+            string characterPath,
+            string characterName,
+            string portraitPath,
+            string tokenPath)
+        {
+            var player = FindPlayer(playerId);
+
+            if (player == null)
+            {
+                return false;
+            }
+
+            player.name = string.IsNullOrWhiteSpace(characterName) ? player.name : characterName;
+            player.characterPath = characterPath;
+            if (!string.IsNullOrWhiteSpace(portraitPath))
+            {
+                player.portraitPath = portraitPath;
+            }
+            player.tokenPath = tokenPath;
+            player.isReady = !string.IsNullOrWhiteSpace(tokenPath);
+            OnPlayersChanged?.Invoke();
+            return true;
+        }
+
+        public static void SetPlayerReady(string playerId, bool ready)
+        {
+            var player = FindPlayer(playerId);
+
+            if (player == null)
+            {
+                return;
+            }
+
+            player.isReady = ready && !string.IsNullOrWhiteSpace(player.tokenPath);
+            OnPlayersChanged?.Invoke();
         }
 
         public static CampaignPlayerData FindPlayer(string id)
