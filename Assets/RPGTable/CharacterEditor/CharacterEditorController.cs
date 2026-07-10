@@ -94,8 +94,6 @@ namespace RPGTable.CharacterEditor
         private int intelligence = 10;
         private int holiness = 10;
 
-        private string weaponScaleStat1 = "None";
-        private string weaponScaleStat2 = "None";
         private int customAbilityCount = 1;
 
         public void Initialize(
@@ -733,7 +731,7 @@ namespace RPGTable.CharacterEditor
 
         private Sprite FindSlotFrameSprite()
         {
-            var inputs = UnityEngine.Object.FindObjectsByType<InputField>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var inputs = UnityEngine.Object.FindObjectsByType<InputField>(FindObjectsInactive.Include);
             foreach (var inp in inputs)
             {
                 var drop = inp.GetComponent<ItemDropSlot>();

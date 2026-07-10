@@ -160,7 +160,7 @@ namespace RPGTable.CharacterEditor
 
         private static Font GetDefaultFont()
         {
-            var texts = UnityEngine.Object.FindObjectsByType<Text>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            var texts = UnityEngine.Object.FindObjectsByType<Text>(FindObjectsInactive.Exclude);
             foreach (var t in texts)
             {
                 if (t.font != null) return t.font;
@@ -170,7 +170,7 @@ namespace RPGTable.CharacterEditor
 
         private static Sprite FindFrameSprite()
         {
-            var images = UnityEngine.Object.FindObjectsByType<Image>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var images = UnityEngine.Object.FindObjectsByType<Image>(FindObjectsInactive.Include);
             foreach (var i in images)
             {
                 if (i.gameObject.name == "Portrait Frame" && i.sprite != null) return i.sprite;
@@ -180,7 +180,7 @@ namespace RPGTable.CharacterEditor
 
         private static Sprite FindSlotFrameSprite()
         {
-            var inputs = UnityEngine.Object.FindObjectsByType<InputField>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var inputs = UnityEngine.Object.FindObjectsByType<InputField>(FindObjectsInactive.Include);
             foreach (var inp in inputs)
             {
                 var drop = inp.GetComponent<ItemDropSlot>();

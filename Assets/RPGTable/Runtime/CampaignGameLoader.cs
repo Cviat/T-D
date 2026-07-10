@@ -313,7 +313,7 @@ namespace RPGTable.Runtime
                 // B. Fallback grid footprint cell check
                 if (targetToken == null)
                 {
-                    var allTokens = GameObject.FindObjectsOfType<CampaignRuntimeToken>();
+                    var allTokens = GameObject.FindObjectsByType<CampaignRuntimeToken>(FindObjectsInactive.Exclude);
                     foreach (var t in allTokens)
                     {
                         if (t == activeToken || t.IsDead) continue;

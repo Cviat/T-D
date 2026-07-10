@@ -58,7 +58,7 @@ namespace RPGTable.Runtime
             onPromptConfirmCallback = onPromptConfirm;
             onPromptCancelCallback = onPromptCancel;
 
-            uiManager = UnityEngine.Object.FindObjectOfType<CampaignUIManager>();
+            uiManager = UnityEngine.Object.FindAnyObjectByType<CampaignUIManager>();
             if (uiManager != null)
             {
                 topMapsRoot = uiManager.TopMapsRoot;
@@ -107,7 +107,7 @@ namespace RPGTable.Runtime
             if (leftPanelRoot == null) return;
             ClearChildren(leftPanelRoot);
 
-            var uiManager = GameObject.FindObjectOfType<CampaignUIManager>();
+            var uiManager = GameObject.FindAnyObjectByType<CampaignUIManager>();
             if (uiManager != null)
             {
                 if (uiManager.ActiveTabBtn != null)
@@ -248,7 +248,7 @@ namespace RPGTable.Runtime
 
         private static void BuildTokenBank(RectTransform tokenList, Action<string> onSelect)
         {
-            var manager = UnityEngine.Object.FindObjectOfType<CampaignUIManager>();
+            var manager = UnityEngine.Object.FindAnyObjectByType<CampaignUIManager>();
             if (manager == null || manager.TokenBankItemPrefab == null) return;
 
             foreach (var charPath in RPGTable.CharacterEditor.UserCharacterStore.GetCharacterPaths())

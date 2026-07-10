@@ -81,7 +81,7 @@ namespace RPGTable.CharacterEditor
         {
             if (inputField != null)
             {
-                var controller = Object.FindFirstObjectByType<CharacterEditorController>();
+                var controller = Object.FindAnyObjectByType<CharacterEditorController>();
                 Sprite dialFrame = controller != null ? controller.DialogFrameSprite : null;
                 Sprite dialBg = controller != null ? controller.DialogBgSprite : null;
 

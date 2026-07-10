@@ -43,7 +43,7 @@ namespace RPGTable.MapEditor
 
         public void ClearPlacedElements()
         {
-            foreach (var element in FindObjectsByType<PlacedMapElement>(FindObjectsSortMode.None))
+            foreach (var element in FindObjectsByType<PlacedMapElement>(FindObjectsInactive.Exclude))
             {
                 Destroy(element.gameObject);
             }

@@ -57,9 +57,9 @@ namespace RPGTable.Input
             if (runtimeToken != null)
             {
 #if UNITY_2023_1_OR_NEWER
-                var loader = FindFirstObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+                var loader = FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
 #else
-                var loader = FindObjectOfType<RPGTable.Runtime.CampaignGameLoader>();
+                var loader = FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
 #endif
                 if (loader != null)
                 {
@@ -96,9 +96,9 @@ namespace RPGTable.Input
             if (activeGrid == null)
             {
 #if UNITY_2023_1_OR_NEWER
-                activeGrid = FindFirstObjectByType<BoardGrid>();
+                activeGrid = FindAnyObjectByType<BoardGrid>();
 #else
-                activeGrid = FindObjectOfType<BoardGrid>();
+                activeGrid = FindAnyObjectByType<BoardGrid>();
 #endif
             }
 
@@ -114,9 +114,9 @@ namespace RPGTable.Input
                 }
 
 #if UNITY_2023_1_OR_NEWER
-                var loader = FindFirstObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+                var loader = FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
 #else
-                var loader = FindObjectOfType<RPGTable.Runtime.CampaignGameLoader>();
+                var loader = FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
 #endif
                 if (loader != null)
                 {

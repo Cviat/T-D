@@ -145,7 +145,7 @@ namespace RPGTable.Editor
 
             tokenObject.AddComponent<RPGTable.Input.TokenDragController>();
 
-            var grid = Object.FindFirstObjectByType<BoardGrid>();
+            var grid = Object.FindAnyObjectByType<BoardGrid>();
             tokenObject.transform.position = grid.CellToWorld(cell) + Vector3.back * 0.5f;
             token.SnapToGrid(grid);
         }

@@ -31,7 +31,7 @@ namespace RPGTable.Runtime
 
             if (loader == null)
             {
-                loader = FindFirstObjectByType<CampaignGameLoader>();
+                loader = FindAnyObjectByType<CampaignGameLoader>();
             }
         }
 

@@ -22,6 +22,7 @@ namespace RPGTable.Runtime.Networking
         private string cachedStreamingAssetsPath;
         private string cachedTokenImagesFolder;
         
+        [Serializable]
         public class ConnectedPlayer
         {
             public string id;
@@ -437,7 +438,7 @@ namespace RPGTable.Runtime.Networking
                     if (payload != null && !string.IsNullOrEmpty(payload.playerId))
                     {
                         ExecuteOnMainThreadBlocking(() => {
-                            var tokens = GameObject.FindObjectsOfType<RPGTable.Runtime.CampaignRuntimeToken>();
+                            var tokens = GameObject.FindObjectsByType<RPGTable.Runtime.CampaignRuntimeToken>(FindObjectsInactive.Exclude);
                             foreach (var t in tokens)
                             {
                                 if (t.PlayerId == payload.playerId)
@@ -487,16 +488,16 @@ namespace RPGTable.Runtime.Networking
 
                 ExecuteOnMainThreadBlocking(() => {
 #if UNITY_2023_1_OR_NEWER
-                    var loader = GameObject.FindFirstObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+                    var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
 #else
-                    var loader = GameObject.FindObjectOfType<RPGTable.Runtime.CampaignGameLoader>();
+                    var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
 #endif
                     if (loader != null && loader.PendingTransitionPlayerId == playerId)
                     {
                         promptText = loader.PendingTransitionPrompt;
                     }
 
-                    var allBoardTokens = GameObject.FindObjectsOfType<RPGTable.Core.BoardToken>();
+                    var allBoardTokens = GameObject.FindObjectsByType<RPGTable.Core.BoardToken>(FindObjectsInactive.Exclude);
                     var myBoardToken = System.Linq.Enumerable.FirstOrDefault(allBoardTokens, t => 
                     {
                         var r = t.GetComponent<RPGTable.Runtime.CampaignRuntimeToken>();
@@ -525,14 +526,14 @@ namespace RPGTable.Runtime.Networking
                                     targetRuntime.MaxHp = 10;
                                     targetRuntime.CurrentHp = 10;
                                     
-                                    var grid = GameObject.FindObjectOfType<RPGTable.Board.BoardGrid>();
+                                    var grid = GameObject.FindAnyObjectByType<RPGTable.Board.BoardGrid>();
                                     if (grid != null) targetBoardToken.SnapToGrid(grid);
                                 }
 
                                 if (!targetRuntime.IsDead)
                                 {
                                     Vector2Int targetGridPos = targetBoardToken.gridPosition;
-                                    var grid = GameObject.FindObjectOfType<RPGTable.Board.BoardGrid>();
+                                    var grid = GameObject.FindAnyObjectByType<RPGTable.Board.BoardGrid>();
                                     if (grid != null)
                                     {
                                         var size = Mathf.Max(1, targetBoardToken.footprintSize);
@@ -594,9 +595,9 @@ namespace RPGTable.Runtime.Networking
                     {
                         ExecuteOnMainThreadBlocking(() => {
 #if UNITY_2023_1_OR_NEWER
-                            var loader = GameObject.FindFirstObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+                            var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
 #else
-                            var loader = GameObject.FindObjectOfType<RPGTable.Runtime.CampaignGameLoader>();
+                            var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
 #endif
                             if (loader != null && loader.PendingTransitionPlayerId == payload.playerId)
                             {
@@ -628,7 +629,7 @@ namespace RPGTable.Runtime.Networking
                     if (payload != null && !string.IsNullOrEmpty(payload.playerId) && !string.IsNullOrEmpty(payload.targetId))
                     {
                         ExecuteOnMainThreadBlocking(() => {
-                            var tokens = GameObject.FindObjectsOfType<RPGTable.Runtime.CampaignRuntimeToken>();
+                            var tokens = GameObject.FindObjectsByType<RPGTable.Runtime.CampaignRuntimeToken>(FindObjectsInactive.Exclude);
                             var myToken = System.Linq.Enumerable.FirstOrDefault(tokens, t => t.PlayerId == payload.playerId);
                             var targetToken = System.Linq.Enumerable.FirstOrDefault(tokens, t => t.RuntimeId == payload.targetId);
 
@@ -638,9 +639,9 @@ namespace RPGTable.Runtime.Networking
                                 targetToken.CurrentHp -= 1;
                                 // Update GM UI
 #if UNITY_2023_1_OR_NEWER
-                                var uiLoader = GameObject.FindFirstObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+                                var uiLoader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
 #else
-                                var uiLoader = GameObject.FindObjectOfType<RPGTable.Runtime.CampaignGameLoader>();
+                                var uiLoader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
 #endif
                                 if (uiLoader != null)
                                 {
@@ -668,7 +669,7 @@ namespace RPGTable.Runtime.Networking
                                 // Animate Player View token (layer 31)
                                 GameObject pvMyToken = null;
                                 GameObject pvTargetToken = null;
-                                foreach (var obj in GameObject.FindObjectsOfType<Transform>())
+                                foreach (var obj in GameObject.FindObjectsByType<Transform>(FindObjectsInactive.Exclude))
                                 {
                                     if (obj.gameObject.layer == 31)
                                     {

@@ -77,7 +77,7 @@ namespace RPGTable.CharacterEditor
 
         private Sprite FindFrameSprite()
         {
-            var images = UnityEngine.Object.FindObjectsByType<Image>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var images = UnityEngine.Object.FindObjectsByType<Image>(FindObjectsInactive.Include);
             foreach (var i in images)
             {
                 if (i.gameObject.name == "Portrait Frame" && i.sprite != null) return i.sprite;

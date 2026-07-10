@@ -43,7 +43,7 @@ namespace RPGTable.UI
 
             if (controller == null)
             {
-                controller = FindFirstObjectByType<MainMenuController>();
+                controller = FindAnyObjectByType<MainMenuController>();
             }
         }
 

@@ -176,7 +176,7 @@ namespace RPGTable.Editor
             bottomToolsView.playerViewCameraButton = camBtn;
 
             // Create EventSystem if it doesn't exist
-            if (Object.FindObjectOfType<UnityEngine.EventSystems.EventSystem>() == null)
+            if (Object.FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>() == null)
             {
                 GameObject eventSystem = new GameObject("EventSystem");
                 eventSystem.AddComponent<UnityEngine.EventSystems.EventSystem>();

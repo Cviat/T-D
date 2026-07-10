@@ -112,7 +112,7 @@ namespace RPGTable.CharacterEditor
 
         private static Font GetDefaultFont()
         {
-            var texts = UnityEngine.Object.FindObjectsByType<Text>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            var texts = UnityEngine.Object.FindObjectsByType<Text>(FindObjectsInactive.Exclude);
             foreach (var t in texts)
             {
                 if (t.font != null) return t.font;

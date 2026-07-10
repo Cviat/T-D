@@ -28,7 +28,7 @@ namespace RPGTable.UI
             GUILayout.Space(12);
             GUILayout.Label("Initiative", titleStyle);
 
-            foreach (var token in FindObjectsByType<BoardToken>(FindObjectsSortMode.None).OrderByDescending(t => t.initiative))
+            foreach (var token in FindObjectsByType<BoardToken>(FindObjectsInactive.Exclude).OrderByDescending(t => t.initiative))
             {
                 GUILayout.Label($"{token.initiative:00}  {token.displayName}  ({token.team})", bodyStyle);
             }

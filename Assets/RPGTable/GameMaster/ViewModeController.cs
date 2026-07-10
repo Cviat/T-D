@@ -59,7 +59,7 @@ namespace RPGTable.GameMaster
 
         private void ApplyMode()
         {
-            foreach (var token in FindObjectsByType<BoardToken>(FindObjectsSortMode.None))
+            foreach (var token in FindObjectsByType<BoardToken>(FindObjectsInactive.Exclude))
             {
                 token.ApplyViewMode(IsPlayerView);
             }

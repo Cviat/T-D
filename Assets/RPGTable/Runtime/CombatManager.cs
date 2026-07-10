@@ -62,7 +62,7 @@ namespace RPGTable.Runtime
             ActiveTokenIndex = -1;
 
             Queue.Clear();
-            var allTokens = GameObject.FindObjectsOfType<CampaignRuntimeToken>();
+            var allTokens = GameObject.FindObjectsByType<CampaignRuntimeToken>(FindObjectsInactive.Exclude);
             foreach (var token in allTokens)
             {
                 if (!token.IsDead)
@@ -168,9 +168,9 @@ namespace RPGTable.Runtime
 
             // Auto-select token to update inspector and highlights
 #if UNITY_2023_1_OR_NEWER
-            var loader = FindFirstObjectByType<CampaignGameLoader>();
+            var loader = FindAnyObjectByType<CampaignGameLoader>();
 #else
-            var loader = FindObjectOfType<CampaignGameLoader>();
+            var loader = FindAnyObjectByType<CampaignGameLoader>();
 #endif
             if (loader != null)
             {
@@ -238,9 +238,9 @@ namespace RPGTable.Runtime
                     {
                         token.IsDead = true;
 #if UNITY_2023_1_OR_NEWER
-                        var loader = FindFirstObjectByType<CampaignGameLoader>();
+                        var loader = FindAnyObjectByType<CampaignGameLoader>();
 #else
-                        var loader = FindObjectOfType<CampaignGameLoader>();
+                        var loader = FindAnyObjectByType<CampaignGameLoader>();
 #endif
                         if (loader != null) loader.KillRuntimeToken(token);
                     }

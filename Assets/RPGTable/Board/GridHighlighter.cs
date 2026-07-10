@@ -89,7 +89,7 @@ namespace RPGTable.Board
             }
 
             // Spawn reticle on targetable enemies in action range
-            var allTokens = GameObject.FindObjectsOfType<RPGTable.Runtime.CampaignRuntimeToken>();
+            var allTokens = GameObject.FindObjectsByType<RPGTable.Runtime.CampaignRuntimeToken>(FindObjectsInactive.Exclude);
             Sprite reticleSprite = Resources.Load<Sprite>("image/Gemini_Generated_Image_m2vmn7m2vmn7m2vm");
             foreach (var t in allTokens)
             {
