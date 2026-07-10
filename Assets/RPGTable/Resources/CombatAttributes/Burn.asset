@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RPGTable.Core.CombatAttribute
   icon: {fileID: 21300000, guid: cf6478ef684ce7f4c830edba147c7607, type: 3}
   attributeName: "\u041F\u043E\u0434\u0436\u043E\u0433"
-  affectedStat: HP
+  affectedStat: 1
   value: -3
   durationTurns: 3
   appliedToSelf: 0

@@ -22,6 +22,7 @@ MonoBehaviour:
   effectType: 0
   effectValue: 1
   multiplier: 1.5
+  defenseValue: 2
   attributes:
   - {fileID: 11400000, guid: 624f19c41c536944fb3867fb5cfe203c, type: 2}
   attackType: 3

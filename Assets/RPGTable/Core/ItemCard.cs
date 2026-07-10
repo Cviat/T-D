@@ -42,7 +42,6 @@ namespace RPGTable.Core
         public int bonusHol = 0;
 
         [Header("Attributes / Effects")]
-        public string attribute = "";
         public System.Collections.Generic.List<CombatAttribute> attributes = new System.Collections.Generic.List<CombatAttribute>();
         public AttackType attackType = AttackType.Melee;
     }

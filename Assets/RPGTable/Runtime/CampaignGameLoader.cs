@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using RPGTable.MapEditor;
 using RPGTable.Core;
@@ -31,7 +31,7 @@ namespace RPGTable.Runtime
         private CampaignGameUI ui;
         internal CampaignGameUI UI => ui;
 
-        // ── Lifecycle ────────────────────────────────────────────────────
+        // в”Ђв”Ђ Lifecycle в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
         private void Start()
         {
@@ -74,7 +74,7 @@ namespace RPGTable.Runtime
             HandleCombatInputs();
         }
 
-        // ── Campaign loading ─────────────────────────────────────────────
+        // в”Ђв”Ђ Campaign loading в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
         private void LoadSelectedCampaign()
         {
@@ -114,7 +114,7 @@ namespace RPGTable.Runtime
             return context.Campaign.maps[0];
         }
 
-        // ── Map loading ──────────────────────────────────────────────────
+        // в”Ђв”Ђ Map loading в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
         private void LoadMap(SavedCampaignMapNodeData node)
         {
@@ -158,7 +158,7 @@ namespace RPGTable.Runtime
             }
         }
 
-        // ── Player selection ─────────────────────────────────────────────
+        // в”Ђв”Ђ Player selection в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
         private void SelectPlayer(CampaignPlayerData player)
         {
@@ -176,7 +176,7 @@ namespace RPGTable.Runtime
         public string PendingTransitionPlayerId => transitionController.PendingPlayerId;
         public string PendingTransitionPrompt => transitionController.PendingPromptText;
 
-        // ── Transition callbacks ─────────────────────────────────────────
+        // в”Ђв”Ђ Transition callbacks в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
         public void HandleConfirmTransition()
         {
@@ -195,7 +195,7 @@ namespace RPGTable.Runtime
             ui.HidePrompt();
         }
 
-        // ── PV camera toggle ─────────────────────────────────────────────
+        // в”Ђв”Ђ PV camera toggle в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
         private void HandleTogglePlayerViewCamera()
         {
@@ -203,7 +203,7 @@ namespace RPGTable.Runtime
             ui.UpdatePlayerViewControlButton(CampaignPlayerViewManager.PlayerViewCameraControlActive);
         }
 
-        // ── Public API for context-click menu ────────────────────────────
+        // в”Ђв”Ђ Public API for context-click menu в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
         public void SelectRuntimeToken(CampaignRuntimeToken runtimeToken)
         {
@@ -247,7 +247,7 @@ namespace RPGTable.Runtime
             }
         }
 
-        // ── UI refresh helpers ───────────────────────────────────────────
+        // в”Ђв”Ђ UI refresh helpers в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
         private void RefreshPlayerPanel()
         {
@@ -304,7 +304,7 @@ namespace RPGTable.Runtime
                     {
                         hitToken = hit.collider.GetComponentInParent<CampaignRuntimeToken>();
                     }
-                    if (hitToken != null && hitToken != activeToken && !hitToken.IsDead)
+                    if (hitToken != null && hitToken != activeToken && !hitToken.IsPlayerViewClone && !hitToken.IsDead)
                     {
                         targetToken = hitToken;
                     }
@@ -316,7 +316,7 @@ namespace RPGTable.Runtime
                     var allTokens = GameObject.FindObjectsByType<CampaignRuntimeToken>(FindObjectsInactive.Exclude);
                     foreach (var t in allTokens)
                     {
-                        if (t == activeToken || t.IsDead) continue;
+                        if (t == activeToken || t.IsPlayerViewClone || t.IsDead) continue;
                         var bt = t.GetComponent<BoardToken>();
                         if (bt != null)
                         {
@@ -332,6 +332,11 @@ namespace RPGTable.Runtime
 
                 if (targetToken != null)
                 {
+                    if (!CanAttack(activeToken, targetToken))
+                    {
+                        return;
+                    }
+
                     var btTarget = targetToken.GetComponent<BoardToken>();
                     int dist = GetTokenDistance(btActive, btTarget);
                     int maxRange = GetMaxAbilityRange(activeToken);
@@ -421,7 +426,7 @@ namespace RPGTable.Runtime
         {
             if (attacker.CurrentRolls <= 0)
             {
-                CombatManager.Instance.SpawnTextBanner("НЕТ АТАК!", Color.red, 1.5f, false);
+                SpawnCombatText(attacker, "\u041d\u0415\u0422 \u0410\u0422\u0410\u041a!", Color.red, 32f);
                 return;
             }
 
@@ -432,7 +437,7 @@ namespace RPGTable.Runtime
             if (charData == null) return;
 
             int roll = UnityEngine.Random.Range(1, 7);
-            CombatManager.Instance.SpawnTextBanner($"КУБИК: {roll}", new Color(1f, 0.5f, 0f, 1f), 1.5f, false);
+            SpawnCombatText(attacker, $"\u041a\u0423\u0411\u0418\u041a: {roll}", new Color(1f, 0.55f, 0f, 1f), 30f);
 
             int slotIndex = roll - 1;
             string abilityName = "";
@@ -449,16 +454,7 @@ namespace RPGTable.Runtime
                 return;
             }
 
-            AbilityCard ability = null;
-            var abilities = Resources.LoadAll<AbilityCard>("AbilityCards");
-            foreach (var a in abilities)
-            {
-                if (a != null && string.Equals(a.title, abilityName, StringComparison.OrdinalIgnoreCase))
-                {
-                    ability = a;
-                    break;
-                }
-            }
+            AbilityCard ability = FindAbilityCard(abilityName);
 
             if (ability == null)
             {
@@ -472,7 +468,7 @@ namespace RPGTable.Runtime
         private IEnumerator ExecuteMissRoutine(CampaignRuntimeToken attacker, CampaignRuntimeToken target)
         {
             attacker.CurrentRolls--;
-            CombatManager.Instance.SpawnTextBanner("ПРОМАХ!", Color.gray, 1.5f, false);
+            SpawnCombatText(target, "\u041f\u0420\u041e\u041c\u0410\u0425", Color.gray, 32f);
 
             AnimateTokenAttack(attacker, target);
 
@@ -489,7 +485,7 @@ namespace RPGTable.Runtime
         private IEnumerator ExecuteHitRoutine(CampaignRuntimeToken attacker, CampaignRuntimeToken target, AbilityCard ability, RPGTable.CharacterEditor.SavedCharacterData charData)
         {
             attacker.CurrentRolls--;
-            CombatManager.Instance.SpawnTextBanner(ability.title, Color.yellow, 1.5f, false);
+            SpawnCombatText(attacker, ability.title, Color.yellow, 30f);
 
             AnimateTokenAttack(attacker, target);
             AnimateTokenDamage(target, attacker);
@@ -509,6 +505,16 @@ namespace RPGTable.Runtime
             }
 
             int finalDamage = Mathf.RoundToInt(baseDmg * ability.multiplier);
+            AbilityCard defenseAbility = RollDefenseAbility(target);
+            if (defenseAbility != null)
+            {
+                int defenseValue = Mathf.Max(0, defenseAbility.defenseValue);
+                if (defenseValue > 0)
+                {
+                    SpawnCombatText(target, $"\u0417\u0410\u0429\u0418\u0422\u0410 -{defenseValue}", Color.cyan, 30f);
+                    finalDamage = Mathf.Max(0, finalDamage - defenseValue);
+                }
+            }
 
             // Check if ShieldBuff is active on target statusEffects
             ActiveStatusEffect shieldEffect = null;
@@ -516,7 +522,7 @@ namespace RPGTable.Runtime
             {
                 foreach (var effect in target.statusEffects)
                 {
-                    if (string.Equals(effect.effectName, "ShieldBuff", StringComparison.OrdinalIgnoreCase) || string.Equals(effect.effectName, "Эгида", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(effect.effectName, "ShieldBuff", StringComparison.OrdinalIgnoreCase) || string.Equals(effect.effectName, "Р­РіРёРґР°", StringComparison.OrdinalIgnoreCase))
                     {
                         shieldEffect = effect;
                         break;
@@ -527,7 +533,7 @@ namespace RPGTable.Runtime
             if (shieldEffect != null)
             {
                 target.statusEffects.Remove(shieldEffect);
-                CombatManager.Instance.SpawnTextBanner("БЛОК!", Color.cyan, 1.5f, false);
+                SpawnCombatText(target, "\u0411\u041b\u041e\u041a", Color.cyan, 32f);
                 finalDamage = 0;
             }
 
@@ -537,7 +543,7 @@ namespace RPGTable.Runtime
             {
                 foreach (var attr in ability.attributes)
                 {
-                    if (attr != null && (string.Equals(attr.attributeName, "Pierce", StringComparison.OrdinalIgnoreCase) || string.Equals(attr.attributeName, "Пробитие брони", StringComparison.OrdinalIgnoreCase) || string.Equals(attr.attributeName, "Пробитие", StringComparison.OrdinalIgnoreCase)))
+                    if (attr != null && (string.Equals(attr.attributeName, "Pierce", StringComparison.OrdinalIgnoreCase) || string.Equals(attr.attributeName, "РџСЂРѕР±РёС‚РёРµ Р±СЂРѕРЅРё", StringComparison.OrdinalIgnoreCase) || string.Equals(attr.attributeName, "РџСЂРѕР±РёС‚РёРµ", StringComparison.OrdinalIgnoreCase)))
                         isPierce = true;
                 }
             }
@@ -545,7 +551,7 @@ namespace RPGTable.Runtime
             {
                 foreach (var attr in weapon.attributes)
                 {
-                    if (attr != null && (string.Equals(attr.attributeName, "Pierce", StringComparison.OrdinalIgnoreCase) || string.Equals(attr.attributeName, "Пробитие брони", StringComparison.OrdinalIgnoreCase) || string.Equals(attr.attributeName, "Пробитие", StringComparison.OrdinalIgnoreCase)))
+                    if (attr != null && (string.Equals(attr.attributeName, "Pierce", StringComparison.OrdinalIgnoreCase) || string.Equals(attr.attributeName, "РџСЂРѕР±РёС‚РёРµ Р±СЂРѕРЅРё", StringComparison.OrdinalIgnoreCase) || string.Equals(attr.attributeName, "РџСЂРѕР±РёС‚РёРµ", StringComparison.OrdinalIgnoreCase)))
                         isPierce = true;
                 }
             }
@@ -553,19 +559,31 @@ namespace RPGTable.Runtime
             if (isPierce)
             {
                 target.CurrentHp = Mathf.Max(0, target.CurrentHp - finalDamage);
+                if (finalDamage > 0)
+                {
+                    SpawnCombatText(target, $"-{finalDamage} HP", new Color(1f, 0.18f, 0.12f, 1f), 34f);
+                }
             }
             else
             {
+                int armorDamage = 0;
                 if (target.CurrentArmor > 0)
                 {
                     int armorAbsorb = Mathf.Min(target.CurrentArmor, finalDamage);
                     target.CurrentArmor -= armorAbsorb;
                     finalDamage -= armorAbsorb;
+                    armorDamage = armorAbsorb;
+                }
+
+                if (armorDamage > 0)
+                {
+                    SpawnCombatText(target, $"-{armorDamage} ARM", new Color(0.62f, 0.72f, 1f, 1f), 30f);
                 }
 
                 if (finalDamage > 0)
                 {
                     target.CurrentHp = Mathf.Max(0, target.CurrentHp - finalDamage);
+                    SpawnCombatText(target, $"-{finalDamage} HP", new Color(1f, 0.18f, 0.12f, 1f), 34f);
                 }
             }
 
@@ -584,6 +602,15 @@ namespace RPGTable.Runtime
                 foreach (var attr in weapon.attributes)
                 {
                     ApplyAttributeEffect(attacker, target, attr);
+                }
+            }
+
+            // Apply defense attributes using defender as source and attacker as opponent.
+            if (defenseAbility != null && defenseAbility.attributes != null)
+            {
+                foreach (var attr in defenseAbility.attributes)
+                {
+                    ApplyAttributeEffect(target, attacker, attr);
                 }
             }
 
@@ -611,12 +638,151 @@ namespace RPGTable.Runtime
             }
         }
 
+        private AbilityCard RollDefenseAbility(CampaignRuntimeToken defender)
+        {
+            var charData = string.IsNullOrEmpty(defender.CharacterPath)
+                ? null
+                : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(defender.CharacterPath);
+
+            if (charData == null || charData.defenseSlots == null)
+            {
+                return null;
+            }
+
+            int roll = UnityEngine.Random.Range(1, 7);
+            SpawnCombatText(defender, $"\u0417\u0410\u0429\u0418\u0422\u0410 D6: {roll}", Color.cyan, 28f);
+
+            int slotIndex = roll - 1;
+            if (slotIndex < 0 || slotIndex >= charData.defenseSlots.Length)
+            {
+                return null;
+            }
+
+            AbilityCard defenseAbility = FindAbilityCard(charData.defenseSlots[slotIndex]);
+            if (defenseAbility == null || defenseAbility.attackType != AttackType.Defense)
+            {
+                return null;
+            }
+
+            SpawnCombatText(defender, defenseAbility.title, Color.cyan, 28f);
+            return defenseAbility;
+        }
+
+        private void SpawnCombatText(CampaignRuntimeToken token, string message, Color color, float fontSize)
+        {
+            if (token == null || string.IsNullOrWhiteSpace(message))
+            {
+                return;
+            }
+
+            var textOffset = FloatingTextOffset(token);
+            CombatManager.Instance.SpawnFloatingText(
+                token.transform.position + textOffset,
+                message,
+                color,
+                1.05f,
+                fontSize,
+                token.gameObject.layer,
+                FloatingTextStackKey(token, false));
+
+            if (pvManager != null)
+            {
+                var playerViewToken = pvManager.GetPlayerViewTokenTransform(token);
+                if (playerViewToken != null)
+                {
+                    CombatManager.Instance.SpawnFloatingText(
+                        playerViewToken.position + textOffset,
+                        message,
+                        color,
+                        1.05f,
+                        fontSize,
+                        playerViewToken.gameObject.layer,
+                        FloatingTextStackKey(token, true));
+                }
+            }
+        }
+
+        private static int FloatingTextStackKey(CampaignRuntimeToken token, bool playerView)
+        {
+            var id = token.RuntimeId;
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                id = token.PlayerId;
+            }
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                id = token.DisplayName;
+            }
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                id = token.name;
+            }
+
+            return ((playerView ? "pv:" : "gm:") + id).GetHashCode();
+        }
+
+        private static Vector3 FloatingTextOffset(CampaignRuntimeToken token)
+        {
+            var footprint = Mathf.Max(1, token.FootprintSize);
+            var boardToken = token.GetComponent<BoardToken>();
+            if (boardToken != null)
+            {
+                footprint = Mathf.Max(1, boardToken.footprintSize);
+            }
+
+            return new Vector3(0f, footprint * 0.5f + 0.35f, 0f);
+        }
+
+        private AbilityCard FindAbilityCard(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return null;
+
+            var abilities = Resources.LoadAll<AbilityCard>("AbilityCards");
+            foreach (var ability in abilities)
+            {
+                if (ability != null && string.Equals(ability.title, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return ability;
+                }
+            }
+
+            return null;
+        }
+
+        private bool CanAttack(CampaignRuntimeToken attacker, CampaignRuntimeToken target)
+        {
+            if (attacker == null || target == null || attacker == target || target.IsDead)
+            {
+                return false;
+            }
+
+            return AreHostile(attacker.Team, target.Team);
+        }
+
+        private static bool AreHostile(TokenTeam attackerTeam, TokenTeam targetTeam)
+        {
+            bool attackerIsParty = attackerTeam == TokenTeam.Player || attackerTeam == TokenTeam.Ally;
+            bool targetIsParty = targetTeam == TokenTeam.Player || targetTeam == TokenTeam.Ally;
+
+            if (attackerIsParty && targetTeam == TokenTeam.Enemy)
+            {
+                return true;
+            }
+
+            if (attackerTeam == TokenTeam.Enemy && targetIsParty)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
         private void ApplyAttributeEffect(CampaignRuntimeToken attacker, CampaignRuntimeToken target, CombatAttribute attr)
         {
             if (attr == null) return;
 
             // Pierce is handled separately during damage calculation
-            if (string.Equals(attr.attributeName, "Pierce", StringComparison.OrdinalIgnoreCase) || string.Equals(attr.attributeName, "Пробитие брони", StringComparison.OrdinalIgnoreCase) || string.Equals(attr.attributeName, "Пробитие", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(attr.attributeName, "Pierce", StringComparison.OrdinalIgnoreCase) || string.Equals(attr.attributeName, "РџСЂРѕР±РёС‚РёРµ Р±СЂРѕРЅРё", StringComparison.OrdinalIgnoreCase) || string.Equals(attr.attributeName, "РџСЂРѕР±РёС‚РёРµ", StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
@@ -634,28 +800,26 @@ namespace RPGTable.Runtime
                     effectName = attr.attributeName,
                     affectedStat = attr.affectedStat,
                     value = attr.value,
-                    durationTurns = attr.durationTurns,
-                    appliedToSelf = attr.appliedToSelf
+                    durationTurns = attr.durationTurns
                 };
                 subject.statusEffects.Add(debuff);
             }
         }
 
-        private void ApplyStatChange(CampaignRuntimeToken token, string stat, int delta)
+        private void ApplyStatChange(CampaignRuntimeToken token, CombatAttributeStat stat, int delta)
         {
-            if (string.IsNullOrEmpty(stat)) return;
-            switch (stat.ToUpper())
+            switch (stat)
             {
-                case "HP":
+                case CombatAttributeStat.HP:
                     token.CurrentHp = Mathf.Clamp(token.CurrentHp + delta, 0, token.MaxHp);
                     break;
-                case "MOVEMENTPOINTS":
+                case CombatAttributeStat.MovementPoints:
                     token.CurrentMovementPoints = Mathf.Max(0, token.CurrentMovementPoints + delta);
                     break;
-                case "ROLLS":
+                case CombatAttributeStat.Rolls:
                     token.CurrentRolls = Mathf.Max(0, token.CurrentRolls + delta);
                     break;
-                case "ARMOR":
+                case CombatAttributeStat.Armor:
                     token.CurrentArmor = Mathf.Clamp(token.CurrentArmor + delta, 0, token.MaxArmor);
                     break;
             }
@@ -756,3 +920,4 @@ namespace RPGTable.Runtime
         }
     }
 }
+

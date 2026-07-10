@@ -121,10 +121,6 @@ namespace RPGTable.CharacterEditor
                         }
                     }
                 }
-                else if (!string.IsNullOrWhiteSpace(card.attribute))
-                {
-                    sb.AppendLine($"Свойство: <b>{card.attribute}</b>");
-                }
             }
 
             return sb.ToString().TrimEnd();
@@ -145,8 +141,11 @@ namespace RPGTable.CharacterEditor
 
             sb.AppendLine($"Стоимость: <b>{card.cost} SP</b>");
             sb.AppendLine($"Дальность: <b>{card.range}</b>");
-            sb.AppendLine($"Цель: <b>{GetTargetTypeName(card.targetType)}</b>");
             sb.AppendLine($"Множитель: <b>x{card.multiplier:F1}</b>");
+            if (card.attackType == AttackType.Defense)
+            {
+                sb.AppendLine($"Защита: <b>{card.defenseValue}</b>");
+            }
 
             if (card.attributes != null && card.attributes.Count > 0)
             {
@@ -194,19 +193,6 @@ namespace RPGTable.CharacterEditor
                 case AbilityEffectType.Move: return "Перемещение";
                 case AbilityEffectType.Status: return "Эффект состояния";
                 case AbilityEffectType.Reveal: return "Раскрытие";
-                default: return type.ToString();
-            }
-        }
-
-        private string GetTargetTypeName(AbilityTargetType type)
-        {
-            switch (type)
-            {
-                case AbilityTargetType.Self: return "Себя";
-                case AbilityTargetType.Ally: return "Союзник";
-                case AbilityTargetType.Enemy: return "Враг";
-                case AbilityTargetType.Area: return "Область";
-                case AbilityTargetType.Object: return "Объект";
                 default: return type.ToString();
             }
         }

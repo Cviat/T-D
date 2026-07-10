@@ -12,7 +12,9 @@ namespace RPGTable.Runtime
         public string DisplayName { get; set; }
         public TokenTeam Team { get; set; }
         public bool VisibleToPlayers { get; set; }
+        public bool IsPlayerViewClone { get; set; }
         public bool IsDead { get; set; }
+        public int FootprintSize { get; set; } = 1;
         public int MaxHp { get; set; }
         public int CurrentHp { get; set; }
         public int MaxArmor { get; set; }

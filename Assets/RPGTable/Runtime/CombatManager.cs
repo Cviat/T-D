@@ -31,6 +31,7 @@ namespace RPGTable.Runtime
         public List<CampaignRuntimeToken> Queue { get; } = new List<CampaignRuntimeToken>();
         public int ActiveTokenIndex { get; private set; } = -1;
         public int CurrentTurnNumber { get; private set; } = 1;
+        private readonly Dictionary<int, int> floatingTextStacks = new Dictionary<int, int>();
 
         public CampaignRuntimeToken ActiveToken
         {
@@ -65,10 +66,16 @@ namespace RPGTable.Runtime
             var allTokens = GameObject.FindObjectsByType<CampaignRuntimeToken>(FindObjectsInactive.Exclude);
             foreach (var token in allTokens)
             {
-                if (!token.IsDead)
+                if (!token.IsPlayerViewClone && !token.IsDead)
                 {
                     Queue.Add(token);
                 }
+            }
+
+            if (!HasOpposingLivingSides())
+            {
+                EndCombat();
+                return;
             }
 
             // Sort by initiative (from BoardToken initiative field) descending
@@ -193,6 +200,17 @@ namespace RPGTable.Runtime
         public void EndTokenTurn()
         {
             if (!CampaignGameSession.IsCombatActive) return;
+            if (!HasOpposingLivingSides())
+            {
+                EndCombat();
+                return;
+            }
+            RemoveInvalidQueueEntries();
+            if (Queue.Count == 0)
+            {
+                EndCombat();
+                return;
+            }
 
             ActiveTokenIndex++;
             if (ActiveTokenIndex >= Queue.Count)
@@ -208,7 +226,7 @@ namespace RPGTable.Runtime
             var nextToken = ActiveToken;
             if (nextToken != null && nextToken.IsDead)
             {
-                EndTokenTurn();
+                EndCombat();
                 return;
             }
 
@@ -224,38 +242,77 @@ namespace RPGTable.Runtime
             }
         }
 
+        private void RemoveInvalidQueueEntries()
+        {
+            Queue.RemoveAll(token => token == null || token.IsPlayerViewClone || token.IsDead || token.CurrentHp <= 0);
+
+            if (ActiveTokenIndex >= Queue.Count)
+            {
+                ActiveTokenIndex = Queue.Count - 1;
+            }
+        }
+
+        private bool HasOpposingLivingSides()
+        {
+            var hasParty = false;
+            var hasEnemy = false;
+
+            var allTokens = GameObject.FindObjectsByType<CampaignRuntimeToken>(FindObjectsInactive.Exclude);
+            foreach (var token in allTokens)
+            {
+                if (token == null || token.IsPlayerViewClone || token.IsDead || token.CurrentHp <= 0)
+                {
+                    continue;
+                }
+
+                if (token.Team == TokenTeam.Enemy)
+                {
+                    hasEnemy = true;
+                }
+                else if (token.Team == TokenTeam.Player || token.Team == TokenTeam.Ally)
+                {
+                    hasParty = true;
+                }
+
+                if (hasParty && hasEnemy)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private void ProcessStatusEffects(CampaignRuntimeToken token)
         {
             for (int i = token.statusEffects.Count - 1; i >= 0; i--)
             {
                 var effect = token.statusEffects[i];
                 
-                // Apply ticking damage/effect dynamically based on affectedStat
-                if (string.Equals(effect.affectedStat, "HP", StringComparison.OrdinalIgnoreCase))
+                switch (effect.affectedStat)
                 {
-                    token.CurrentHp = Mathf.Clamp(token.CurrentHp + effect.value, 0, token.MaxHp);
-                    if (token.CurrentHp <= 0)
-                    {
-                        token.IsDead = true;
+                    case CombatAttributeStat.HP:
+                        token.CurrentHp = Mathf.Clamp(token.CurrentHp + effect.value, 0, token.MaxHp);
+                        if (token.CurrentHp <= 0)
+                        {
+                            token.IsDead = true;
 #if UNITY_2023_1_OR_NEWER
-                        var loader = FindAnyObjectByType<CampaignGameLoader>();
+                            var loader = FindAnyObjectByType<CampaignGameLoader>();
 #else
-                        var loader = FindAnyObjectByType<CampaignGameLoader>();
+                            var loader = FindAnyObjectByType<CampaignGameLoader>();
 #endif
-                        if (loader != null) loader.KillRuntimeToken(token);
-                    }
-                }
-                else if (string.Equals(effect.affectedStat, "MovementPoints", StringComparison.OrdinalIgnoreCase))
-                {
-                    token.CurrentMovementPoints = Mathf.Max(0, token.CurrentMovementPoints + effect.value);
-                }
-                else if (string.Equals(effect.affectedStat, "Rolls", StringComparison.OrdinalIgnoreCase))
-                {
-                    token.CurrentRolls = Mathf.Max(0, token.CurrentRolls + effect.value);
-                }
-                else if (string.Equals(effect.affectedStat, "Armor", StringComparison.OrdinalIgnoreCase))
-                {
-                    token.CurrentArmor = Mathf.Clamp(token.CurrentArmor + effect.value, 0, token.MaxArmor);
+                            if (loader != null) loader.KillRuntimeToken(token);
+                        }
+                        break;
+                    case CombatAttributeStat.MovementPoints:
+                        token.CurrentMovementPoints = Mathf.Max(0, token.CurrentMovementPoints + effect.value);
+                        break;
+                    case CombatAttributeStat.Rolls:
+                        token.CurrentRolls = Mathf.Max(0, token.CurrentRolls + effect.value);
+                        break;
+                    case CombatAttributeStat.Armor:
+                        token.CurrentArmor = Mathf.Clamp(token.CurrentArmor + effect.value, 0, token.MaxArmor);
+                        break;
                 }
 
                 // Decrement duration
@@ -322,6 +379,102 @@ namespace RPGTable.Runtime
             if (pvCanvasGo != null)
             {
                 CreateBannerOnCanvas(pvCanvasGo, message, color, duration, slide);
+            }
+        }
+
+        public void SpawnFloatingText(Vector3 worldPosition, string message, Color color, float duration = 1.1f, float fontSize = 24f, int layer = -1, int stackKey = 0)
+        {
+            var stackIndex = ReserveFloatingTextStack(stackKey);
+            var side = stackIndex % 2 == 0 ? -1f : 1f;
+            var lane = stackIndex / 2;
+            var offset = new Vector3(
+                side * (0.18f + lane * 0.22f) + UnityEngine.Random.Range(-0.06f, 0.06f),
+                stackIndex * 0.28f,
+                -0.7f);
+            var textObject = CreateFloatingTextObject("FloatingCombatText", worldPosition + offset, message, color, fontSize);
+            if (layer >= 0)
+            {
+                textObject.layer = layer;
+            }
+            StartCoroutine(AnimateFloatingText(textObject, duration, stackKey));
+        }
+
+        private int ReserveFloatingTextStack(int stackKey)
+        {
+            if (stackKey == 0)
+            {
+                return 0;
+            }
+
+            floatingTextStacks.TryGetValue(stackKey, out var stackIndex);
+            floatingTextStacks[stackKey] = stackIndex + 1;
+            return stackIndex;
+        }
+
+        private static GameObject CreateFloatingTextObject(string name, Vector3 position, string message, Color color, float fontSize)
+        {
+            var go = new GameObject(name);
+            go.transform.position = position;
+
+            var text = go.AddComponent<TextMesh>();
+            text.text = message;
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontSize = Mathf.RoundToInt(fontSize);
+            text.characterSize = 0.16f;
+            text.anchor = TextAnchor.MiddleCenter;
+            text.alignment = TextAlignment.Center;
+            text.color = color;
+
+            var renderer = go.GetComponent<MeshRenderer>();
+            if (renderer != null)
+            {
+                renderer.sortingOrder = 500;
+            }
+
+            return go;
+        }
+
+        private IEnumerator AnimateFloatingText(GameObject textObject, float duration, int stackKey)
+        {
+            if (textObject == null)
+            {
+                yield break;
+            }
+
+            var start = textObject.transform.position;
+            var end = start + new Vector3(0f, 0.75f, 0f);
+            var text = textObject.GetComponent<TextMesh>();
+            var startColor = text != null ? text.color : Color.white;
+            var elapsed = 0f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+                textObject.transform.position = Vector3.Lerp(start, end, t);
+
+                if (text != null)
+                {
+                    var alpha = 1f - Mathf.SmoothStep(0f, 1f, Mathf.Max(0f, (t - 0.35f) / 0.65f));
+                    text.color = new Color(startColor.r, startColor.g, startColor.b, alpha);
+                }
+
+                yield return null;
+            }
+
+            Destroy(textObject);
+
+            if (stackKey != 0 && floatingTextStacks.TryGetValue(stackKey, out var stackCount))
+            {
+                stackCount = Mathf.Max(0, stackCount - 1);
+                if (stackCount == 0)
+                {
+                    floatingTextStacks.Remove(stackKey);
+                }
+                else
+                {
+                    floatingTextStacks[stackKey] = stackCount;
+                }
             }
         }
 

@@ -1,5 +1,6 @@
 using System.IO;
 using RPGTable.Runtime;
+using RPGTable.Runtime.UI;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,6 +13,8 @@ namespace RPGTable.Editor
         private const string TokenCardPath = PrefabFolder + "/TokenCard.prefab";
         private const string MapCardPath = PrefabFolder + "/MapCard.prefab";
         private const string GMBottomToolsPath = PrefabFolder + "/GMBottomTools.prefab";
+        private const string TokenWorldBarsPath = PrefabFolder + "/TokenWorldBars.prefab";
+        private const string CombatInspectorPath = PrefabFolder + "/CombatInspector.prefab";
 
         private static Sprite defaultUiSprite;
 
@@ -24,15 +27,28 @@ namespace RPGTable.Editor
             BuildTokenCardPrefab();
             BuildMapCardPrefab();
             BuildGMBottomToolsPrefab();
+            BuildTokenWorldBarsPrefab();
+            BuildCombatInspectorPrefab();
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log("RPG Table GM UI Prefabs created successfully in: " + PrefabFolder);
         }
 
+        [MenuItem("RPG Table/Create Combat Inspector Prefab")]
+        public static void CreateCombatInspectorPrefab()
+        {
+            Directory.CreateDirectory(PrefabFolder);
+            LoadDefaultUiSprite();
+            BuildCombatInspectorPrefab();
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log("CombatInspector prefab created successfully: " + CombatInspectorPath);
+        }
+
         private static void LoadDefaultUiSprite()
         {
-            defaultUiSprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
+            defaultUiSprite = null;
         }
 
         private static void BuildTokenCardPrefab()
@@ -191,6 +207,180 @@ namespace RPGTable.Editor
             Object.DestroyImmediate(root);
         }
 
+        private static void BuildTokenWorldBarsPrefab()
+        {
+            var root = CreateUIElement("Token World Bars", new Vector2(120f, 50f));
+            var rootRect = root.GetComponent<RectTransform>();
+            rootRect.anchorMin = new Vector2(0.5f, 0.5f);
+            rootRect.anchorMax = new Vector2(0.5f, 0.5f);
+            rootRect.pivot = new Vector2(0.5f, 0.5f);
+
+            var canvas = root.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+            canvas.sortingOrder = 200;
+            root.AddComponent<CanvasScaler>();
+            root.AddComponent<GraphicRaycaster>();
+
+            var healthRoot = CreateBarRoot("Health", root.transform, new Vector2(0f, 10f), new Color(0.12f, 0.12f, 0.12f, 0.85f));
+            var healthFill = CreateBarFill("Fill", healthRoot.transform, new Color(0.82f, 0.12f, 0.12f, 1f));
+            var healthText = CreateBarText("Text", healthRoot.transform);
+
+            var armorRoot = CreateBarRoot("Armor", root.transform, new Vector2(0f, -10f), new Color(0.12f, 0.12f, 0.12f, 0.85f));
+            var armorFill = CreateBarFill("Fill", armorRoot.transform, new Color(0.62f, 0.66f, 0.75f, 1f));
+            var armorText = CreateBarText("Text", armorRoot.transform);
+
+            var view = root.AddComponent<TokenWorldBarsView>();
+            var serialized = new SerializedObject(view);
+            serialized.FindProperty("healthRoot").objectReferenceValue = healthRoot;
+            serialized.FindProperty("healthFill").objectReferenceValue = healthFill;
+            serialized.FindProperty("healthText").objectReferenceValue = healthText;
+            serialized.FindProperty("armorRoot").objectReferenceValue = armorRoot;
+            serialized.FindProperty("armorFill").objectReferenceValue = armorFill;
+            serialized.FindProperty("armorText").objectReferenceValue = armorText;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            PrefabUtility.SaveAsPrefabAsset(root, TokenWorldBarsPath);
+            Object.DestroyImmediate(root);
+        }
+
+        private static void BuildCombatInspectorPrefab()
+        {
+            var root = CreateUIElement("Combat Inspector", new Vector2(300f, 300f));
+            var rootRect = root.GetComponent<RectTransform>();
+            rootRect.anchorMin = new Vector2(0.5f, 0.5f);
+            rootRect.anchorMax = new Vector2(0.5f, 0.5f);
+            rootRect.pivot = new Vector2(0.5f, 0.5f);
+            root.AddComponent<LayoutElement>().preferredHeight = 300f;
+
+            var rootImage = root.AddComponent<Image>();
+            rootImage.color = new Color(0.08f, 0.07f, 0.055f, 0.96f);
+            ApplyGuiSprite(rootImage, "big_background");
+
+            var portraitFrame = CreateUIElement("Portrait Frame", new Vector2(82f, 82f), root.transform);
+            var portraitFrameRect = portraitFrame.GetComponent<RectTransform>();
+            portraitFrameRect.anchorMin = new Vector2(0f, 1f);
+            portraitFrameRect.anchorMax = new Vector2(0f, 1f);
+            portraitFrameRect.pivot = new Vector2(0f, 1f);
+            portraitFrameRect.anchoredPosition = new Vector2(10f, -10f);
+            var portraitFrameImage = portraitFrame.AddComponent<Image>();
+            portraitFrameImage.color = Color.white;
+            ApplyGuiSprite(portraitFrameImage, "lil_roundbackground");
+
+            var portrait = CreateUIElement("Portrait", new Vector2(66f, 66f), portraitFrame.transform);
+            var portraitRect = portrait.GetComponent<RectTransform>();
+            portraitRect.anchorMin = new Vector2(0.5f, 0.5f);
+            portraitRect.anchorMax = new Vector2(0.5f, 0.5f);
+            portraitRect.pivot = new Vector2(0.5f, 0.5f);
+            portraitRect.anchoredPosition = Vector2.zero;
+            var portraitImage = portrait.AddComponent<Image>();
+            portraitImage.color = new Color(0.12f, 0.12f, 0.12f, 1f);
+            portraitImage.preserveAspect = true;
+
+            var portraitOverlay = CreateUIElement("Portrait Overlay", new Vector2(82f, 82f), portraitFrame.transform);
+            var portraitOverlayRect = portraitOverlay.GetComponent<RectTransform>();
+            portraitOverlayRect.anchorMin = new Vector2(0.5f, 0.5f);
+            portraitOverlayRect.anchorMax = new Vector2(0.5f, 0.5f);
+            portraitOverlayRect.pivot = new Vector2(0.5f, 0.5f);
+            portraitOverlayRect.anchoredPosition = Vector2.zero;
+            var portraitOverlayImage = portraitOverlay.AddComponent<Image>();
+            portraitOverlayImage.color = Color.white;
+            portraitOverlayImage.raycastTarget = false;
+            ApplyGuiSprite(portraitOverlayImage, "lil_roundframe");
+
+            var nameLabel = CreateTextElement("Name", "Фишка", 15, FontStyle.Bold, root.transform);
+            PlaceRect(nameLabel.GetComponent<RectTransform>(), new Vector2(100f, -10f), new Vector2(190f, 24f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+            ConfigureBestFit(nameLabel.GetComponent<Text>(), 10, 15, HorizontalWrapMode.Wrap, VerticalWrapMode.Truncate);
+            nameLabel.GetComponent<Text>().alignment = TextAnchor.MiddleLeft;
+
+            var stateLabel = CreateTextElement("State", "HP: 0/0", 12, FontStyle.Bold, root.transform);
+            ConfigureBestFit(stateLabel.GetComponent<Text>(), 9, 12, HorizontalWrapMode.Wrap, VerticalWrapMode.Truncate);
+            PlaceRect(stateLabel.GetComponent<RectTransform>(), new Vector2(100f, -36f), new Vector2(190f, 20f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+            stateLabel.GetComponent<Text>().alignment = TextAnchor.MiddleLeft;
+
+            var armorLabel = CreateTextElement("Armor", "Броня: 0/0", 11, FontStyle.Normal, root.transform);
+            PlaceRect(armorLabel.GetComponent<RectTransform>(), new Vector2(100f, -58f), new Vector2(92f, 18f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+            armorLabel.GetComponent<Text>().alignment = TextAnchor.MiddleLeft;
+
+            var rollsLabel = CreateTextElement("Rolls", "Броски: 0/0", 11, FontStyle.Normal, root.transform);
+            PlaceRect(rollsLabel.GetComponent<RectTransform>(), new Vector2(198f, -58f), new Vector2(92f, 18f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+            rollsLabel.GetComponent<Text>().alignment = TextAnchor.MiddleLeft;
+
+            var movementLabel = CreateTextElement("Movement", "Ход: свободно", 11, FontStyle.Normal, root.transform);
+            PlaceRect(movementLabel.GetComponent<RectTransform>(), new Vector2(100f, -78f), new Vector2(190f, 18f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+            ConfigureBestFit(movementLabel.GetComponent<Text>(), 8, 11, HorizontalWrapMode.Wrap, VerticalWrapMode.Truncate);
+            movementLabel.GetComponent<Text>().alignment = TextAnchor.MiddleLeft;
+
+            var descLabel = CreateTextElement("Description", "Нет описания.", 10, FontStyle.Italic, root.transform);
+            PlaceRect(descLabel.GetComponent<RectTransform>(), new Vector2(10f, -98f), new Vector2(280f, 36f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+            var descText = descLabel.GetComponent<Text>();
+            descText.alignment = TextAnchor.UpperLeft;
+            descText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            ConfigureBestFit(descText, 8, 10, HorizontalWrapMode.Wrap, VerticalWrapMode.Truncate);
+            descText.verticalOverflow = VerticalWrapMode.Truncate;
+
+            var statsLabel = CreateTextElement("Stats", "Размер: 1x1", 10, FontStyle.Normal, root.transform);
+            PlaceRect(statsLabel.GetComponent<RectTransform>(), new Vector2(10f, -138f), new Vector2(130f, 34f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+            statsLabel.GetComponent<Text>().alignment = TextAnchor.UpperLeft;
+
+            var weaponLabel = CreateTextElement("Weapon", "Оружие: нет", 11, FontStyle.Bold, root.transform);
+            ConfigureBestFit(weaponLabel.GetComponent<Text>(), 8, 11, HorizontalWrapMode.Wrap, VerticalWrapMode.Truncate);
+            PlaceRect(weaponLabel.GetComponent<RectTransform>(), new Vector2(10f, -174f), new Vector2(280f, 20f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+            weaponLabel.GetComponent<Text>().alignment = TextAnchor.MiddleLeft;
+
+            var attacksLabel = CreateTextElement("Attacks", "Атаки: -", 10, FontStyle.Normal, root.transform);
+            PlaceRect(attacksLabel.GetComponent<RectTransform>(), new Vector2(10f, -196f), new Vector2(280f, 46f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+            attacksLabel.GetComponent<Text>().alignment = TextAnchor.UpperLeft;
+            ConfigureBestFit(attacksLabel.GetComponent<Text>(), 7, 9, HorizontalWrapMode.Wrap, VerticalWrapMode.Truncate);
+
+            var defenseLabel = CreateTextElement("Defense", "Защита: -", 10, FontStyle.Normal, root.transform);
+            PlaceRect(defenseLabel.GetComponent<RectTransform>(), new Vector2(10f, -242f), new Vector2(170f, 36f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+            defenseLabel.GetComponent<Text>().alignment = TextAnchor.UpperLeft;
+            ConfigureBestFit(defenseLabel.GetComponent<Text>(), 7, 9, HorizontalWrapMode.Wrap, VerticalWrapMode.Truncate);
+
+            var statusesLabel = CreateTextElement("Statuses", "Статусы: -", 10, FontStyle.Normal, root.transform);
+            PlaceRect(statusesLabel.GetComponent<RectTransform>(), new Vector2(184f, -242f), new Vector2(106f, 36f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f));
+            statusesLabel.GetComponent<Text>().alignment = TextAnchor.MiddleLeft;
+            ConfigureBestFit(statusesLabel.GetComponent<Text>(), 7, 9, HorizontalWrapMode.Wrap, VerticalWrapMode.Truncate);
+
+            var switchButton = CreateInspectorButton("Switch Weapon", "Сменить оружие", root.transform);
+            PlaceRect(switchButton.GetComponent<RectTransform>(), new Vector2(150f, 10f), new Vector2(140f, 28f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f));
+            var switchText = switchButton.GetComponentInChildren<Text>();
+
+            var hpInputGo = CreateInputElement("HP Input", "5", root.transform);
+            PlaceRect(hpInputGo.GetComponent<RectTransform>(), new Vector2(10f, 10f), new Vector2(38f, 28f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f));
+            var hpInput = hpInputGo.GetComponent<InputField>();
+
+            var damageButton = CreateInspectorButton("Damage", "-", root.transform);
+            PlaceRect(damageButton.GetComponent<RectTransform>(), new Vector2(54f, 10f), new Vector2(40f, 28f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f));
+
+            var healButton = CreateInspectorButton("Heal", "+", root.transform);
+            PlaceRect(healButton.GetComponent<RectTransform>(), new Vector2(98f, 10f), new Vector2(40f, 28f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f));
+
+            var view = root.AddComponent<EntityInspectorView>();
+            var serialized = new SerializedObject(view);
+            serialized.FindProperty("portraitImage").objectReferenceValue = portraitImage;
+            serialized.FindProperty("nameLabel").objectReferenceValue = nameLabel.GetComponent<Text>();
+            serialized.FindProperty("stateLabel").objectReferenceValue = stateLabel.GetComponent<Text>();
+            serialized.FindProperty("descLabel").objectReferenceValue = descLabel.GetComponent<Text>();
+            serialized.FindProperty("statsLabel").objectReferenceValue = statsLabel.GetComponent<Text>();
+            serialized.FindProperty("armorLabel").objectReferenceValue = armorLabel.GetComponent<Text>();
+            serialized.FindProperty("rollsLabel").objectReferenceValue = rollsLabel.GetComponent<Text>();
+            serialized.FindProperty("movementLabel").objectReferenceValue = movementLabel.GetComponent<Text>();
+            serialized.FindProperty("weaponLabel").objectReferenceValue = weaponLabel.GetComponent<Text>();
+            serialized.FindProperty("attacksLabel").objectReferenceValue = attacksLabel.GetComponent<Text>();
+            serialized.FindProperty("defenseLabel").objectReferenceValue = defenseLabel.GetComponent<Text>();
+            serialized.FindProperty("statusesLabel").objectReferenceValue = statusesLabel.GetComponent<Text>();
+            serialized.FindProperty("hpInput").objectReferenceValue = hpInput;
+            serialized.FindProperty("damageButton").objectReferenceValue = damageButton.GetComponent<Button>();
+            serialized.FindProperty("healButton").objectReferenceValue = healButton.GetComponent<Button>();
+            serialized.FindProperty("weaponSwitchButton").objectReferenceValue = switchButton.GetComponent<Button>();
+            serialized.FindProperty("weaponSwitchText").objectReferenceValue = switchText;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            PrefabUtility.SaveAsPrefabAsset(root, CombatInspectorPath);
+            Object.DestroyImmediate(root);
+        }
+
         // ── Assembly Helpers ─────────────────────────────────────────────
 
         private static GameObject CreateUIElement(string name, Vector2 size, Transform parent = null)
@@ -241,6 +431,167 @@ namespace RPGTable.Editor
             tRect.anchorMax = Vector2.one;
             tRect.offsetMin = new Vector2(6f, 3f);
             tRect.offsetMax = new Vector2(-6f, -3f);
+
+            return go;
+        }
+
+        private static GameObject CreateBarRoot(string name, Transform parent, Vector2 anchoredPosition, Color backgroundColor)
+        {
+            var go = CreateUIElement(name, new Vector2(110f, 18f), parent);
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = anchoredPosition;
+
+            var image = go.AddComponent<Image>();
+            image.color = backgroundColor;
+            image.raycastTarget = false;
+            if (defaultUiSprite != null)
+            {
+                image.sprite = defaultUiSprite;
+                image.type = Image.Type.Sliced;
+            }
+
+            return go;
+        }
+
+        private static RectTransform CreateBarFill(string name, Transform parent, Color color)
+        {
+            var go = CreateUIElement(name, Vector2.zero, parent);
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.pivot = new Vector2(0f, 0.5f);
+            rect.offsetMin = new Vector2(2f, 2f);
+            rect.offsetMax = new Vector2(-2f, -2f);
+
+            var image = go.AddComponent<Image>();
+            image.color = color;
+            image.raycastTarget = false;
+            if (defaultUiSprite != null)
+            {
+                image.sprite = defaultUiSprite;
+                image.type = Image.Type.Sliced;
+            }
+
+            return rect;
+        }
+
+        private static Text CreateBarText(string name, Transform parent)
+        {
+            var go = CreateTextElement(name, "0/0", 10, FontStyle.Bold, parent);
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            var text = go.GetComponent<Text>();
+            text.alignment = TextAnchor.MiddleCenter;
+            text.color = Color.white;
+
+            var outline = go.AddComponent<Outline>();
+            outline.effectColor = Color.black;
+            outline.effectDistance = new Vector2(1f, -1f);
+
+            return text;
+        }
+
+        private static void PlaceRect(RectTransform rect, Vector2 anchoredPosition, Vector2 size, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot)
+        {
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.pivot = pivot;
+            rect.anchoredPosition = anchoredPosition;
+            rect.sizeDelta = size;
+        }
+
+        private static void ConfigureBestFit(Text text, int minSize, int maxSize, HorizontalWrapMode horizontalWrap, VerticalWrapMode verticalWrap)
+        {
+            if (text == null)
+            {
+                return;
+            }
+
+            text.resizeTextForBestFit = true;
+            text.resizeTextMinSize = minSize;
+            text.resizeTextMaxSize = maxSize;
+            text.horizontalOverflow = horizontalWrap;
+            text.verticalOverflow = verticalWrap;
+        }
+
+        private static void ApplyGuiSprite(Image image, string spriteName)
+        {
+            if (image == null || string.IsNullOrWhiteSpace(spriteName))
+            {
+                return;
+            }
+
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/GUI_Parts/Gui_parts/{spriteName}.png");
+            if (sprite == null)
+            {
+                return;
+            }
+
+            image.sprite = sprite;
+            image.type = Image.Type.Sliced;
+        }
+
+        private static GameObject CreateInspectorButton(string name, string label, Transform parent)
+        {
+            var go = CreateUIElement(name, new Vector2(100f, 28f), parent);
+            var image = go.AddComponent<Image>();
+            image.color = new Color(0.22f, 0.18f, 0.13f, 1f);
+            ApplyGuiSprite(image, "button2");
+
+            var button = go.AddComponent<Button>();
+            button.targetGraphic = image;
+
+            var textObject = CreateTextElement("Text", label, 10, FontStyle.Bold, go.transform);
+            var textRect = textObject.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(4f, 2f);
+            textRect.offsetMax = new Vector2(-4f, -2f);
+            textObject.GetComponent<Text>().alignment = TextAnchor.MiddleCenter;
+
+            return go;
+        }
+
+        private static GameObject CreateInputElement(string name, string value, Transform parent)
+        {
+            var go = CreateUIElement(name, new Vector2(38f, 28f), parent);
+            var image = go.AddComponent<Image>();
+            image.color = new Color(0.08f, 0.07f, 0.06f, 1f);
+            ApplyGuiSprite(image, "button_frame");
+
+            var input = go.AddComponent<InputField>();
+            input.targetGraphic = image;
+            input.contentType = InputField.ContentType.IntegerNumber;
+            input.text = value;
+
+            var textObject = CreateTextElement("Text", value, 11, FontStyle.Bold, go.transform);
+            var textRect = textObject.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(4f, 2f);
+            textRect.offsetMax = new Vector2(-4f, -2f);
+            var text = textObject.GetComponent<Text>();
+            text.alignment = TextAnchor.MiddleCenter;
+            text.supportRichText = false;
+            input.textComponent = text;
+
+            var placeholderObject = CreateTextElement("Placeholder", value, 11, FontStyle.Normal, go.transform);
+            var placeholderRect = placeholderObject.GetComponent<RectTransform>();
+            placeholderRect.anchorMin = Vector2.zero;
+            placeholderRect.anchorMax = Vector2.one;
+            placeholderRect.offsetMin = new Vector2(4f, 2f);
+            placeholderRect.offsetMax = new Vector2(-4f, -2f);
+            var placeholder = placeholderObject.GetComponent<Text>();
+            placeholder.alignment = TextAnchor.MiddleCenter;
+            placeholder.color = new Color(1f, 1f, 1f, 0.35f);
+            input.placeholder = placeholder;
 
             return go;
         }

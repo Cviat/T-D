@@ -35,10 +35,10 @@ namespace RPGTable.Editor
                 ?? AssetDatabase.LoadAssetAtPath<Sprite>("Assets/GUI_Parts/Icons/skill_icon_04.png");
 
             // Create Combat Attributes
-            var stunAttr = CreateOrUpdateAttribute("Stun", "Оглушение", stunIcon, "Rolls", -999, 1, false, "Цель оглушена и пропускает свой следующий ход.");
-            var burnAttr = CreateOrUpdateAttribute("Burn", "Поджог", fireIcon, "HP", -3, 3, false, "Цель горит и получает периодический урон от огня в начале своего хода.");
-            var poisonAttr = CreateOrUpdateAttribute("Poison", "Отравление", shotIcon, "HP", -4, 3, false, "Цель отравлена и получает урон ядом в конце каждого своего хода.");
-            var shieldAttr = CreateOrUpdateAttribute("ShieldBuff", "Эгида", healIcon, "Armor", 0, 1, true, "Дарует щит, блокирующий следующий входящий урон.");
+            var stunAttr = CreateOrUpdateAttribute("Stun", "Оглушение", stunIcon, CombatAttributeStat.Rolls, -999, 1, false, "Цель оглушена и пропускает свой следующий ход.");
+            var burnAttr = CreateOrUpdateAttribute("Burn", "Поджог", fireIcon, CombatAttributeStat.HP, -3, 3, false, "Цель горит и получает периодический урон от огня в начале своего хода.");
+            var poisonAttr = CreateOrUpdateAttribute("Poison", "Отравление", shotIcon, CombatAttributeStat.HP, -4, 3, false, "Цель отравлена и получает урон ядом в конце каждого своего хода.");
+            var shieldAttr = CreateOrUpdateAttribute("ShieldBuff", "Эгида", healIcon, CombatAttributeStat.Armor, 0, 1, true, "Дарует щит, блокирующий следующий входящий урон.");
 
             // Create 15 Distinct Ability Cards
             CreateOrUpdateAbility("HeavyStrike", "Сильный удар", "Наносит мощный рубящий удар с размаху, оглушая цель.", heavyStrike =>
@@ -46,9 +46,7 @@ namespace RPGTable.Editor
                 heavyStrike.icon = stunIcon;
                 heavyStrike.cost = 2;
                 heavyStrike.range = 1;
-                heavyStrike.targetType = AbilityTargetType.Enemy;
                 heavyStrike.effectType = AbilityEffectType.Damage;
-                heavyStrike.effectValue = 5;
                 heavyStrike.multiplier = 1.5f;
                 heavyStrike.attributes = new List<CombatAttribute> { stunAttr };
                 heavyStrike.attackType = AttackType.Melee;
@@ -59,9 +57,7 @@ namespace RPGTable.Editor
                 quickShot.icon = shotIcon;
                 quickShot.cost = 1;
                 quickShot.range = 4;
-                quickShot.targetType = AbilityTargetType.Enemy;
                 quickShot.effectType = AbilityEffectType.Damage;
-                quickShot.effectValue = 3;
                 quickShot.multiplier = 1.2f;
                 quickShot.attributes = new List<CombatAttribute>();
                 quickShot.attackType = AttackType.Ranged;
@@ -72,9 +68,7 @@ namespace RPGTable.Editor
                 fireball.icon = fireIcon;
                 fireball.cost = 3;
                 fireball.range = 3;
-                fireball.targetType = AbilityTargetType.Enemy;
                 fireball.effectType = AbilityEffectType.Damage;
-                fireball.effectValue = 8;
                 fireball.multiplier = 2.0f;
                 fireball.attributes = new List<CombatAttribute> { burnAttr };
                 fireball.attackType = AttackType.Magic;
@@ -85,10 +79,9 @@ namespace RPGTable.Editor
                 lesserHeal.icon = healIcon;
                 lesserHeal.cost = 2;
                 lesserHeal.range = 2;
-                lesserHeal.targetType = AbilityTargetType.Ally;
                 lesserHeal.effectType = AbilityEffectType.Heal;
-                lesserHeal.effectValue = 6;
                 lesserHeal.multiplier = 1.5f;
+                lesserHeal.defenseValue = 0;
                 lesserHeal.attributes = new List<CombatAttribute>();
                 lesserHeal.attackType = AttackType.Defense;
             });
@@ -98,10 +91,9 @@ namespace RPGTable.Editor
                 faithShield.icon = healIcon;
                 faithShield.cost = 2;
                 faithShield.range = 3;
-                faithShield.targetType = AbilityTargetType.Ally;
                 faithShield.effectType = AbilityEffectType.Status;
-                faithShield.effectValue = 0;
                 faithShield.multiplier = 1.0f;
+                faithShield.defenseValue = 4;
                 faithShield.attributes = new List<CombatAttribute> { shieldAttr };
                 faithShield.attackType = AttackType.Defense;
             });
@@ -111,9 +103,7 @@ namespace RPGTable.Editor
                 poisonDart.icon = shotIcon;
                 poisonDart.cost = 2;
                 poisonDart.range = 3;
-                poisonDart.targetType = AbilityTargetType.Enemy;
                 poisonDart.effectType = AbilityEffectType.Damage;
-                poisonDart.effectValue = 2;
                 poisonDart.multiplier = 1.0f;
                 poisonDart.attributes = new List<CombatAttribute> { poisonAttr };
                 poisonDart.attackType = AttackType.Ranged;
@@ -124,9 +114,7 @@ namespace RPGTable.Editor
                 lightning.icon = fireIcon;
                 lightning.cost = 3;
                 lightning.range = 4;
-                lightning.targetType = AbilityTargetType.Enemy;
                 lightning.effectType = AbilityEffectType.Damage;
-                lightning.effectValue = 7;
                 lightning.multiplier = 1.8f;
                 lightning.attributes = new List<CombatAttribute>();
                 lightning.attackType = AttackType.Magic;
@@ -137,9 +125,7 @@ namespace RPGTable.Editor
                 vamp.icon = stunIcon;
                 vamp.cost = 3;
                 vamp.range = 1;
-                vamp.targetType = AbilityTargetType.Enemy;
                 vamp.effectType = AbilityEffectType.Heal;
-                vamp.effectValue = 4;
                 vamp.multiplier = 1.3f;
                 vamp.attributes = new List<CombatAttribute>();
                 vamp.attackType = AttackType.Melee;
@@ -150,10 +136,9 @@ namespace RPGTable.Editor
                 radiance.icon = healIcon;
                 radiance.cost = 4;
                 radiance.range = 2;
-                radiance.targetType = AbilityTargetType.Area;
                 radiance.effectType = AbilityEffectType.Heal;
-                radiance.effectValue = 5;
                 radiance.multiplier = 1.4f;
+                radiance.defenseValue = 0;
                 radiance.attributes = new List<CombatAttribute>();
                 radiance.attackType = AttackType.Defense;
             });
@@ -163,9 +148,7 @@ namespace RPGTable.Editor
                 iceArrow.icon = shotIcon;
                 iceArrow.cost = 2;
                 iceArrow.range = 4;
-                iceArrow.targetType = AbilityTargetType.Enemy;
                 iceArrow.effectType = AbilityEffectType.Damage;
-                iceArrow.effectValue = 4;
                 iceArrow.multiplier = 1.1f;
                 iceArrow.attributes = new List<CombatAttribute> { stunAttr };
                 iceArrow.attackType = AttackType.Ranged;
@@ -176,9 +159,7 @@ namespace RPGTable.Editor
                 flame.icon = fireIcon;
                 flame.cost = 2;
                 flame.range = 2;
-                flame.targetType = AbilityTargetType.Enemy;
                 flame.effectType = AbilityEffectType.Damage;
-                flame.effectValue = 5;
                 flame.multiplier = 1.4f;
                 flame.attributes = new List<CombatAttribute> { burnAttr };
                 flame.attackType = AttackType.Magic;
@@ -189,10 +170,9 @@ namespace RPGTable.Editor
                 stone.icon = healIcon;
                 stone.cost = 1;
                 stone.range = 1;
-                stone.targetType = AbilityTargetType.Self;
                 stone.effectType = AbilityEffectType.Status;
-                stone.effectValue = 3;
                 stone.multiplier = 1.0f;
+                stone.defenseValue = 3;
                 stone.attributes = new List<CombatAttribute>();
                 stone.attackType = AttackType.Defense;
             });
@@ -202,9 +182,7 @@ namespace RPGTable.Editor
                 vortex.icon = stunIcon;
                 vortex.cost = 3;
                 vortex.range = 1;
-                vortex.targetType = AbilityTargetType.Area;
                 vortex.effectType = AbilityEffectType.Damage;
-                vortex.effectValue = 4;
                 vortex.multiplier = 1.3f;
                 vortex.attributes = new List<CombatAttribute>();
                 vortex.attackType = AttackType.Melee;
@@ -215,10 +193,9 @@ namespace RPGTable.Editor
                 dash.icon = shotIcon;
                 dash.cost = 1;
                 dash.range = 2;
-                dash.targetType = AbilityTargetType.Area;
                 dash.effectType = AbilityEffectType.Move;
-                dash.effectValue = 2;
                 dash.multiplier = 1.0f;
+                dash.defenseValue = 1;
                 dash.attributes = new List<CombatAttribute>();
                 dash.attackType = AttackType.Defense;
             });
@@ -228,10 +205,9 @@ namespace RPGTable.Editor
                 purify.icon = healIcon;
                 purify.cost = 1;
                 purify.range = 2;
-                purify.targetType = AbilityTargetType.Ally;
                 purify.effectType = AbilityEffectType.Status;
-                purify.effectValue = 0;
                 purify.multiplier = 1.0f;
+                purify.defenseValue = 0;
                 purify.attributes = new List<CombatAttribute>();
                 purify.attackType = AttackType.Defense;
             });
@@ -245,7 +221,7 @@ namespace RPGTable.Editor
             string assetName, 
             string displayName, 
             Sprite icon, 
-            string affectedStat, 
+            CombatAttributeStat affectedStat, 
             int value, 
             int durationTurns, 
             bool appliedToSelf, 

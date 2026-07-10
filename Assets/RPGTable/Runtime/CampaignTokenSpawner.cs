@@ -298,6 +298,7 @@ namespace RPGTable.Runtime
             runtime.DisplayName = displayName;
             runtime.Team = team;
             runtime.VisibleToPlayers = visibleToPlayers;
+            runtime.FootprintSize = footprint;
             runtime.MaxHp = charData != null ? charData.maxHp : 10;
             runtime.CurrentHp = runtime.MaxHp;
             runtime.MaxArmor = charData != null ? charData.maxArmor : 0;

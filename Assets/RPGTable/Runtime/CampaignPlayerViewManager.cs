@@ -398,10 +398,23 @@ namespace RPGTable.Runtime
                 PlacePlayerViewToken(tokenObject.transform, PlayerViewTokenKey("player", mapId, player.id), targetPosition, activeTokenKeys);
 
                 tokenSpawner.CreateTokenVisual(tokenObject.transform, tokenData, footprint, TokenTeam.Player, tokenSpawner.AllocateSortingOrder());
+                var runtimeToken = ConfigurePlayerViewRuntimeToken(
+                    tokenObject,
+                    player.name,
+                    player.characterPath,
+                    player.tokenPath,
+                    TokenTeam.Player,
+                    true,
+                    player.id,
+                    player.id,
+                    new Vector2Int(player.gridX, player.gridY),
+                    footprint,
+                    FindRuntimeTokenByPlayerId(player.id),
+                    player.isDead,
+                    player.currentHp);
 
                 if (player.isDead)
                 {
-                    var runtimeToken = tokenObject.AddComponent<CampaignRuntimeToken>();
                     tokenSpawner.ApplyDeadVisual(runtimeToken, footprint);
                 }
             }
@@ -436,10 +449,23 @@ namespace RPGTable.Runtime
                     targetPosition, activeTokenKeys);
 
                 tokenSpawner.CreateTokenVisual(tokenObject.transform, tokenData, footprint, state.team, tokenSpawner.AllocateSortingOrder());
+                var runtimeToken = ConfigurePlayerViewRuntimeToken(
+                    tokenObject,
+                    state.displayName,
+                    state.characterPath,
+                    state.tokenPath,
+                    state.team,
+                    state.visibleToPlayers,
+                    null,
+                    state.runtimeId,
+                    state.gridPosition,
+                    footprint,
+                    null,
+                    state.isDead,
+                    state.currentHp);
 
                 if (state.isDead)
                 {
-                    var runtimeToken = tokenObject.AddComponent<CampaignRuntimeToken>();
                     tokenSpawner.ApplyDeadVisual(runtimeToken, footprint);
                 }
             }
@@ -473,10 +499,23 @@ namespace RPGTable.Runtime
                     targetPosition, activeTokenKeys);
 
                 tokenSpawner.CreateTokenVisual(tokenObject.transform, tokenData, footprint, runtimeToken.Team, tokenSpawner.AllocateSortingOrder());
+                var playerViewRuntimeToken = ConfigurePlayerViewRuntimeToken(
+                    tokenObject,
+                    runtimeToken.DisplayName,
+                    runtimeToken.CharacterPath,
+                    runtimeToken.TokenPath,
+                    runtimeToken.Team,
+                    runtimeToken.VisibleToPlayers,
+                    runtimeToken.PlayerId,
+                    CampaignTokenSpawner.EnsureRuntimeTokenId(runtimeToken),
+                    boardToken.gridPosition,
+                    footprint,
+                    runtimeToken,
+                    runtimeToken.IsDead,
+                    runtimeToken.CurrentHp);
 
                 if (runtimeToken.IsDead)
                 {
-                    var playerViewRuntimeToken = tokenObject.AddComponent<CampaignRuntimeToken>();
                     tokenSpawner.ApplyDeadVisual(playerViewRuntimeToken, footprint);
                 }
             }
@@ -520,6 +559,21 @@ namespace RPGTable.Runtime
                 {
                     return false;
                 }
+
+                SyncPlayerViewRuntimeToken(
+                    tokenTransform,
+                    player.name,
+                    player.characterPath,
+                    player.tokenPath,
+                    TokenTeam.Player,
+                    true,
+                    player.id,
+                    player.id,
+                    new Vector2Int(player.gridX, player.gridY),
+                    footprint,
+                    FindRuntimeTokenByPlayerId(player.id),
+                    player.isDead,
+                    player.currentHp);
             }
 
             if (mapId == context.CurrentMapNode?.id && context.TokenRoot != null)
@@ -549,6 +603,21 @@ namespace RPGTable.Runtime
                     {
                         return false;
                     }
+
+                    SyncPlayerViewRuntimeToken(
+                        playerViewTokenTransforms[key],
+                        state.displayName,
+                        state.characterPath,
+                        state.tokenPath,
+                        state.team,
+                        state.visibleToPlayers,
+                        null,
+                        state.runtimeId,
+                        state.gridPosition,
+                        footprint,
+                        null,
+                        state.isDead,
+                        state.currentHp);
                 }
             }
 
@@ -602,6 +671,21 @@ namespace RPGTable.Runtime
                 {
                     return false;
                 }
+
+                SyncPlayerViewRuntimeToken(
+                    tokenTransform,
+                    runtimeToken.DisplayName,
+                    runtimeToken.CharacterPath,
+                    runtimeToken.TokenPath,
+                    runtimeToken.Team,
+                    runtimeToken.VisibleToPlayers,
+                    runtimeToken.PlayerId,
+                    CampaignTokenSpawner.EnsureRuntimeTokenId(runtimeToken),
+                    boardToken.gridPosition,
+                    footprint,
+                    runtimeToken,
+                    runtimeToken.IsDead,
+                    runtimeToken.CurrentHp);
             }
 
             return true;
@@ -691,6 +775,138 @@ namespace RPGTable.Runtime
             return $"{type}:{mapId}:{id}";
         }
 
+        private CampaignRuntimeToken ConfigurePlayerViewRuntimeToken(
+            GameObject tokenObject,
+            string displayName,
+            string characterPath,
+            string tokenPath,
+            TokenTeam team,
+            bool visibleToPlayers,
+            string playerId,
+            string runtimeId,
+            Vector2Int cell,
+            int footprint,
+            CampaignRuntimeToken source,
+            bool isDead,
+            int fallbackCurrentHp)
+        {
+            RemovePlayerViewCombatComponents(tokenObject);
+
+            var runtimeToken = tokenObject.GetComponent<CampaignRuntimeToken>();
+            if (runtimeToken == null)
+            {
+                runtimeToken = tokenObject.AddComponent<CampaignRuntimeToken>();
+            }
+
+            var charData = string.IsNullOrWhiteSpace(characterPath)
+                ? null
+                : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(characterPath);
+
+            runtimeToken.PlayerId = playerId;
+            runtimeToken.RuntimeId = string.IsNullOrWhiteSpace(runtimeId) ? playerId : runtimeId;
+            runtimeToken.TokenPath = tokenPath;
+            runtimeToken.CharacterPath = characterPath;
+            runtimeToken.DisplayName = displayName;
+            runtimeToken.Team = team;
+            runtimeToken.VisibleToPlayers = visibleToPlayers;
+            runtimeToken.IsPlayerViewClone = true;
+            runtimeToken.IsDead = isDead;
+            runtimeToken.FootprintSize = Mathf.Max(1, footprint);
+            runtimeToken.MaxHp = source != null ? source.MaxHp : (charData != null ? charData.maxHp : 10);
+            runtimeToken.CurrentHp = source != null
+                ? source.CurrentHp
+                : Mathf.Clamp(fallbackCurrentHp <= 0 ? runtimeToken.MaxHp : fallbackCurrentHp, 0, runtimeToken.MaxHp);
+            runtimeToken.MaxArmor = source != null ? source.MaxArmor : (charData != null ? charData.maxArmor : 0);
+            runtimeToken.CurrentArmor = source != null ? source.CurrentArmor : runtimeToken.MaxArmor;
+            runtimeToken.MaxMovementPoints = source != null ? source.MaxMovementPoints : runtimeToken.MaxMovementPoints;
+            runtimeToken.CurrentMovementPoints = source != null ? source.CurrentMovementPoints : runtimeToken.CurrentMovementPoints;
+            runtimeToken.MaxRolls = source != null ? source.MaxRolls : runtimeToken.MaxRolls;
+            runtimeToken.CurrentRolls = source != null ? source.CurrentRolls : runtimeToken.CurrentRolls;
+            runtimeToken.ActiveWeaponIndex = source != null ? source.ActiveWeaponIndex : runtimeToken.ActiveWeaponIndex;
+
+            if (tokenObject.GetComponent<TokenHealthArmorBars>() == null)
+            {
+                tokenObject.AddComponent<TokenHealthArmorBars>();
+            }
+
+            return runtimeToken;
+        }
+
+        private static void RemovePlayerViewCombatComponents(GameObject tokenObject)
+        {
+            var boardToken = tokenObject.GetComponent<BoardToken>();
+            if (boardToken != null)
+            {
+                Object.Destroy(boardToken);
+            }
+
+            var collider = tokenObject.GetComponent<Collider2D>();
+            if (collider != null)
+            {
+                Object.Destroy(collider);
+            }
+
+            var rootRenderer = tokenObject.GetComponent<SpriteRenderer>();
+            if (rootRenderer != null)
+            {
+                Object.Destroy(rootRenderer);
+            }
+        }
+
+        private void SyncPlayerViewRuntimeToken(
+            Transform tokenTransform,
+            string displayName,
+            string characterPath,
+            string tokenPath,
+            TokenTeam team,
+            bool visibleToPlayers,
+            string playerId,
+            string runtimeId,
+            Vector2Int cell,
+            int footprint,
+            CampaignRuntimeToken source,
+            bool isDead,
+            int fallbackCurrentHp)
+        {
+            if (tokenTransform == null)
+            {
+                return;
+            }
+
+            ConfigurePlayerViewRuntimeToken(
+                tokenTransform.gameObject,
+                displayName,
+                characterPath,
+                tokenPath,
+                team,
+                visibleToPlayers,
+                playerId,
+                runtimeId,
+                cell,
+                footprint,
+                source,
+                isDead,
+                fallbackCurrentHp);
+        }
+
+        private CampaignRuntimeToken FindRuntimeTokenByPlayerId(string playerId)
+        {
+            if (string.IsNullOrWhiteSpace(playerId) || context.TokenRoot == null)
+            {
+                return null;
+            }
+
+            foreach (var runtimeToken in context.TokenRoot.GetComponentsInChildren<CampaignRuntimeToken>())
+            {
+                if (runtimeToken != null && runtimeToken.PlayerId == playerId)
+                {
+                    return runtimeToken;
+                }
+            }
+
+            return null;
+        }
+
         private void SetPlayerViewCameraTarget(CampaignPlayerData selectedPlayer, Bounds fallbackBounds)
         {
             if (playerViewCamera == null)
@@ -754,7 +970,8 @@ namespace RPGTable.Runtime
 
             foreach (var player in CampaignGameSession.CurrentPlayers)
             {
-                key += $"|{player.id}:{player.currentMapId}:{player.gridX}:{player.gridY}:{player.tokenPath}:{player.isDead}";
+                var runtimeToken = FindRuntimeTokenByPlayerId(player.id);
+                key += $"|{player.id}:{player.currentMapId}:{player.gridX}:{player.gridY}:{player.tokenPath}:{player.isDead}:{player.currentHp}:{player.maxHp}:{runtimeToken?.CurrentHp}:{runtimeToken?.MaxHp}:{runtimeToken?.CurrentArmor}:{runtimeToken?.MaxArmor}";
             }
 
             var selectedPlayer = CampaignGameSession.FindPlayer(context.SelectedPlayerId);
@@ -769,7 +986,7 @@ namespace RPGTable.Runtime
                     }
 
                     var boardToken = runtimeToken.GetComponent<BoardToken>();
-                    key += $"|token:{CampaignTokenSpawner.EnsureRuntimeTokenId(runtimeToken)}:{runtimeToken.TokenPath}:{runtimeToken.VisibleToPlayers}:{runtimeToken.IsDead}:{boardToken?.gridPosition.x}:{boardToken?.gridPosition.y}";
+                    key += $"|token:{CampaignTokenSpawner.EnsureRuntimeTokenId(runtimeToken)}:{runtimeToken.TokenPath}:{runtimeToken.VisibleToPlayers}:{runtimeToken.IsDead}:{boardToken?.gridPosition.x}:{boardToken?.gridPosition.y}:{runtimeToken.CurrentHp}:{runtimeToken.MaxHp}:{runtimeToken.CurrentArmor}:{runtimeToken.MaxArmor}";
                 }
             }
 

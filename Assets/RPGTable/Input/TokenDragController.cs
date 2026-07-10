@@ -110,7 +110,21 @@ namespace RPGTable.Input
                 int distance = Mathf.Max(Mathf.Abs(token.gridPosition.x - startGridPos.x), Mathf.Abs(token.gridPosition.y - startGridPos.y));
                 if (distance > 0 && RPGTable.Runtime.CampaignGameSession.IsCombatActive)
                 {
+                    if (distance > runtimeToken.CurrentMovementPoints)
+                    {
+                        token.gridPosition = startGridPos;
+                        var size = Mathf.Max(1, token.footprintSize);
+                        var offset = activeGrid != null
+                            ? new Vector3((size - 1) * activeGrid.cellSize * 0.5f, (size - 1) * activeGrid.cellSize * 0.5f, 0f)
+                            : Vector3.zero;
+                        transform.position = activeGrid != null
+                            ? activeGrid.CellToWorld(startGridPos) + offset
+                            : transform.position;
+                    }
+                    else
+                    {
                     runtimeToken.CurrentMovementPoints = Mathf.Max(0, runtimeToken.CurrentMovementPoints - distance);
+                    }
                 }
 
 #if UNITY_2023_1_OR_NEWER

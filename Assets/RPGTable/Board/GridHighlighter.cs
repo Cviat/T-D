@@ -93,7 +93,9 @@ namespace RPGTable.Board
             Sprite reticleSprite = Resources.Load<Sprite>("image/Gemini_Generated_Image_m2vmn7m2vmn7m2vm");
             foreach (var t in allTokens)
             {
-                if (t == token || t.IsDead) continue;
+                if (t == token || t.IsPlayerViewClone || t.IsDead) continue;
+                if (!AreHostile(token.Team, t.Team)) continue;
+
                 var bt = t.GetComponent<BoardToken>();
                 if (bt == null) continue;
 
@@ -198,6 +200,24 @@ namespace RPGTable.Board
                 }
             }
             return 0;
+        }
+
+        private static bool AreHostile(TokenTeam attackerTeam, TokenTeam targetTeam)
+        {
+            bool attackerIsParty = attackerTeam == TokenTeam.Player || attackerTeam == TokenTeam.Ally;
+            bool targetIsParty = targetTeam == TokenTeam.Player || targetTeam == TokenTeam.Ally;
+
+            if (attackerIsParty && targetTeam == TokenTeam.Enemy)
+            {
+                return true;
+            }
+
+            if (attackerTeam == TokenTeam.Enemy && targetIsParty)
+            {
+                return true;
+            }
+
+            return false;
         }
     }
 }

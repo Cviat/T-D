@@ -1007,10 +1007,6 @@ namespace RPGTable.CharacterEditor
                         if (a != null) attrList.Add(a.attributeName);
                     }
                 }
-                else if (!string.IsNullOrEmpty(weaponCard.attribute))
-                {
-                    attrList.Add(weaponCard.attribute);
-                }
                 if (weaponAttributesLabel != null)
                 {
                     weaponAttributesLabel.text = "Свойства: " + (attrList.Count > 0 ? string.Join(", ", attrList) : "Нет");
@@ -1047,10 +1043,6 @@ namespace RPGTable.CharacterEditor
                     {
                         if (a != null) attrList.Add(a.attributeName);
                     }
-                }
-                else if (!string.IsNullOrEmpty(weaponCard2.attribute))
-                {
-                    attrList.Add(weaponCard2.attribute);
                 }
                 if (weapon2AttributesLabel != null)
                 {

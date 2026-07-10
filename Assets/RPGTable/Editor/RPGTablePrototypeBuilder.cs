@@ -172,27 +172,21 @@ namespace RPGTable.Editor
                 "Deal 2 damage to one visible enemy in melee range.",
                 0,
                 1,
-                AbilityTargetType.Enemy,
-                AbilityEffectType.Damage,
-                2);
+                AbilityEffectType.Damage);
 
             CreateAbilityCard(
                 "Patch Wounds",
                 "Restore 2 health to yourself or an adjacent ally.",
                 1,
                 1,
-                AbilityTargetType.Ally,
-                AbilityEffectType.Heal,
-                2);
+                AbilityEffectType.Heal);
 
             CreateAbilityCard(
                 "Scout Ahead",
                 "Reveal a small nearby area without moving into it.",
                 1,
                 4,
-                AbilityTargetType.Area,
-                AbilityEffectType.Reveal,
-                3);
+                AbilityEffectType.Reveal);
         }
 
         private static void CreateAbilityCard(
@@ -200,9 +194,7 @@ namespace RPGTable.Editor
             string description,
             int cost,
             int range,
-            AbilityTargetType targetType,
-            AbilityEffectType effectType,
-            int effectValue)
+            AbilityEffectType effectType)
         {
             var path = $"{CardsPath}/{title.Replace(" ", string.Empty)}.asset";
             var card = AssetDatabase.LoadAssetAtPath<AbilityCard>(path);
@@ -217,9 +209,7 @@ namespace RPGTable.Editor
             card.description = description;
             card.cost = cost;
             card.range = range;
-            card.targetType = targetType;
             card.effectType = effectType;
-            card.effectValue = effectValue;
             EditorUtility.SetDirty(card);
         }
     }

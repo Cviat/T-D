@@ -23,6 +23,7 @@ MonoBehaviour:
   effectType: 0
   effectValue: 1
   multiplier: 1
+  defenseValue: 4
   attributes: []
   attackType: 3
   hiddenNotes: 

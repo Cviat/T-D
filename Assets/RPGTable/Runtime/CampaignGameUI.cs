@@ -31,6 +31,8 @@ namespace RPGTable.Runtime
         private GameObject promptPanel;
         private GameObject playerViewControlButton;
         private GMBottomToolsView bottomToolsView;
+        private Button combatToggleButton;
+        private Text combatToggleText;
 
         private enum LeftTab { ActiveTokens, TokenBank }
         private LeftTab currentLeftTab = LeftTab.ActiveTokens;
@@ -66,6 +68,10 @@ namespace RPGTable.Runtime
                 bottomToolsetRoot = uiManager.BottomToolsetRoot;
                 rightPanelRoot = uiManager.RightScenarioRoot;
                 rightInspectorRoot = uiManager.RightInspectorRoot;
+                if (rightInspectorRoot == null)
+                {
+                    rightInspectorRoot = CreateRuntimeInspectorRoot(uiManager.transform);
+                }
                 
                 var bottomToolsView = bottomToolsetRoot.GetComponentInChildren<GMBottomToolsView>();
                 if (bottomToolsView != null)
@@ -91,6 +97,21 @@ namespace RPGTable.Runtime
         {
             currentLeftTab = tab;
             RefreshLeftPanel();
+        }
+
+        private static RectTransform CreateRuntimeInspectorRoot(Transform parent)
+        {
+            var root = new GameObject("Right Inspector Root", typeof(RectTransform));
+            root.transform.SetParent(parent, false);
+
+            var rect = root.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(1f, 0.5f);
+            rect.anchorMax = new Vector2(1f, 0.5f);
+            rect.pivot = new Vector2(1f, 0.5f);
+            rect.sizeDelta = new Vector2(300f, 300f);
+            rect.anchoredPosition = new Vector2(-12f, 0f);
+
+            return rect;
         }
 
         public void RefreshActiveTokensPanel()
@@ -354,9 +375,13 @@ namespace RPGTable.Runtime
             rightInspectorRoot.gameObject.SetActive(true);
             ClearChildren(rightInspectorRoot);
 
-            if (uiManager != null && uiManager.InspectorContentPrefab != null)
+            var inspectorPrefab = uiManager != null && uiManager.InspectorContentPrefab != null
+                ? uiManager.InspectorContentPrefab
+                : Resources.Load<GameObject>("Prefabs/CombatInspector");
+
+            if (inspectorPrefab != null)
             {
-                var inspectorGo = UnityEngine.Object.Instantiate(uiManager.InspectorContentPrefab, rightInspectorRoot);
+                var inspectorGo = UnityEngine.Object.Instantiate(inspectorPrefab, rightInspectorRoot);
                 var inspectorView = inspectorGo.GetComponent<EntityInspectorView>();
                 if (inspectorView != null)
                 {
@@ -386,7 +411,7 @@ namespace RPGTable.Runtime
                 {
                     var btn = combatBtn.GetComponent<Button>();
                     var text = combatBtn.GetComponentInChildren<Text>();
-                    UpdateCombatButtonState(btn, text);
+                    UpdateCombatButtonState();
                 }
             }
 
@@ -728,8 +753,10 @@ namespace RPGTable.Runtime
             }
             
             var btn = combatBtnGo.GetComponent<Button>();
+            combatToggleButton = btn;
+            combatToggleText = text;
             btn.onClick.RemoveAllListeners();
-            btn.onClick.AddListener(() => ToggleCombatActiveState(btn, text));
+            btn.onClick.AddListener(ToggleCombatActiveState);
 
             // 2. End Turn Button
             endTurnBtnGo = UnityEngine.Object.Instantiate(camBtn.gameObject, camBtn.transform.parent, false);
@@ -770,10 +797,10 @@ namespace RPGTable.Runtime
                 }
             });
 
-            UpdateCombatButtonState(btn, text);
+            UpdateCombatButtonState();
         }
 
-        private void ToggleCombatActiveState(Button btn, Text text)
+        private void ToggleCombatActiveState()
         {
             CampaignGameSession.IsCombatActive = !CampaignGameSession.IsCombatActive;
             
@@ -786,18 +813,18 @@ namespace RPGTable.Runtime
                 CombatManager.Instance.EndCombat();
             }
 
-            UpdateCombatButtonState(btn, text);
+            UpdateCombatButtonState();
         }
 
-        private void UpdateCombatButtonState(Button btn, Text text)
+        private void UpdateCombatButtonState()
         {
             bool active = CampaignGameSession.IsCombatActive;
-            if (text != null)
+            if (combatToggleText != null)
             {
-                text.text = active ? "Бой: ВКЛ" : "Бой: ВЫКЛ";
+                combatToggleText.text = active ? "Бой: ВКЛ" : "Бой: ВЫКЛ";
             }
 
-            var image = btn.GetComponent<Image>();
+            var image = combatToggleButton == null ? null : combatToggleButton.GetComponent<Image>();
             if (image != null)
             {
                 image.color = active
@@ -819,6 +846,7 @@ namespace RPGTable.Runtime
         public void RefreshCombatUI()
         {
             bool combat = CampaignGameSession.IsCombatActive;
+            UpdateCombatButtonState();
 
             if (topMapsRoot != null)
             {

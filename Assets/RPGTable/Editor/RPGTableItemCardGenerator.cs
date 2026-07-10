@@ -53,7 +53,6 @@ namespace RPGTable.Editor
                         card.description = "Быстрый охотничий лук.";
                         card.scaleStat1 = "AGI";
                         card.coef1 = 0.8f;
-                        card.attribute = "Дальний бой";
                         card.attackType = AttackType.Ranged;
                     }
                     else if (itemName.Contains("Sword") || itemName.Contains("Longsword"))
@@ -70,7 +69,6 @@ namespace RPGTable.Editor
                         card.description = "Тяжелый боевой топор.";
                         card.scaleStat1 = "STR";
                         card.coef1 = 1.0f;
-                        card.attribute = "Оглушение";
                         if (stunAttr != null) card.attributes.Add(stunAttr);
                         card.attackType = AttackType.Melee;
                     }
@@ -79,7 +77,6 @@ namespace RPGTable.Editor
                         card.description = "Тяжелая шипованная булава.";
                         card.scaleStat1 = "STR";
                         card.coef1 = 0.9f;
-                        card.attribute = "Оглушение";
                         if (stunAttr != null) card.attributes.Add(stunAttr);
                         card.attackType = AttackType.Melee;
                     }
@@ -88,7 +85,6 @@ namespace RPGTable.Editor
                         card.description = "Магический посох.";
                         card.scaleStat1 = "INT";
                         card.coef1 = 0.8f;
-                        card.attribute = "Магия";
                         card.attackType = AttackType.Magic;
                     }
                     else if (itemName.Contains("Shield"))
