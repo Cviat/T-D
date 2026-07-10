@@ -300,8 +300,11 @@ namespace RPGTable.Runtime
             runtime.VisibleToPlayers = visibleToPlayers;
             runtime.MaxHp = charData != null ? charData.maxHp : 10;
             runtime.CurrentHp = runtime.MaxHp;
+            runtime.MaxArmor = charData != null ? charData.maxArmor : 0;
+            runtime.CurrentArmor = runtime.MaxArmor;
 
             tokenObject.AddComponent<TokenDragController>();
+            tokenObject.AddComponent<TokenHealthArmorBars>();
             tokenObject.AddComponent<CampaignTokenContextClick>().Initialize(loader, runtime);
             return runtime;
         }

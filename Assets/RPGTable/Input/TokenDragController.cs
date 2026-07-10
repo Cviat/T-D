@@ -40,11 +40,20 @@ namespace RPGTable.Input
                 return;
             }
 
+            var runtimeToken = GetComponent<RPGTable.Runtime.CampaignRuntimeToken>();
+            if (RPGTable.Runtime.CampaignGameSession.IsCombatActive)
+            {
+                var combatMgr = RPGTable.Runtime.CombatManager.Instance;
+                if (combatMgr.ActiveToken != runtimeToken)
+                {
+                    return; // Block dragging other tokens in combat
+                }
+            }
+
             dragging = true;
             dragOffset = transform.position - MouseWorldPosition();
             startGridPos = token.gridPosition;
 
-            var runtimeToken = GetComponent<RPGTable.Runtime.CampaignRuntimeToken>();
             if (runtimeToken != null)
             {
 #if UNITY_2023_1_OR_NEWER

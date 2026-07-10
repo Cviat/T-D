@@ -35,10 +35,10 @@ namespace RPGTable.Editor
                 ?? AssetDatabase.LoadAssetAtPath<Sprite>("Assets/GUI_Parts/Icons/skill_icon_04.png");
 
             // Create Combat Attributes
-            var stunAttr = CreateOrUpdateAttribute("Stun", "Оглушение", stunIcon, 1, "Цель оглушена и пропускает свой следующий ход.");
-            var burnAttr = CreateOrUpdateAttribute("Burn", "Поджог", fireIcon, 3, "Цель горит и получает периодический урон от огня в начале своего хода.");
-            var poisonAttr = CreateOrUpdateAttribute("Poison", "Отравление", shotIcon, 4, "Цель отравлена и получает урон ядом в конце каждого своего хода.");
-            var shieldAttr = CreateOrUpdateAttribute("ShieldBuff", "Эгида", healIcon, 2, "Дарует щит, блокирующий следующий входящий урон.");
+            var stunAttr = CreateOrUpdateAttribute("Stun", "Оглушение", stunIcon, "Rolls", -999, 1, false, "Цель оглушена и пропускает свой следующий ход.");
+            var burnAttr = CreateOrUpdateAttribute("Burn", "Поджог", fireIcon, "HP", -3, 3, false, "Цель горит и получает периодический урон от огня в начале своего хода.");
+            var poisonAttr = CreateOrUpdateAttribute("Poison", "Отравление", shotIcon, "HP", -4, 3, false, "Цель отравлена и получает урон ядом в конце каждого своего хода.");
+            var shieldAttr = CreateOrUpdateAttribute("ShieldBuff", "Эгида", healIcon, "Armor", 0, 1, true, "Дарует щит, блокирующий следующий входящий урон.");
 
             // Create 15 Distinct Ability Cards
             CreateOrUpdateAbility("HeavyStrike", "Сильный удар", "Наносит мощный рубящий удар с размаху, оглушая цель.", heavyStrike =>
@@ -241,7 +241,15 @@ namespace RPGTable.Editor
             Debug.Log("15 distinct Ability Cards and Combat Attributes successfully generated inside Resources.");
         }
 
-        private static CombatAttribute CreateOrUpdateAttribute(string assetName, string displayName, Sprite icon, int value, string desc)
+        private static CombatAttribute CreateOrUpdateAttribute(
+            string assetName, 
+            string displayName, 
+            Sprite icon, 
+            string affectedStat, 
+            int value, 
+            int durationTurns, 
+            bool appliedToSelf, 
+            string desc)
         {
             var path = $"Assets/RPGTable/Resources/CombatAttributes/{assetName}.asset";
             var attr = AssetDatabase.LoadAssetAtPath<CombatAttribute>(path);
@@ -252,8 +260,11 @@ namespace RPGTable.Editor
             }
 
             attr.attributeName = displayName;
+            attr.affectedStat = affectedStat;
             attr.icon = icon;
             attr.value = value;
+            attr.durationTurns = durationTurns;
+            attr.appliedToSelf = appliedToSelf;
             attr.description = desc;
 
             EditorUtility.SetDirty(attr);

@@ -1272,6 +1272,64 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 807801983}
   m_CullTransparentMesh: 1
+--- !u!1 &900601015
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 900601018}
+  - component: {fileID: 900601017}
+  - component: {fileID: 900601016}
+  m_Layer: 0
+  m_Name: TestToken
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &900601016
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900601015}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc6d0cc5599da5940b5eb81a749d5019, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RPGTable.Runtime.TokenHealthArmorBars
+--- !u!114 &900601017
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900601015}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5f44ce0a4b925143bbfbc05c607eaa5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RPGTable.Runtime.CampaignRuntimeToken
+  statusEffects: []
+--- !u!4 &900601018
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 900601015}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &919972042
 GameObject:
   m_ObjectHideFlags: 0
@@ -1374,9 +1432,9 @@ RectTransform:
   - {fileID: 1109120597}
   m_Father: {fileID: 919972043}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 195, y: -419}
   m_SizeDelta: {x: 390, y: 72}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &989286108
@@ -1710,9 +1768,9 @@ RectTransform:
   - {fileID: 1830170766}
   m_Father: {fileID: 919972043}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 195, y: -235}
   m_SizeDelta: {x: 390, y: 72}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1199875545
@@ -2039,9 +2097,9 @@ RectTransform:
   - {fileID: 700817680}
   m_Father: {fileID: 919972043}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 195, y: -51}
   m_SizeDelta: {x: 390, y: 72}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1267532799
@@ -2736,9 +2794,9 @@ RectTransform:
   - {fileID: 1906500462}
   m_Father: {fileID: 919972043}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 195, y: -327}
   m_SizeDelta: {x: 390, y: 72}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1838625405
@@ -2955,9 +3013,9 @@ RectTransform:
   - {fileID: 559648706}
   m_Father: {fileID: 919972043}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 195, y: -143}
   m_SizeDelta: {x: 390, y: 72}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1963685245
@@ -3067,3 +3125,4 @@ SceneRoots:
   - {fileID: 39144514}
   - {fileID: 1148517330}
   - {fileID: 1316408395}
+  - {fileID: 900601018}

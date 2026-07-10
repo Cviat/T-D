@@ -87,6 +87,53 @@ namespace RPGTable.Board
             {
                 SpawnHighlight(cell, moveRangeColor);
             }
+
+            // Spawn reticle on targetable enemies in action range
+            var allTokens = GameObject.FindObjectsOfType<RPGTable.Runtime.CampaignRuntimeToken>();
+            Sprite reticleSprite = Resources.Load<Sprite>("image/Gemini_Generated_Image_m2vmn7m2vmn7m2vm");
+            foreach (var t in allTokens)
+            {
+                if (t == token || t.IsDead) continue;
+                var bt = t.GetComponent<BoardToken>();
+                if (bt == null) continue;
+
+                int dist = RPGTable.Runtime.CampaignGameLoader.GetTokenDistance(boardToken, bt);
+                if (dist <= actionRange)
+                {
+                    SpawnReticle(bt, reticleSprite);
+                }
+            }
+        }
+
+        private void SpawnReticle(BoardToken targetToken, Sprite reticleSprite)
+        {
+            var reticleGo = new GameObject("ActionTargetReticle");
+            reticleGo.transform.SetParent(transform, false);
+            reticleGo.transform.position = targetToken.transform.position + new Vector3(0f, 0f, -0.5f);
+
+            var renderer = reticleGo.AddComponent<SpriteRenderer>();
+            renderer.sprite = reticleSprite;
+            renderer.color = new Color(1f, 0.2f, 0.2f, 0.85f);
+            
+            // Render on top of the token by finding the maximum sorting order of its sprite layers
+            int maxSortingOrder = 0;
+            var renderers = targetToken.GetComponentsInChildren<SpriteRenderer>();
+            foreach (var r in renderers)
+            {
+                if (r.sortingOrder > maxSortingOrder)
+                {
+                    maxSortingOrder = r.sortingOrder;
+                }
+            }
+            renderer.sortingOrder = maxSortingOrder + 1;
+
+            if (reticleSprite != null)
+            {
+                float size = targetToken.footprintSize * grid.cellSize;
+                reticleGo.transform.localScale = new Vector3(size / reticleSprite.bounds.size.x, size / reticleSprite.bounds.size.y, 1f);
+            }
+
+            activeHighlights.Add(reticleGo);
         }
 
         private void SpawnHighlight(Vector2Int cell, Color color)
@@ -125,19 +172,10 @@ namespace RPGTable.Board
 
             if (charData != null)
             {
-                // Scan attack slots
-                if (charData.attackSlots != null)
+                var slots = (token.ActiveWeaponIndex == 0) ? charData.attackSlots : charData.attack2Slots;
+                if (slots != null)
                 {
-                    foreach (var name in charData.attackSlots)
-                    {
-                        int r = GetAbilityRange(name);
-                        if (r > maxRange) maxRange = r;
-                    }
-                }
-                // Scan attack2 slots
-                if (charData.attack2Slots != null)
-                {
-                    foreach (var name in charData.attack2Slots)
+                    foreach (var name in slots)
                     {
                         int r = GetAbilityRange(name);
                         if (r > maxRange) maxRange = r;
@@ -151,7 +189,7 @@ namespace RPGTable.Board
         private int GetAbilityRange(string name)
         {
             if (string.IsNullOrEmpty(name)) return 0;
-            var cards = Resources.LoadAll<AbilityCard>("Abilities");
+            var cards = Resources.LoadAll<AbilityCard>("AbilityCards");
             foreach (var card in cards)
             {
                 if (card != null && string.Equals(card.title, name, StringComparison.OrdinalIgnoreCase))

@@ -616,6 +616,11 @@ namespace RPGTable.Runtime
                 return false;
             }
 
+            if (tokenTransform.GetComponent<TokenAttackAnimator>() != null)
+            {
+                return true;
+            }
+
             playerViewTokenPositions[key] = targetPosition;
 
             if ((tokenTransform.position - targetPosition).sqrMagnitude <= 0.0001f)
@@ -1025,6 +1030,28 @@ namespace RPGTable.Runtime
                    UnityEngine.Input.GetMouseButtonUp(1) ||
                    UnityEngine.Input.GetMouseButtonUp(2);
 #endif
+        }
+
+        public Transform GetPlayerViewTokenTransform(CampaignRuntimeToken runtimeToken)
+        {
+            if (runtimeToken == null) return null;
+            
+            var keyRuntime = PlayerViewTokenKey("runtime", playerViewMapId, CampaignTokenSpawner.EnsureRuntimeTokenId(runtimeToken));
+            if (playerViewTokenTransforms.TryGetValue(keyRuntime, out var tRuntime))
+            {
+                return tRuntime;
+            }
+
+            if (!string.IsNullOrEmpty(runtimeToken.PlayerId))
+            {
+                var keyPlayer = PlayerViewTokenKey("player", playerViewMapId, runtimeToken.PlayerId);
+                if (playerViewTokenTransforms.TryGetValue(keyPlayer, out var tPlayer))
+                {
+                    return tPlayer;
+                }
+            }
+
+            return null;
         }
     }
 }

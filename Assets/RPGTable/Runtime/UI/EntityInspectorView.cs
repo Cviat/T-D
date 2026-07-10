@@ -16,6 +16,9 @@ namespace RPGTable.Runtime
         [SerializeField] private Button damageButton;
         [SerializeField] private Button healButton;
 
+        private Button weaponSwitchBtn;
+        private Text weaponSwitchTxt;
+
         public void Setup(
             CampaignRuntimeToken token, 
             SavedTokenData tokenData, 
@@ -47,25 +50,34 @@ namespace RPGTable.Runtime
             }
 
             if (statsLabel != null)
+            if (charData != null)
+            {
+                bool hasW1 = !string.IsNullOrEmpty(charData.eqWeapon);
+                bool hasW2 = !string.IsNullOrEmpty(charData.eqWeapon2);
+                if (hasW1 && !hasW2)
+                {
+                    token.ActiveWeaponIndex = 0;
+                }
+                else if (!hasW1 && hasW2)
+                {
+                    token.ActiveWeaponIndex = 1;
+                }
+            }
+
+            if (statsLabel != null)
             {
                 var footprint = tokenData != null ? tokenData.footprintSize : 1;
                 
-                var weapon1Card = charData != null ? FindItemCard(charData.eqWeapon) : null;
-                var weapon2Card = charData != null ? FindItemCard(charData.eqWeapon2) : null;
+                RPGTable.Core.ItemCard activeWeaponCard = null;
+                if (charData != null)
+                {
+                    string activeWeaponName = (token.ActiveWeaponIndex == 0) ? charData.eqWeapon : charData.eqWeapon2;
+                    activeWeaponCard = FindItemCard(activeWeaponName);
+                }
 
-                bool melee = (charData != null) && (
-                    (weapon1Card == null && weapon2Card == null)
-                    || (weapon1Card != null && weapon1Card.attackType == RPGTable.Core.AttackType.Melee)
-                    || (weapon2Card != null && weapon2Card.attackType == RPGTable.Core.AttackType.Melee)
-                );
-                bool ranged = charData != null && (
-                    (weapon1Card != null && weapon1Card.attackType == RPGTable.Core.AttackType.Ranged)
-                    || (weapon2Card != null && weapon2Card.attackType == RPGTable.Core.AttackType.Ranged)
-                );
-                bool magic = charData != null && (
-                    (weapon1Card != null && weapon1Card.attackType == RPGTable.Core.AttackType.Magic)
-                    || (weapon2Card != null && weapon2Card.attackType == RPGTable.Core.AttackType.Magic)
-                );
+                bool melee = activeWeaponCard == null || activeWeaponCard.attackType == RPGTable.Core.AttackType.Melee;
+                bool ranged = activeWeaponCard != null && activeWeaponCard.attackType == RPGTable.Core.AttackType.Ranged;
+                bool magic = activeWeaponCard != null && activeWeaponCard.attackType == RPGTable.Core.AttackType.Magic;
 
                 string moveStr = CampaignGameSession.IsCombatActive
                     ? $"{token.CurrentMovementPoints}/{token.MaxMovementPoints}"
@@ -74,6 +86,45 @@ namespace RPGTable.Runtime
                 statsLabel.text = $"Размер сетки: {footprint}x{footprint}\n" +
                                   $"Тип атаки: " + (melee ? "Ближний " : "") + (magic ? "Магия " : "") + (ranged ? "Дальний" : "") + "\n" +
                                   $"Движение: {moveStr}";
+            }
+
+            var hasBothWeapons = charData != null && !string.IsNullOrEmpty(charData.eqWeapon) && !string.IsNullOrEmpty(charData.eqWeapon2);
+
+            if (damageButton != null && weaponSwitchBtn == null && hasBothWeapons)
+            {
+                var go = UnityEngine.Object.Instantiate(damageButton.gameObject, damageButton.transform.parent, false);
+                go.name = "Weapon Switch Button";
+                weaponSwitchBtn = go.GetComponent<Button>();
+                weaponSwitchTxt = go.GetComponentInChildren<Text>();
+
+                var rect = go.GetComponent<RectTransform>();
+                rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, rect.anchoredPosition.y + 40f);
+            }
+
+            if (weaponSwitchBtn != null)
+            {
+                weaponSwitchBtn.gameObject.SetActive(hasBothWeapons);
+                if (hasBothWeapons)
+                {
+                    var w1 = charData.eqWeapon;
+                    var w2 = charData.eqWeapon2;
+                    weaponSwitchTxt.text = token.ActiveWeaponIndex == 0 ? $"Оружие: ⚔1 ({w1})" : $"Оружие: ⚔2 ({w2})";
+
+                    weaponSwitchBtn.onClick.RemoveAllListeners();
+                    weaponSwitchBtn.onClick.AddListener(() => {
+                        token.ActiveWeaponIndex = token.ActiveWeaponIndex == 0 ? 1 : 0;
+                        weaponSwitchTxt.text = token.ActiveWeaponIndex == 0 ? $"Оружие: ⚔1 ({w1})" : $"Оружие: ⚔2 ({w2})";
+                        
+                        // Force refresh UI text
+                        Setup(token, tokenData, charData, portrait, onDamage, onHeal);
+
+                        // Force update range highlighting!
+                        if (RPGTable.Board.GridHighlighter.Instance != null)
+                        {
+                            RPGTable.Board.GridHighlighter.Instance.HighlightTokenRanges(token);
+                        }
+                    });
+                }
             }
 
             if (damageButton != null)

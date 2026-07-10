@@ -15,7 +15,13 @@ namespace RPGTable.Runtime
         public bool IsDead { get; set; }
         public int MaxHp { get; set; }
         public int CurrentHp { get; set; }
+        public int MaxArmor { get; set; }
+        public int CurrentArmor { get; set; }
         public int MaxMovementPoints { get; set; } = 3;
         public int CurrentMovementPoints { get; set; } = 3;
+        public int MaxRolls { get; set; } = 1;
+        public int CurrentRolls { get; set; } = 1;
+        public int ActiveWeaponIndex { get; set; } = 0; // 0 = Weapon 1, 1 = Weapon 2
+        public System.Collections.Generic.List<ActiveStatusEffect> statusEffects = new System.Collections.Generic.List<ActiveStatusEffect>();
     }
 }

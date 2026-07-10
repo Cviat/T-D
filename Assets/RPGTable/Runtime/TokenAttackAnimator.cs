@@ -64,7 +64,10 @@ namespace RPGTable.Runtime
             Color[] originalColors = new Color[renderers.Length];
             for (int i = 0; i < renderers.Length; i++)
             {
-                originalColors[i] = renderers[i].color;
+                if (renderers[i] != null)
+                {
+                    originalColors[i] = renderers[i].color;
+                }
             }
 
             float duration = 0.3f;
@@ -78,21 +81,33 @@ namespace RPGTable.Runtime
                 // Shake and push
                 float magnitude = (1f - progress) * 0.2f;
                 Vector3 shake = new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), 0f).normalized * magnitude;
-                transform.position = startPos + pushDirection * (magnitude * 0.5f) + shake;
+                if (transform != null)
+                {
+                    transform.position = startPos + pushDirection * (magnitude * 0.5f) + shake;
+                }
                 
                 // Blink Red
                 for (int i = 0; i < renderers.Length; i++)
                 {
-                    renderers[i].color = Color.Lerp(Color.red, originalColors[i], progress);
+                    if (renderers[i] != null)
+                    {
+                        renderers[i].color = Color.Lerp(Color.red, originalColors[i], progress);
+                    }
                 }
 
                 yield return null;
             }
 
-            transform.position = startPos;
+            if (transform != null)
+            {
+                transform.position = startPos;
+            }
             for (int i = 0; i < renderers.Length; i++)
             {
-                renderers[i].color = originalColors[i];
+                if (renderers[i] != null)
+                {
+                    renderers[i].color = originalColors[i];
+                }
             }
             Destroy(this);
         }
