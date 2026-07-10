@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using RPGTable.Board;
 using RPGTable.Core;
@@ -76,7 +76,7 @@ namespace RPGTable.Runtime
 
         public int PlayerViewLayerMaskValue => PlayerViewLayerMask;
 
-        // ── Setup ────────────────────────────────────────────────────────
+        // в”Ђв”Ђ Setup в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
         public void BuildPlayerView()
         {
@@ -100,7 +100,10 @@ namespace RPGTable.Runtime
             var canvas = canvasObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.targetDisplay = playerViewCamera.targetDisplay;
-            canvasObject.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            var scaler = canvasObject.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
             canvasObject.AddComponent<GraphicRaycaster>();
 
             var rosterPanel = CampaignGameUI.CreatePanel("Player View Roster", canvasObject.transform, Color.clear);
@@ -108,7 +111,7 @@ namespace RPGTable.Runtime
             rosterRect.anchorMin = new Vector2(0f, 0f);
             rosterRect.anchorMax = new Vector2(0f, 1f);
             rosterRect.pivot = new Vector2(0f, 0.5f);
-            rosterRect.sizeDelta = new Vector2(180f, 0f); // Увеличил ширину панели, чтобы карточка влезала лучше
+            rosterRect.sizeDelta = new Vector2(260f, 0f);
             rosterRect.anchoredPosition = Vector2.zero;
 
             playerViewRosterRoot = CampaignGameUI.CreateVerticalList(
@@ -121,7 +124,7 @@ namespace RPGTable.Runtime
                 8f);
         }
 
-        // ── Toggle / Control ─────────────────────────────────────────────
+        // в”Ђв”Ђ Toggle / Control в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
         public void TogglePlayerViewCameraControl()
         {
@@ -135,7 +138,7 @@ namespace RPGTable.Runtime
             playerViewCameraVelocity = Vector3.zero;
         }
 
-        // ── Player selection helpers ─────────────────────────────────────
+        // в”Ђв”Ђ Player selection helpers в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
         public void SelectDefaultPlayer()
         {
@@ -159,7 +162,7 @@ namespace RPGTable.Runtime
                 : null;
         }
 
-        // ── Per-frame updates ────────────────────────────────────────────
+        // в”Ђв”Ђ Per-frame updates в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
         public void RefreshPlayerViewIfNeeded()
         {
@@ -246,7 +249,11 @@ namespace RPGTable.Runtime
                 return;
             }
 
-            var desired = playerViewFollowTarget + playerViewManualOffset;
+            UpdateCombatCameraTarget();
+
+            var desired = CampaignGameSession.IsCombatActive
+                ? playerViewFollowTarget
+                : playerViewFollowTarget + playerViewManualOffset;
             desired.z = -10f;
             playerViewCamera.transform.position = Vector3.SmoothDamp(
                 playerViewCamera.transform.position,
@@ -259,8 +266,30 @@ namespace RPGTable.Runtime
                 playerViewTargetZoom,
                 Time.deltaTime * 5f);
         }
+        private void UpdateCombatCameraTarget()
+        {
+            if (!CampaignGameSession.IsCombatActive)
+            {
+                return;
+            }
 
-        // ── Full refresh ─────────────────────────────────────────────────
+            var activeToken = CombatManager.Instance.ActiveToken;
+            if (activeToken == null || activeToken.IsDead)
+            {
+                return;
+            }
+
+            var playerViewToken = GetPlayerViewTokenTransform(activeToken);
+            if (playerViewToken == null)
+            {
+                return;
+            }
+
+            playerViewFollowTarget = new Vector3(playerViewToken.position.x, playerViewToken.position.y, 0f);
+        }
+
+
+        // в”Ђв”Ђ Full refresh в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
         public void RefreshPlayerView(bool force)
         {
@@ -317,7 +346,7 @@ namespace RPGTable.Runtime
             playerViewStateKey = BuildPlayerViewStateKey();
         }
 
-        // ── Player View world building ───────────────────────────────────
+        // в”Ђв”Ђ Player View world building в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
         private Bounds BuildPlayerViewMap(SavedMapData data, Transform root)
         {
@@ -377,7 +406,7 @@ namespace RPGTable.Runtime
             gridObject.AddComponent<BoardGridVisual>();
         }
 
-        // ── Token spawning for PV ────────────────────────────────────────
+        // в”Ђв”Ђ Token spawning for PV в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
         private HashSet<string> SpawnPlayerViewTokens(string mapId, Transform root)
         {
@@ -521,7 +550,7 @@ namespace RPGTable.Runtime
             }
         }
 
-        // ── In-place sync (avoids full rebuild) ──────────────────────────
+        // в”Ђв”Ђ In-place sync (avoids full rebuild) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
         private bool TrySyncPlayerViewInPlace(string mapId)
         {
@@ -723,7 +752,7 @@ namespace RPGTable.Runtime
             return true;
         }
 
-        // ── Helpers ──────────────────────────────────────────────────────
+        // в”Ђв”Ђ Helpers в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
         private void PlacePlayerViewToken(Transform tokenTransform, string key, Vector3 targetPosition, HashSet<string> activeTokenKeys)
         {
@@ -1002,8 +1031,8 @@ namespace RPGTable.Runtime
 
             CampaignGameUI.ClearChildren(playerViewRosterRoot);
 
-            // Пытаемся загрузить специальный префаб для экрана игрока.
-            // Если его нет, используем дефолтную TokenCard.
+            // РџС‹С‚Р°РµРјСЃСЏ Р·Р°РіСЂСѓР·РёС‚СЊ СЃРїРµС†РёР°Р»СЊРЅС‹Р№ РїСЂРµС„Р°Р± РґР»СЏ СЌРєСЂР°РЅР° РёРіСЂРѕРєР°.
+            // Р•СЃР»Рё РµРіРѕ РЅРµС‚, РёСЃРїРѕР»СЊР·СѓРµРј РґРµС„РѕР»С‚РЅСѓСЋ TokenCard.
             var cardPrefab = Resources.Load<GameObject>("Prefabs/PlayerViewCard") 
                              ?? Resources.Load<GameObject>("Prefabs/TokenCard");
 
@@ -1023,6 +1052,7 @@ namespace RPGTable.Runtime
                 if (cardPrefab != null)
                 {
                     var cardGo = Object.Instantiate(cardPrefab, playerViewRosterRoot);
+                    ConfigurePlayerViewRosterCard(cardGo);
                     var cardView = cardGo.GetComponent<TokenCardView>();
                     
                     if (cardView != null)
@@ -1054,10 +1084,29 @@ namespace RPGTable.Runtime
                 else
                 {
                     var card = CampaignGameUI.CreateButton(player.name, playerViewRosterRoot, color);
-                    card.GetComponent<LayoutElement>().preferredHeight = 54f;
+                    card.GetComponent<LayoutElement>().preferredHeight = 78f;
                     card.GetComponent<Button>().interactable = false;
                 }
             }
+        }
+
+        private static void ConfigurePlayerViewRosterCard(GameObject cardGo)
+        {
+            if (cardGo == null)
+            {
+                return;
+            }
+
+            var layout = cardGo.GetComponent<LayoutElement>();
+            if (layout == null)
+            {
+                layout = cardGo.AddComponent<LayoutElement>();
+            }
+
+            layout.preferredHeight = 78f;
+            layout.minHeight = 78f;
+            layout.preferredWidth = 240f;
+            layout.minWidth = 220f;
         }
 
         /// <summary>
@@ -1073,7 +1122,7 @@ namespace RPGTable.Runtime
             return states != null;
         }
 
-        // ── Display detection ────────────────────────────────────────────
+        // в”Ђв”Ђ Display detection в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
         internal static bool MouseOnDisplay(int displayIndex)
         {
