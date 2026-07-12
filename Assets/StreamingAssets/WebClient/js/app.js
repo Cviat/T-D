@@ -5,13 +5,23 @@ import { initRegisterScreen } from './screens/register-screen.js';
 import { initCharacterChoiceScreen } from './screens/character-choice-screen.js';
 import { renderSelf, startLobbyPolling, stopLobbyPolling } from './screens/lobby-screen.js';
 import { initCombatControls, startGamePolling, stopGamePolling } from './screens/combat-screen.js';
+import { initInventoryScreen } from './screens/inventory-screen.js';
+import { initCharacterEditorScreen } from './screens/character-editor-screen.js';
 
 const sessionRef = { current: null };
 
 document.addEventListener('DOMContentLoaded', async () => {
     initRouter();
 
-    window.addEventListener('route', event => showScreen(event.detail));
+    window.addEventListener('route', async event => {
+        const routeName = event.detail;
+        showScreen(routeName);
+        if (routeName === 'inventory') {
+            await initInventoryScreen(sessionRef.current);
+        } else if (routeName === 'character-editor') {
+            await initCharacterEditorScreen(sessionRef.current);
+        }
+    });
 
     initRegisterScreen(session => {
         sessionRef.current = session;

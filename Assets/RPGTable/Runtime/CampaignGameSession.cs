@@ -28,6 +28,7 @@ namespace RPGTable.Runtime
         public int maxRolls = 1;
         public int activeWeaponIndex = 0;
         public List<RPGTable.Core.ActiveStatusEffect> statusEffects = new List<RPGTable.Core.ActiveStatusEffect>();
+        public RPGTable.CharacterEditor.SavedCharacterData characterRuntimeData;
     }
 
     public static class CampaignGameSession
@@ -67,6 +68,11 @@ namespace RPGTable.Runtime
         private static int nextPlayerIndex = 1;
 
         public static event Action OnPlayersChanged;
+
+        public static void TriggerPlayersChanged()
+        {
+            OnPlayersChanged?.Invoke();
+        }
 
         public static string SelectedCampaignPath { get; set; }
         public static string PendingTokenPlayerId { get; set; }
@@ -113,7 +119,8 @@ namespace RPGTable.Runtime
                 maxHp = charData != null ? charData.maxHp : 10,
                 currentHp = charData != null ? charData.maxHp : 10,
                 maxArmor = charData != null ? charData.maxArmor : 0,
-                currentArmor = charData != null ? charData.maxArmor : 0
+                currentArmor = charData != null ? charData.maxArmor : 0,
+                characterRuntimeData = charData
             };
 
             Players.Add(player);
@@ -170,6 +177,7 @@ namespace RPGTable.Runtime
             player.currentHp = player.maxHp;
             player.maxArmor = charData != null ? charData.maxArmor : 0;
             player.currentArmor = player.maxArmor;
+            player.characterRuntimeData = charData;
             OnPlayersChanged?.Invoke();
             return true;
         }

@@ -125,6 +125,23 @@ namespace RPGTable.Runtime.Networking
         }
 
         [Serializable]
+        public class UpdateSkillsPayload
+        {
+            public string playerId;
+            public string[] attackSlots;
+            public string[] attack2Slots;
+        }
+
+        [Serializable]
+        public class EquipItemPayload
+        {
+            public string playerId;
+            public string slotName;
+            public string itemName;
+            public int backpackIndex;
+        }
+
+        [Serializable]
         public class PendingRoll
         {
             public string id;
@@ -1312,6 +1329,182 @@ namespace RPGTable.Runtime.Networking
                 return;
             }
 
+            if (method == "GET" && url.StartsWith("/api/character/details?playerId="))
+            {
+                string playerId = url.Substring("/api/character/details?playerId=".Length);
+                string responseJson = "{\"status\":\"failed\"}";
+                ExecuteOnMainThreadBlocking(() => {
+                    var player = RPGTable.Runtime.CampaignGameSession.FindPlayer(playerId);
+                    if (player != null && player.characterRuntimeData != null)
+                    {
+                        var data = player.characterRuntimeData;
+                        
+                        // Load all abilities from resources
+                        var abilitiesList = new List<string>();
+                        var abilityCards = Resources.LoadAll<RPGTable.Core.AbilityCard>("AbilityCards");
+                        foreach (var card in abilityCards)
+                        {
+                            if (card == null) continue;
+                            abilitiesList.Add("{" +
+                                $"\"title\":\"{JsonString(card.title)}\"," +
+                                $"\"description\":\"{JsonString(card.description)}\"," +
+                                $"\"cost\":{card.cost}," +
+                                $"\"range\":{card.range}," +
+                                $"\"attackType\":\"{card.attackType.ToString()}\"" +
+                                "}");
+                        }
+
+                        // Load all items from resources
+                        var itemsList = new List<string>();
+                        var itemCards = Resources.LoadAll<RPGTable.Core.ItemCard>("ItemCards");
+                        foreach (var item in itemCards)
+                        {
+                            if (item == null) continue;
+                            itemsList.Add("{" +
+                                $"\"title\":\"{JsonString(item.title)}\"," +
+                                $"\"description\":\"{JsonString(item.description)}\"," +
+                                $"\"itemType\":\"{item.itemType.ToString()}\"," +
+                                $"\"armorPoints\":{item.armorPoints}," +
+                                $"\"bonusHp\":{item.bonusHp}," +
+                                $"\"bonusStr\":{item.bonusStr}," +
+                                $"\"bonusAgi\":{item.bonusAgi}," +
+                                $"\"bonusInt\":{item.bonusInt}," +
+                                $"\"bonusHol\":{item.bonusHol}" +
+                                "}");
+                        }
+
+                        // Format list arrays
+                        Func<string[], string> makeArray = arr => {
+                            if (arr == null) return "[]";
+                            var clean = new List<string>();
+                            foreach (var s in arr) clean.Add($"\"{JsonString(s)}\"");
+                            return "[" + string.Join(",", clean) + "]";
+                        };
+
+                        responseJson = "{" +
+                            "\"status\":\"success\"," +
+                            $"\"name\":\"{JsonString(data.name)}\"," +
+                            $"\"description\":\"{JsonString(data.description)}\"," +
+                            $"\"characterClass\":\"{JsonString(data.characterClass)}\"," +
+                            $"\"level\":{data.level}," +
+                            $"\"xp\":{data.xp}," +
+                            $"\"strength\":{data.strength}," +
+                            $"\"agility\":{data.agility}," +
+                            $"\"intelligence\":{data.intelligence}," +
+                            $"\"holiness\":{data.holiness}," +
+                            $"\"maxHp\":{player.maxHp}," +
+                            $"\"currentHp\":{player.currentHp}," +
+                            $"\"maxArmor\":{player.maxArmor}," +
+                            $"\"currentArmor\":{player.currentArmor}," +
+                            $"\"rerollCoins\":{player.rerollCoins}," +
+                            $"\"attackSlots\":{makeArray(data.attackSlots)}," +
+                            $"\"attack2Slots\":{makeArray(data.attack2Slots)}," +
+                            $"\"defenseSlots\":{makeArray(data.defenseSlots)}," +
+                            $"\"eqHelmet\":\"{JsonString(data.eqHelmet)}\"," +
+                            $"\"eqArmor\":\"{JsonString(data.eqArmor)}\"," +
+                            $"\"eqWeapon\":\"{JsonString(data.eqWeapon)}\"," +
+                            $"\"eqWeapon2\":\"{JsonString(data.eqWeapon2)}\"," +
+                            $"\"eqShield\":\"{JsonString(data.eqShield)}\"," +
+                            $"\"eqBoots\":\"{JsonString(data.eqBoots)}\"," +
+                            $"\"eqAmulet\":\"{JsonString(data.eqAmulet)}\"," +
+                            $"\"eqRing\":\"{JsonString(data.eqRing)}\"," +
+                            $"\"eqArtifact\":\"{JsonString(data.eqArtifact)}\"," +
+                            $"\"eqBelt\":\"{JsonString(data.eqBelt)}\"," +
+                            $"\"backpackSlots\":{makeArray(data.backpackSlots)}," +
+                            $"\"allAbilities\":[{string.Join(",", abilitiesList)}]," +
+                            $"\"allItems\":[{string.Join(",", itemsList)}]" +
+                            "}";
+                    }
+                });
+                SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(responseJson));
+                return;
+            }
+
+            if (method == "POST" && url == "/api/character/update-skills")
+            {
+                try
+                {
+                    var payload = JsonUtility.FromJson<UpdateSkillsPayload>(requestStr);
+                    bool success = false;
+                    if (payload != null && !string.IsNullOrEmpty(payload.playerId))
+                    {
+                        ExecuteOnMainThreadBlocking(() => {
+                            var player = RPGTable.Runtime.CampaignGameSession.FindPlayer(payload.playerId);
+                            if (player != null && player.characterRuntimeData != null)
+                            {
+                                if (payload.attackSlots != null)
+                                    player.characterRuntimeData.attackSlots = payload.attackSlots;
+                                if (payload.attack2Slots != null)
+                                    player.characterRuntimeData.attack2Slots = payload.attack2Slots;
+
+                                success = true;
+                                RPGTable.Runtime.CampaignGameSession.TriggerPlayersChanged();
+                            }
+                        });
+                    }
+                    string resp = success ? "{\"status\":\"success\"}" : "{\"status\":\"failed\"}";
+                    SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(resp));
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[WebServerManager] update-skills error: {ex}");
+                    SendResponse(stream, 500, "Internal Server Error", "text/plain", Encoding.UTF8.GetBytes(ex.Message));
+                }
+                return;
+            }
+
+            if (method == "POST" && url == "/api/character/equip-item")
+            {
+                try
+                {
+                    var payload = JsonUtility.FromJson<EquipItemPayload>(requestStr);
+                    bool success = false;
+                    if (payload != null && !string.IsNullOrEmpty(payload.playerId))
+                    {
+                        ExecuteOnMainThreadBlocking(() => {
+                            var player = RPGTable.Runtime.CampaignGameSession.FindPlayer(payload.playerId);
+                            if (player != null && player.characterRuntimeData != null)
+                            {
+                                var data = player.characterRuntimeData;
+                                // Handle backpack swap if index is valid
+                                string prevEquipped = "";
+                                switch (payload.slotName)
+                                {
+                                    case "eqHelmet": prevEquipped = data.eqHelmet; data.eqHelmet = payload.itemName; break;
+                                    case "eqArmor": prevEquipped = data.eqArmor; data.eqArmor = payload.itemName; break;
+                                    case "eqWeapon": prevEquipped = data.eqWeapon; data.eqWeapon = payload.itemName; break;
+                                    case "eqWeapon2": prevEquipped = data.eqWeapon2; data.eqWeapon2 = payload.itemName; break;
+                                    case "eqShield": prevEquipped = data.eqShield; data.eqShield = payload.itemName; break;
+                                    case "eqBoots": prevEquipped = data.eqBoots; data.eqBoots = payload.itemName; break;
+                                    case "eqAmulet": prevEquipped = data.eqAmulet; data.eqAmulet = payload.itemName; break;
+                                    case "eqRing": prevEquipped = data.eqRing; data.eqRing = payload.itemName; break;
+                                    case "eqArtifact": prevEquipped = data.eqArtifact; data.eqArtifact = payload.itemName; break;
+                                    case "eqBelt": prevEquipped = data.eqBelt; data.eqBelt = payload.itemName; break;
+                                }
+
+                                if (payload.backpackIndex >= 0 && payload.backpackIndex < data.backpackSlots.Length)
+                                {
+                                    data.backpackSlots[payload.backpackIndex] = prevEquipped;
+                                }
+
+                                RecalculatePlayerRuntimeStats(player);
+
+                                success = true;
+                                RPGTable.Runtime.CampaignGameSession.TriggerPlayersChanged();
+                            }
+                        });
+                    }
+                    string resp = success ? "{\"status\":\"success\"}" : "{\"status\":\"failed\"}";
+                    SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(resp));
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[WebServerManager] equip-item error: {ex}");
+                    SendResponse(stream, 500, "Internal Server Error", "text/plain", Encoding.UTF8.GetBytes(ex.Message));
+                }
+                return;
+            }
+
             SendResponse(stream, 404, "Not Found", "text/plain", Encoding.UTF8.GetBytes("API endpoint not found"));
         }
 
@@ -1361,6 +1554,68 @@ namespace RPGTable.Runtime.Networking
                 case ".jpg": case ".jpeg": return "image/jpeg";
                 default: return "application/octet-stream";
             }
+        }
+
+        private static void RecalculatePlayerRuntimeStats(CampaignPlayerData player)
+        {
+            var data = player.characterRuntimeData;
+            if (data == null) return;
+
+            // Start with base stats from character data
+            var baseData = string.IsNullOrEmpty(player.characterPath) 
+                ? new CharacterEditor.SavedCharacterData() 
+                : CharacterEditor.UserCharacterStore.LoadCharacter(player.characterPath);
+
+            int baseHp = baseData != null ? baseData.maxHp : 10;
+            int baseArmor = baseData != null ? baseData.maxArmor : 0;
+
+            int extraHp = 0;
+            int extraArmor = 0;
+
+            string[] equipped = {
+                data.eqHelmet, data.eqArmor, data.eqWeapon, data.eqWeapon2,
+                data.eqShield, data.eqBoots, data.eqAmulet, data.eqRing,
+                data.eqArtifact, data.eqBelt
+            };
+
+            foreach (var itemName in equipped)
+            {
+                if (string.IsNullOrEmpty(itemName)) continue;
+                var item = FindItemCardStatic(itemName);
+                if (item != null)
+                {
+                    extraHp += item.bonusHp;
+                    extraArmor += item.armorPoints;
+                }
+            }
+
+            player.maxHp = baseHp + extraHp;
+            player.currentHp = Mathf.Min(player.currentHp, player.maxHp);
+            player.maxArmor = baseArmor + extraArmor;
+            player.currentArmor = Mathf.Min(player.currentArmor, player.maxArmor);
+
+            CampaignGameSession.UpdateTokenCombatStats(
+                player.id, player.currentMapId,
+                player.currentHp, player.maxHp,
+                player.currentArmor, player.maxArmor,
+                player.currentMovementPoints, player.maxMovementPoints,
+                player.currentRolls, player.maxRolls,
+                player.activeWeaponIndex, player.rerollCoins,
+                player.statusEffects, player.isDead);
+        }
+
+        private static RPGTable.Core.ItemCard FindItemCardStatic(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            var items = Resources.LoadAll<RPGTable.Core.ItemCard>("ItemCards");
+            foreach (var item in items)
+            {
+                if (item != null && string.Equals(item.title, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return item;
+                }
+            }
+            return null;
         }
 
         private void OnDestroy()

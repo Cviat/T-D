@@ -5,29 +5,36 @@ import { saveSession } from '../session.js';
 let gameTimer = null;
 let currentTargetId = null;
 let currentSessionRef = null;
+let isGamePollingActive = false;
 
 export function startGamePolling(session) {
     stopGamePolling();
+    isGamePollingActive = true;
     document.getElementById('game-name').textContent = session.name || 'Игрок';
     document.getElementById('game-photo').style.backgroundImage = session.portraitUrl ? `url('${session.portraitUrl}')` : '';
 
     const tick = async () => {
+        if (!isGamePollingActive) return;
         try {
             if (currentSessionRef && currentSessionRef.current) {
                 const state = await apiGet(`/api/game/state?playerId=${encodeURIComponent(currentSessionRef.current.playerId)}`);
+                if (!isGamePollingActive) return;
                 renderGameState(state);
             }
         } catch (error) {
             console.error(error);
         }
 
-        gameTimer = setTimeout(tick, 2000);
+        if (isGamePollingActive) {
+            gameTimer = setTimeout(tick, 2000);
+        }
     };
 
     tick();
 }
 
 export function stopGamePolling() {
+    isGamePollingActive = false;
     if (gameTimer) {
         clearTimeout(gameTimer);
         gameTimer = null;

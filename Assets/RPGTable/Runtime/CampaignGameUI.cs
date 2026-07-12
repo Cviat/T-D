@@ -242,7 +242,10 @@ namespace RPGTable.Runtime
                 Sprite portraitSprite = null;
                 if (!string.IsNullOrEmpty(runtimeToken.CharacterPath))
                 {
-                    var charData = RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(runtimeToken.CharacterPath);
+                    var player = string.IsNullOrEmpty(runtimeToken.PlayerId) ? null : CampaignGameSession.FindPlayer(runtimeToken.PlayerId);
+                    var charData = (player != null && player.characterRuntimeData != null)
+                        ? player.characterRuntimeData
+                        : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(runtimeToken.CharacterPath);
                     if (charData != null) portraitSprite = RPGTable.CharacterEditor.UserCharacterStore.LoadSprite(charData.portraitPath);
                 }
                 
@@ -386,7 +389,10 @@ namespace RPGTable.Runtime
                 if (inspectorView != null)
                 {
                     var tokenData = UserTokenStore.LoadToken(token.TokenPath);
-                    var charData = string.IsNullOrEmpty(token.CharacterPath) ? null : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(token.CharacterPath);
+                    var player = string.IsNullOrEmpty(token.PlayerId) ? null : CampaignGameSession.FindPlayer(token.PlayerId);
+                    var charData = (player != null && player.characterRuntimeData != null)
+                        ? player.characterRuntimeData
+                        : (string.IsNullOrEmpty(token.CharacterPath) ? null : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(token.CharacterPath));
 
                     Sprite portrait = null;
                     if (charData != null) portrait = RPGTable.CharacterEditor.UserCharacterStore.LoadSprite(charData.portraitPath);

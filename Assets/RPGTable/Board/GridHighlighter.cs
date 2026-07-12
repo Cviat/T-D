@@ -183,9 +183,12 @@ namespace RPGTable.Board
         private int GetMaxAbilityRange(RPGTable.Runtime.CampaignRuntimeToken token)
         {
             int maxRange = 1; // Default melee range is 1 cell
-            var charData = string.IsNullOrEmpty(token.CharacterPath) 
-                ? null 
-                : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(token.CharacterPath);
+            var player = string.IsNullOrEmpty(token.PlayerId) ? null : RPGTable.Runtime.CampaignGameSession.FindPlayer(token.PlayerId);
+            var charData = (player != null && player.characterRuntimeData != null)
+                ? player.characterRuntimeData
+                : (string.IsNullOrEmpty(token.CharacterPath) 
+                    ? null 
+                    : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(token.CharacterPath));
 
             if (charData != null)
             {

@@ -84,15 +84,41 @@
         <section id="screen-character-editor" class="screen">
             <header class="screen-header">
                 <p class="eyebrow">Персонаж</p>
-                <h1>Редактор</h1>
-                <p class="muted">Полный мобильный редактор будет следующим этапом. Сейчас рабочий путь - импорт готового персонажа.</p>
+                <h1>Характеристики и Способности</h1>
             </header>
 
             <div class="panel">
-                <p>Здесь будут характеристики, оружие, способности, атрибуты и инвентарь.</p>
+                <div class="panel-title">Атрибуты</div>
+                <div class="attributes-grid">
+                    <div class="attr-box"><span>STR</span><strong id="char-str">-</strong></div>
+                    <div class="attr-box"><span>AGI</span><strong id="char-agi">-</strong></div>
+                    <div class="attr-box"><span>INT</span><strong id="char-int">-</strong></div>
+                    <div class="attr-box"><span>HOL</span><strong id="char-hol">-</strong></div>
+                </div>
             </div>
 
-            <button class="button secondary" data-route="lobby" type="button">Назад</button>
+            <div class="panel">
+                <div class="panel-title">Слоты способностей</div>
+                <div class="tabs" style="display: flex; gap: 8px; margin-bottom: 12px;">
+                    <button id="skills-tab-1" class="button secondary active" style="flex: 1; min-height: 38px; font-size: 11px;" type="button">Оружие 1</button>
+                    <button id="skills-tab-2" class="button secondary" style="flex: 1; min-height: 38px; font-size: 11px;" type="button">Оружие 2</button>
+                </div>
+                <div class="skills-slots-grid" id="skills-slots-container" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                    <!-- 6 slots populated dynamically -->
+                </div>
+                <div class="skills-instruction muted text-center" style="margin-top: 10px; font-size: 12px;">
+                    Нажмите на слот выше, затем выберите способность из списка ниже
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Доступные способности</div>
+                <div id="grimoire-list" class="grimoire-list" style="display: grid; gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 4px;">
+                    <!-- Available abilities populated dynamically -->
+                </div>
+            </div>
+
+            <button class="button secondary" data-route="game" type="button" style="margin-bottom: 20px;">Назад</button>
         </section>
 
         <section id="screen-game" class="screen">
@@ -142,9 +168,73 @@
         <section id="screen-inventory" class="screen">
             <header class="screen-header">
                 <p class="eyebrow">Инвентарь</p>
-                <h1>Скоро</h1>
+                <h1>Снаряжение</h1>
             </header>
-            <button class="button secondary" data-route="game" type="button">Назад</button>
+
+            <div class="panel">
+                <div class="panel-title">Экипировка</div>
+                <div class="equipment-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div class="equip-slot" data-slot="eqHelmet" style="border: 1px solid var(--line); padding: 8px; border-radius: 4px; background: rgba(0,0,0,0.3); cursor: pointer;">
+                        <span style="font-size: 11px; color: var(--muted); display: block;">Шлем</span>
+                        <strong id="eq-Helmet" style="font-size: 13px; color: #fff;">Пусто</strong>
+                    </div>
+                    <div class="equip-slot" data-slot="eqArmor" style="border: 1px solid var(--line); padding: 8px; border-radius: 4px; background: rgba(0,0,0,0.3); cursor: pointer;">
+                        <span style="font-size: 11px; color: var(--muted); display: block;">Доспех</span>
+                        <strong id="eq-Armor" style="font-size: 13px; color: #fff;">Пусто</strong>
+                    </div>
+                    <div class="equip-slot" data-slot="eqWeapon" style="border: 1px solid var(--line); padding: 8px; border-radius: 4px; background: rgba(0,0,0,0.3); cursor: pointer;">
+                        <span style="font-size: 11px; color: var(--muted); display: block;">Оружие 1</span>
+                        <strong id="eq-Weapon" style="font-size: 13px; color: #fff;">Пусто</strong>
+                    </div>
+                    <div class="equip-slot" data-slot="eqWeapon2" style="border: 1px solid var(--line); padding: 8px; border-radius: 4px; background: rgba(0,0,0,0.3); cursor: pointer;">
+                        <span style="font-size: 11px; color: var(--muted); display: block;">Оружие 2</span>
+                        <strong id="eq-Weapon2" style="font-size: 13px; color: #fff;">Пусто</strong>
+                    </div>
+                    <div class="equip-slot" data-slot="eqShield" style="border: 1px solid var(--line); padding: 8px; border-radius: 4px; background: rgba(0,0,0,0.3); cursor: pointer;">
+                        <span style="font-size: 11px; color: var(--muted); display: block;">Щит</span>
+                        <strong id="eq-Shield" style="font-size: 13px; color: #fff;">Пусто</strong>
+                    </div>
+                    <div class="equip-slot" data-slot="eqBoots" style="border: 1px solid var(--line); padding: 8px; border-radius: 4px; background: rgba(0,0,0,0.3); cursor: pointer;">
+                        <span style="font-size: 11px; color: var(--muted); display: block;">Обувь</span>
+                        <strong id="eq-Boots" style="font-size: 13px; color: #fff;">Пусто</strong>
+                    </div>
+                    <div class="equip-slot" data-slot="eqAmulet" style="border: 1px solid var(--line); padding: 8px; border-radius: 4px; background: rgba(0,0,0,0.3); cursor: pointer;">
+                        <span style="font-size: 11px; color: var(--muted); display: block;">Амулет</span>
+                        <strong id="eq-Amulet" style="font-size: 13px; color: #fff;">Пусто</strong>
+                    </div>
+                    <div class="equip-slot" data-slot="eqRing" style="border: 1px solid var(--line); padding: 8px; border-radius: 4px; background: rgba(0,0,0,0.3); cursor: pointer;">
+                        <span style="font-size: 11px; color: var(--muted); display: block;">Кольцо</span>
+                        <strong id="eq-Ring" style="font-size: 13px; color: #fff;">Пусто</strong>
+                    </div>
+                    <div class="equip-slot" data-slot="eqArtifact" style="border: 1px solid var(--line); padding: 8px; border-radius: 4px; background: rgba(0,0,0,0.3); cursor: pointer;">
+                        <span style="font-size: 11px; color: var(--muted); display: block;">Артефакт</span>
+                        <strong id="eq-Artifact" style="font-size: 13px; color: #fff;">Пусто</strong>
+                    </div>
+                    <div class="equip-slot" data-slot="eqBelt" style="border: 1px solid var(--line); padding: 8px; border-radius: 4px; background: rgba(0,0,0,0.3); cursor: pointer;">
+                        <span style="font-size: 11px; color: var(--muted); display: block;">Пояс</span>
+                        <strong id="eq-Belt" style="font-size: 13px; color: #fff;">Пусто</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Рюкзак</div>
+                <div class="backpack-grid" id="backpack-container" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                    <!-- 8 slots populated dynamically -->
+                </div>
+                <div class="inventory-instruction muted text-center" style="margin-top: 10px; font-size: 12px;">
+                    Нажмите на предмет в рюкзаке для экипировки, или на предмет экипировки для снятия
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Склад снаряжения</div>
+                <div id="item-pool-list" class="item-pool-list" style="display: grid; gap: 8px; max-height: 200px; overflow-y: auto; padding-right: 4px;">
+                    <!-- List of all available items in the game -->
+                </div>
+            </div>
+
+            <button class="button secondary" data-route="game" type="button" style="margin-bottom: 20px;">Назад</button>
         </section>
     </main>
 

@@ -1,24 +1,32 @@
 .player-list,
 .card-list {
     display: grid;
-    gap: 10px;
+    gap: 12px;
 }
 
 .player-card,
 .character-card {
     display: grid;
     grid-template-columns: 54px 1fr;
-    gap: 12px;
+    gap: 14px;
     align-items: center;
-    padding: 10px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.05);
+    padding: 12px;
+    border: 2px solid var(--line);
+    border-radius: 4px;
+    background: linear-gradient(90deg, #1b1613 0%, #110e0c 100%);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+    transition: all 0.2s ease;
+}
+
+.player-card:hover,
+.character-card:hover {
+    border-color: var(--line-active);
+    box-shadow: 0 4px 12px rgba(197, 160, 89, 0.1);
 }
 
 .player-card.not-ready {
-    filter: grayscale(1);
-    opacity: 0.65;
+    filter: sepia(0.3) grayscale(0.5) brightness(0.6);
+    opacity: 0.6;
 }
 
 .player-card .avatar,
@@ -29,22 +37,40 @@
 
 .status-pill {
     display: inline-block;
-    margin-top: 4px;
-    padding: 3px 8px;
-    border-radius: 999px;
-    color: #15120b;
-    background: var(--accent);
-    font-size: 12px;
+    margin-top: 6px;
+    padding: 4px 10px;
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    border-radius: 3px;
+    color: #17120a;
+    background: linear-gradient(180deg, #e5c158 0%, #a88122 100%);
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
     font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .status-pill.ready {
-    background: var(--ready);
+    border-color: rgba(98, 196, 134, 0.4);
+    background: linear-gradient(180deg, #62c486 0%, #2b6139 100%);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
 .check-row {
     display: grid;
-    grid-template-columns: 22px 1fr;
-    gap: 8px;
+    grid-template-columns: 24px 1fr;
+    gap: 10px;
     align-items: center;
+    font-size: 14px;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.check-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+    cursor: pointer;
 }

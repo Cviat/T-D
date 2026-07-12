@@ -400,16 +400,26 @@ namespace RPGTable.Runtime
 
         public int GetMaxAbilityRange(CampaignRuntimeToken token)
         {
-            return GetMaxAbilityRange(token.CharacterPath, token.ActiveWeaponIndex);
+            var player = string.IsNullOrEmpty(token.PlayerId) ? null : RPGTable.Runtime.CampaignGameSession.FindPlayer(token.PlayerId);
+            var charData = (player != null && player.characterRuntimeData != null)
+                ? player.characterRuntimeData
+                : (string.IsNullOrEmpty(token.CharacterPath) 
+                    ? null 
+                    : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(token.CharacterPath));
+            return GetMaxAbilityRangeFromData(charData, token.ActiveWeaponIndex);
         }
 
         public static int GetMaxAbilityRange(string characterPath, int activeWeaponIndex)
         {
-            int maxRange = 1;
             var charData = string.IsNullOrEmpty(characterPath) 
                 ? null 
                 : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(characterPath);
+            return GetMaxAbilityRangeFromData(charData, activeWeaponIndex);
+        }
 
+        public static int GetMaxAbilityRangeFromData(RPGTable.CharacterEditor.SavedCharacterData charData, int activeWeaponIndex)
+        {
+            int maxRange = 1;
             if (charData != null)
             {
                 var slots = (activeWeaponIndex == 0) ? charData.attackSlots : charData.attack2Slots;
@@ -473,9 +483,12 @@ namespace RPGTable.Runtime
                 return;
             }
 
-            var charData = string.IsNullOrEmpty(attacker.CharacterPath) 
-                ? null 
-                : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(attacker.CharacterPath);
+            var player = string.IsNullOrEmpty(attacker.PlayerId) ? null : RPGTable.Runtime.CampaignGameSession.FindPlayer(attacker.PlayerId);
+            var charData = (player != null && player.characterRuntimeData != null)
+                ? player.characterRuntimeData
+                : (string.IsNullOrEmpty(attacker.CharacterPath) 
+                    ? null 
+                    : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(attacker.CharacterPath));
 
             if (charData == null)
             {
@@ -576,9 +589,12 @@ namespace RPGTable.Runtime
             attacker.CurrentRolls = Mathf.Max(0, attacker.CurrentRolls - 1);
 
             Debug.Log($"[CampaignGameLoader] Attacker CharacterPath: '{attacker.CharacterPath}'");
-            var charData = string.IsNullOrEmpty(attacker.CharacterPath)
-                ? null
-                : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(attacker.CharacterPath);
+            var player = string.IsNullOrEmpty(attacker.PlayerId) ? null : RPGTable.Runtime.CampaignGameSession.FindPlayer(attacker.PlayerId);
+            var charData = (player != null && player.characterRuntimeData != null)
+                ? player.characterRuntimeData
+                : (string.IsNullOrEmpty(attacker.CharacterPath) 
+                    ? null 
+                    : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(attacker.CharacterPath));
 
             if (charData == null)
             {
