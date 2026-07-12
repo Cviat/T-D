@@ -1,32 +1,38 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using RPGTable.Core;
+using RPGTable.CharacterEditor;
 
 namespace RPGTable.Runtime
 {
     public class CampaignPlayerViewTradeMirror : MonoBehaviour
     {
-        private string targetPlayerId;
-        private RectTransform giveContent;
-        private RectTransform takeContent;
+        private CampaignRuntimeToken targetToken;
+        private string currentPlayerId;
 
-        public void Initialize(string playerId)
+        private RectTransform targetContent;
+        private RectTransform backpackContent;
+        private Text headerLabel;
+        private Text targetTitleLabel;
+
+        public void Initialize(CampaignRuntimeToken targetToken, string currentPlayerId)
         {
-            targetPlayerId = playerId;
+            this.targetToken = targetToken;
+            this.currentPlayerId = currentPlayerId;
 
-            var player = CampaignGameSession.FindPlayer(playerId);
+            var player = CampaignGameSession.FindPlayer(currentPlayerId);
             var charName = player != null ? player.name : "Игрок";
+            var targetName = targetToken.DisplayName;
 
             // Centered Main Background Panel
             var rect = GetComponent<RectTransform>();
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
-            rect.sizeDelta = new Vector2(700f, 450f);
+            rect.sizeDelta = new Vector2(750f, 500f);
             rect.anchoredPosition = Vector2.zero;
 
             var bgImage = gameObject.AddComponent<Image>();
-            bgImage.color = new Color(0.08f, 0.08f, 0.08f, 0.95f);
+            bgImage.color = new Color(0.08f, 0.08f, 0.08f, 0.96f);
 
             var outline = gameObject.AddComponent<Outline>();
             outline.effectColor = new Color(0.83f, 0.68f, 0.35f, 1f); // Gold outline
@@ -41,7 +47,7 @@ namespace RPGTable.Runtime
             headerRt.sizeDelta = new Vector2(0f, 50f);
             headerRt.anchoredPosition = Vector2.zero;
 
-            var headerLabel = CampaignGameUI.CreateLabel($"ОБМЕН С ГЕЙМ-МАСТЕРОМ: {charName.ToUpper()}", headerGo.transform, 18, FontStyle.Bold,
+            headerLabel = CampaignGameUI.CreateLabel($"ОБМЕН ПРЕДМЕТАМИ: {targetName.ToUpper()} ➔ {charName.ToUpper()}", headerGo.transform, 16, FontStyle.Bold,
                 Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             headerLabel.alignment = TextAnchor.MiddleCenter;
             headerLabel.color = new Color(0.83f, 0.68f, 0.35f, 1f);
@@ -62,13 +68,16 @@ namespace RPGTable.Runtime
             layout.childForceExpandHeight = true;
             layout.childForceExpandWidth = true;
 
-            // Column 1: Offered Items
-            var giveCol = CreateColumn("ВЫ ПОЛУЧИТЕ:", columnsGo.transform);
-            CreateListContent("GiveList", giveCol.transform, out giveContent);
+            // Column 1: Target Token Inventory
+            var targetCol = CreateColumn($"ИНВЕНТАРЬ: {targetName.ToUpper()}", columnsGo.transform);
+            targetTitleLabel = targetCol.GetComponentInChildren<Text>();
+            CreateListContent("TargetList", targetCol.transform, out targetContent);
 
-            // Column 2: Removed Items
-            var takeCol = CreateColumn("У ВАС ЗАБЕРУТ:", columnsGo.transform);
-            CreateListContent("TakeList", takeCol.transform, out takeContent);
+            // Column 2: Player Backpack
+            var playerCol = CreateColumn($"РЮКЗАК ИГРОКА: {charName.ToUpper()}", columnsGo.transform);
+            CreateListContent("PlayerList", playerCol.transform, out backpackContent);
+
+            Refresh();
         }
 
         private GameObject CreateColumn(string title, Transform parent)
@@ -90,7 +99,7 @@ namespace RPGTable.Runtime
             colHeader.transform.SetParent(col.transform, false);
             colHeader.AddComponent<LayoutElement>().preferredHeight = 28f;
             
-            var label = CampaignGameUI.CreateLabel(title, colHeader.transform, 14, FontStyle.Bold,
+            var label = CampaignGameUI.CreateLabel(title, colHeader.transform, 12, FontStyle.Bold,
                 Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             label.alignment = TextAnchor.MiddleCenter;
             label.color = new Color(0.83f, 0.68f, 0.35f, 1f);
@@ -102,7 +111,7 @@ namespace RPGTable.Runtime
         {
             var listObject = new GameObject(name, typeof(RectTransform));
             listObject.transform.SetParent(parent, false);
-            listObject.AddComponent<LayoutElement>().preferredHeight = 280f;
+            listObject.AddComponent<LayoutElement>().preferredHeight = 340f;
             contentRt = listObject.GetComponent<RectTransform>();
 
             var layout = listObject.AddComponent<VerticalLayoutGroup>();
@@ -113,42 +122,65 @@ namespace RPGTable.Runtime
             layout.childForceExpandWidth = true;
         }
 
-        public void Refresh(List<string> offeredItems, HashSet<int> markedForRemovalIndices)
+        public void Refresh()
         {
-            ClearChildren(giveContent);
-            ClearChildren(takeContent);
+            ClearChildren(targetContent);
+            ClearChildren(backpackContent);
 
-            // Populate offered items
-            if (offeredItems.Count == 0)
+            // 1. Resolve Target Character Data
+            SavedCharacterData targetCharData = null;
+            if (!string.IsNullOrEmpty(targetToken.PlayerId))
             {
-                CreateRow("Нет предметов для передачи", giveContent, Color.gray);
+                var targetPlayer = CampaignGameSession.FindPlayer(targetToken.PlayerId);
+                targetCharData = targetPlayer?.characterRuntimeData;
             }
             else
             {
-                foreach (var item in offeredItems)
+                string key = targetToken.RuntimeId;
+                if (string.IsNullOrEmpty(key)) key = targetToken.DisplayName;
+                if (CampaignTradeWindow.NpcRuntimeCharacterData.ContainsKey(key))
                 {
-                    CreateRow(item, giveContent, new Color(0.12f, 0.35f, 0.12f, 1f));
+                    targetCharData = CampaignTradeWindow.NpcRuntimeCharacterData[key];
                 }
             }
 
-            // Populate removed items
-            var player = CampaignGameSession.FindPlayer(targetPlayerId);
+            // Populate Target items
+            if (targetCharData == null)
+            {
+                CreateRow("У этой цели нет инвентаря", targetContent, Color.gray);
+            }
+            else
+            {
+                for (int i = 0; i < 8; i++)
+                {
+                    var name = targetCharData.backpackSlots?[i];
+                    if (string.IsNullOrEmpty(name))
+                    {
+                        CreateRow("- Пусто -", targetContent, new Color(0.1f, 0.08f, 0.07f, 0.4f));
+                    }
+                    else
+                    {
+                        CreateRow(name, targetContent, new Color(0.2f, 0.16f, 0.14f, 1f));
+                    }
+                }
+            }
+
+            // Populate Player items
+            var player = CampaignGameSession.FindPlayer(currentPlayerId);
             if (player != null && player.characterRuntimeData != null)
             {
                 var backpack = player.characterRuntimeData.backpackSlots;
-                bool hasRemovals = false;
-                foreach (var idx in markedForRemovalIndices)
+                for (int i = 0; i < 8; i++)
                 {
-                    if (backpack != null && idx >= 0 && idx < backpack.Length && !string.IsNullOrEmpty(backpack[idx]))
+                    var name = (backpack != null && i < backpack.Length) ? backpack[i] : "";
+                    if (string.IsNullOrEmpty(name))
                     {
-                        CreateRow(backpack[idx], takeContent, new Color(0.4f, 0.12f, 0.12f, 1f));
-                        hasRemovals = true;
+                        CreateRow("- Пусто -", backpackContent, new Color(0.1f, 0.08f, 0.07f, 0.4f));
                     }
-                }
-
-                if (!hasRemovals)
-                {
-                    CreateRow("Нет предметов для изъятия", takeContent, Color.gray);
+                    else
+                    {
+                        CreateRow(name, backpackContent, new Color(0.12f, 0.28f, 0.12f, 1f));
+                    }
                 }
             }
         }
@@ -156,9 +188,9 @@ namespace RPGTable.Runtime
         private void CreateRow(string text, Transform parent, Color color)
         {
             var rowGo = CampaignGameUI.CreatePanel(text, parent, color);
-            rowGo.AddComponent<LayoutElement>().preferredHeight = 36f;
+            rowGo.AddComponent<LayoutElement>().preferredHeight = 32f;
             
-            var label = CampaignGameUI.CreateLabel(text, rowGo.transform, 12, FontStyle.Bold,
+            var label = CampaignGameUI.CreateLabel(text, rowGo.transform, 11, FontStyle.Bold,
                 Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             label.alignment = TextAnchor.MiddleCenter;
             label.color = Color.white;

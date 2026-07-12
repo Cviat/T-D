@@ -279,36 +279,57 @@ namespace RPGTable.Runtime
 
         private void ConfigureTradeButton(CampaignRuntimeToken token)
         {
-            var isPlayer = !string.IsNullOrEmpty(token.PlayerId);
-            
             var existing = transform.Find("Inspector Trade Button");
             if (existing != null)
             {
-                existing.gameObject.SetActive(isPlayer);
-                if (isPlayer)
-                {
-                    var btn = existing.GetComponent<Button>();
-                    btn.onClick.RemoveAllListeners();
-                    btn.onClick.AddListener(() => CampaignTradeWindow.Open(token.PlayerId));
-                }
+                var btn = existing.GetComponent<Button>();
+                btn.onClick.RemoveAllListeners();
+                btn.onClick.AddListener(() => OpenTradeWithCurrentPlayer(token));
                 return;
             }
 
-            if (!isPlayer) return;
-
-            var parent = weaponSwitchButton != null ? weaponSwitchButton.transform.parent : transform;
-            var tradeBtnGo = CampaignGameUI.CreateButton("Торговля", parent, new Color(0.18f, 0.12f, 0.08f, 1f));
+            var tradeBtnGo = CampaignGameUI.CreateButton("Обмен", transform, new Color(0.18f, 0.14f, 0.1f, 1f));
             tradeBtnGo.name = "Inspector Trade Button";
             
-            var layout = tradeBtnGo.GetComponent<LayoutElement>();
-            if (layout != null)
+            var rect = tradeBtnGo.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(1f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 1f);
+            rect.sizeDelta = new Vector2(75f, 24f);
+            rect.anchoredPosition = new Vector2(-8f, -8f);
+
+            var textComp = tradeBtnGo.GetComponentInChildren<Text>();
+            if (textComp != null)
             {
-                layout.preferredHeight = 36f;
-                layout.preferredWidth = 120f;
+                textComp.fontSize = 10;
+                textComp.color = new Color(0.83f, 0.68f, 0.35f, 1f);
             }
 
+            var outline = tradeBtnGo.AddComponent<Outline>();
+            outline.effectColor = new Color(0.83f, 0.68f, 0.35f, 0.8f);
+            outline.effectDistance = new Vector2(1f, 1f);
+
             var btnComp = tradeBtnGo.GetComponent<Button>();
-            btnComp.onClick.AddListener(() => CampaignTradeWindow.Open(token.PlayerId));
+            btnComp.onClick.AddListener(() => OpenTradeWithCurrentPlayer(token));
+        }
+
+        private void OpenTradeWithCurrentPlayer(CampaignRuntimeToken targetToken)
+        {
+            var loader = FindAnyObjectByType<CampaignGameLoader>();
+            var currentPlayerId = loader != null && loader.Context != null ? loader.Context.SelectedPlayerId : null;
+            
+            if (string.IsNullOrEmpty(currentPlayerId) && CampaignGameSession.CurrentPlayers.Count > 0)
+            {
+                currentPlayerId = CampaignGameSession.CurrentPlayers[0].id;
+            }
+
+            if (string.IsNullOrEmpty(currentPlayerId))
+            {
+                Debug.LogWarning("No current player selected to trade with.");
+                return;
+            }
+
+            CampaignTradeWindow.Open(targetToken, currentPlayerId);
         }
 
         private RPGTable.Core.ItemCard FindItemCard(string title)

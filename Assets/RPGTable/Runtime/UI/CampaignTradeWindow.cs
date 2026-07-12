@@ -3,24 +3,28 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using RPGTable.Core;
+using RPGTable.CharacterEditor;
 
 namespace RPGTable.Runtime
 {
     public class CampaignTradeWindow : MonoBehaviour
     {
-        private string targetPlayerId;
-        private List<string> offeredItems = new List<string>();
-        private HashSet<int> markedForRemoval = new HashSet<int>();
+        // Session-persistent cache for NPC/Chest inventories so items remain in them during the game
+        public static Dictionary<string, SavedCharacterData> NpcRuntimeCharacterData = new Dictionary<string, SavedCharacterData>();
+
+        private string currentPlayerId;
+        private CampaignRuntimeToken targetToken;
+        private SavedCharacterData targetCharData;
 
         private RectTransform bankContent;
-        private RectTransform offerContent;
+        private RectTransform targetContent;
         private RectTransform backpackContent;
         private Text headerLabel;
 
         private static CampaignTradeWindow currentInstance;
         private static GameObject mirrorInstance;
 
-        public static void Open(string playerId)
+        public static void Open(CampaignRuntimeToken targetToken, string currentPlayerId)
         {
             if (currentInstance != null)
             {
@@ -41,10 +45,9 @@ namespace RPGTable.Runtime
             var windowGo = new GameObject("CampaignTradeWindow", typeof(RectTransform));
             windowGo.transform.SetParent(canvas.transform, false);
             currentInstance = windowGo.AddComponent<CampaignTradeWindow>();
-            currentInstance.Initialize(playerId);
+            currentInstance.Initialize(targetToken, currentPlayerId);
 
-            // Spawns mirror on Player View (if Display 2 is active)
-            SpawnMirror(playerId);
+            SpawnMirror(targetToken, currentPlayerId);
         }
 
         private static Canvas FindMainCanvas()
@@ -57,7 +60,7 @@ namespace RPGTable.Runtime
             return FindAnyObjectByType<Canvas>();
         }
 
-        private static void SpawnMirror(string playerId)
+        private static void SpawnMirror(CampaignRuntimeToken targetToken, string currentPlayerId)
         {
             if (CampaignPlayerViewManager.Instance == null || CampaignPlayerViewManager.Instance.PlayerViewInterface == null)
             {
@@ -68,17 +71,50 @@ namespace RPGTable.Runtime
             mirrorInstance = new GameObject("PlayerViewTradeMirror", typeof(RectTransform));
             mirrorInstance.transform.SetParent(canvasTransform, false);
             var mirror = mirrorInstance.AddComponent<CampaignPlayerViewTradeMirror>();
-            mirror.Initialize(playerId);
+            mirror.Initialize(targetToken, currentPlayerId);
         }
 
-        public void Initialize(string playerId)
+        public void Initialize(CampaignRuntimeToken targetToken, string currentPlayerId)
         {
-            targetPlayerId = playerId;
-            offeredItems.Clear();
-            markedForRemoval.Clear();
+            this.targetToken = targetToken;
+            this.currentPlayerId = currentPlayerId;
 
-            var player = CampaignGameSession.FindPlayer(playerId);
+            // Resolve target character data
+            if (!string.IsNullOrEmpty(targetToken.PlayerId))
+            {
+                var targetPlayer = CampaignGameSession.FindPlayer(targetToken.PlayerId);
+                targetCharData = targetPlayer?.characterRuntimeData;
+            }
+            else if (!string.IsNullOrEmpty(targetToken.CharacterPath))
+            {
+                string key = targetToken.RuntimeId;
+                if (string.IsNullOrEmpty(key)) key = targetToken.DisplayName;
+                
+                if (!NpcRuntimeCharacterData.ContainsKey(key))
+                {
+                    var loaded = UserCharacterStore.LoadCharacter(targetToken.CharacterPath);
+                    if (loaded == null) loaded = new SavedCharacterData();
+                    NpcRuntimeCharacterData[key] = loaded;
+                }
+                targetCharData = NpcRuntimeCharacterData[key];
+            }
+
+            // Ensure backpacks are initialized
+            var player = CampaignGameSession.FindPlayer(currentPlayerId);
+            if (player != null && player.characterRuntimeData != null)
+            {
+                if (player.characterRuntimeData.backpackSlots == null)
+                {
+                    player.characterRuntimeData.backpackSlots = new string[8];
+                }
+            }
+            if (targetCharData != null && targetCharData.backpackSlots == null)
+            {
+                targetCharData.backpackSlots = new string[8];
+            }
+
             var charName = player != null ? player.name : "Игрок";
+            var targetName = targetToken.DisplayName;
 
             // Main Background Panel
             var rect = GetComponent<RectTransform>();
@@ -91,7 +127,7 @@ namespace RPGTable.Runtime
             bgImage.color = new Color(0.1f, 0.08f, 0.07f, 0.98f);
 
             var outline = gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0.83f, 0.68f, 0.35f, 1f); // Burnished Gold
+            outline.effectColor = new Color(0.83f, 0.68f, 0.35f, 1f); // Gold outline
             outline.effectDistance = new Vector2(2f, 2f);
 
             // Title Header
@@ -103,7 +139,7 @@ namespace RPGTable.Runtime
             headerRt.sizeDelta = new Vector2(0f, 40f);
             headerRt.anchoredPosition = Vector2.zero;
 
-            headerLabel = CampaignGameUI.CreateLabel($"ОБМЕН ИНВЕНТАРЕМ: {charName.ToUpper()}", headerGo.transform, 16, FontStyle.Bold,
+            headerLabel = CampaignGameUI.CreateLabel($"ОБМЕН ИНВЕНТАРЕМ: {targetName.ToUpper()} ➔ {charName.ToUpper()}", headerGo.transform, 14, FontStyle.Bold,
                 Vector2.zero, Vector2.one, new Vector2(10f, 2f), new Vector2(-10f, -2f));
             headerLabel.alignment = TextAnchor.MiddleLeft;
 
@@ -113,8 +149,8 @@ namespace RPGTable.Runtime
             var colRt = columnsGo.GetComponent<RectTransform>();
             colRt.anchorMin = new Vector2(0f, 0f);
             colRt.anchorMax = new Vector2(1f, 1f);
-            colRt.offsetMin = new Vector2(15f, 70f); // Bottom offset to leave room for buttons
-            colRt.offsetMax = new Vector2(-15f, -55f); // Top offset to leave room for header
+            colRt.offsetMin = new Vector2(15f, 70f);
+            colRt.offsetMax = new Vector2(-15f, -55f);
 
             var layout = columnsGo.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 15f;
@@ -127,12 +163,13 @@ namespace RPGTable.Runtime
             var bankCol = CreateColumn("БАНК ПРЕДМЕТОВ", columnsGo.transform);
             CreateScrollView("BankScroll", bankCol.transform, out bankContent);
 
-            // Column 2: Offered Items
-            var offerCol = CreateColumn("ПРЕДЛОЖЕНИЕ ГМ (ОТДАТЬ)", columnsGo.transform);
-            CreateScrollView("OfferScroll", offerCol.transform, out offerContent);
+            // Column 2: Target Token Backpack
+            var targetColName = targetCharData != null ? $"ИНВЕНТАРЬ: {targetName.ToUpper()}" : "ИНВЕНТАРЬ ЦЕЛИ (ПУСТО)";
+            var targetCol = CreateColumn(targetColName, columnsGo.transform);
+            CreateScrollView("TargetScroll", targetCol.transform, out targetContent);
 
             // Column 3: Player Backpack
-            var backpackCol = CreateColumn("РЮКЗАК ПЕРСОНАЖА (ИЗЪЯТЬ)", columnsGo.transform);
+            var backpackCol = CreateColumn($"РЮКЗАК ИГРОКА: {charName.ToUpper()}", columnsGo.transform);
             CreateScrollView("BackpackScroll", backpackCol.transform, out backpackContent);
 
             // Bottom Buttons Panel
@@ -146,19 +183,15 @@ namespace RPGTable.Runtime
 
             var buttonsLayout = buttonsPanel.AddComponent<HorizontalLayoutGroup>();
             buttonsLayout.spacing = 20f;
-            buttonsLayout.padding = new RectOffset(40, 40, 10, 10);
+            buttonsLayout.padding = new RectOffset(200, 200, 10, 10);
             buttonsLayout.childControlHeight = true;
             buttonsLayout.childControlWidth = true;
             buttonsLayout.childForceExpandHeight = true;
             buttonsLayout.childForceExpandWidth = true;
 
-            var commitBtnGo = CampaignGameUI.CreateButton("ПРИМЕНИТЬ ОБМЕН", buttonsPanel.transform, new Color(0.12f, 0.35f, 0.12f, 1f));
-            commitBtnGo.GetComponent<Button>().onClick.AddListener(CommitTrade);
+            var closeBtnGo = CampaignGameUI.CreateButton("ЗАКРЫТЬ", buttonsPanel.transform, new Color(0.25f, 0.2f, 0.18f, 1f));
+            closeBtnGo.GetComponent<Button>().onClick.AddListener(CloseWindow);
 
-            var cancelBtnGo = CampaignGameUI.CreateButton("ОТМЕНИТЬ", buttonsPanel.transform, new Color(0.35f, 0.12f, 0.12f, 1f));
-            cancelBtnGo.GetComponent<Button>().onClick.AddListener(CancelTrade);
-
-            // Populates all columns initially
             RefreshUI();
         }
 
@@ -181,7 +214,7 @@ namespace RPGTable.Runtime
             colHeader.transform.SetParent(col.transform, false);
             colHeader.AddComponent<LayoutElement>().preferredHeight = 24f;
             
-            var label = CampaignGameUI.CreateLabel(title, colHeader.transform, 12, FontStyle.Bold,
+            var label = CampaignGameUI.CreateLabel(title, colHeader.transform, 11, FontStyle.Bold,
                 Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             label.alignment = TextAnchor.MiddleCenter;
             label.color = new Color(0.83f, 0.68f, 0.35f, 1f);
@@ -237,6 +270,8 @@ namespace RPGTable.Runtime
 
         private void RefreshUI()
         {
+            var player = CampaignGameSession.FindPlayer(currentPlayerId);
+
             // 1. Refresh Item Bank
             ClearChildren(bankContent);
             var itemCards = Resources.LoadAll<ItemCard>("ItemCards");
@@ -245,62 +280,87 @@ namespace RPGTable.Runtime
                 if (item == null) continue;
                 var cardBtn = CreateItemRow(item.title, GetItemStatsText(item), bankContent, new Color(0.2f, 0.16f, 0.12f, 1f));
                 cardBtn.GetComponent<Button>().onClick.AddListener(() => {
-                    offeredItems.Add(item.title);
-                    RefreshUI();
+                    if (AddItemToBackpack(player?.characterRuntimeData, item.title))
+                    {
+                        OnInventoryModified(player);
+                        RefreshUI();
+                    }
                 });
             }
 
-            // 2. Refresh Offered Items
-            ClearChildren(offerContent);
-            if (offeredItems.Count == 0)
+            // 2. Refresh Target Token Inventory
+            ClearChildren(targetContent);
+            if (targetCharData == null)
             {
-                CreatePlaceholderRow("Предложений нет", offerContent);
+                CreatePlaceholderRow("У этой цели нет инвентаря", targetContent);
             }
             else
             {
-                for (int i = 0; i < offeredItems.Count; i++)
-                {
-                    int index = i;
-                    var name = offeredItems[index];
-                    var itemCard = FindItemCardStatic(name);
-                    var cardBtn = CreateItemRow(name, GetItemStatsText(itemCard), offerContent, new Color(0.12f, 0.24f, 0.12f, 1f));
-                    cardBtn.GetComponent<Button>().onClick.AddListener(() => {
-                        offeredItems.RemoveAt(index);
-                        RefreshUI();
-                    });
-                }
-            }
-
-            // 3. Refresh Player Backpack Slots
-            ClearChildren(backpackContent);
-            var player = CampaignGameSession.FindPlayer(targetPlayerId);
-            if (player != null && player.characterRuntimeData != null)
-            {
-                var backpack = player.characterRuntimeData.backpackSlots;
                 for (int i = 0; i < 8; i++)
                 {
                     int slotIndex = i;
-                    var name = (backpack != null && slotIndex < backpack.Length) ? backpack[slotIndex] : "";
-                    
+                    var name = targetCharData.backpackSlots[slotIndex];
                     if (string.IsNullOrEmpty(name))
                     {
-                        var cardBtn = CreateItemRow($"Слот {slotIndex + 1}: [ПУСТО]", "", backpackContent, new Color(0.1f, 0.08f, 0.07f, 0.4f));
+                        var cardBtn = CreateItemRow($"Слот {slotIndex + 1}: [ПУСТО]", "", targetContent, new Color(0.1f, 0.08f, 0.07f, 0.3f));
                         cardBtn.GetComponent<Button>().interactable = false;
                     }
                     else
                     {
-                        var isMarked = markedForRemoval.Contains(slotIndex);
-                        var bgCol = isMarked ? new Color(0.4f, 0.12f, 0.12f, 1f) : new Color(0.22f, 0.18f, 0.15f, 1f);
-                        var labelPrefix = isMarked ? "[УДАЛИТЬ] " : "";
                         var itemCard = FindItemCardStatic(name);
-
-                        var cardBtn = CreateItemRow($"{labelPrefix}Слот {slotIndex + 1}: {name}", GetItemStatsText(itemCard), backpackContent, bgCol);
+                        var cardBtn = CreateItemRow($"Слот {slotIndex + 1}: {name}", GetItemStatsText(itemCard), targetContent, new Color(0.2f, 0.15f, 0.12f, 1f));
                         cardBtn.GetComponent<Button>().onClick.AddListener(() => {
-                            if (markedForRemoval.Contains(slotIndex))
-                                markedForRemoval.Remove(slotIndex);
+                            // Transfer from Target to Player
+                            if (AddItemToBackpack(player?.characterRuntimeData, name))
+                            {
+                                targetCharData.backpackSlots[slotIndex] = "";
+                                OnInventoryModified(player);
+                                OnInventoryModified(null); // NPC changed
+                                RefreshUI();
+                            }
+                        });
+                    }
+                }
+            }
+
+            // 3. Refresh Player Backpack
+            ClearChildren(backpackContent);
+            if (player != null && player.characterRuntimeData != null)
+            {
+                for (int i = 0; i < 8; i++)
+                {
+                    int slotIndex = i;
+                    var name = player.characterRuntimeData.backpackSlots[slotIndex];
+                    if (string.IsNullOrEmpty(name))
+                    {
+                        var cardBtn = CreateItemRow($"Слот {slotIndex + 1}: [ПУСТО]", "", backpackContent, new Color(0.1f, 0.08f, 0.07f, 0.3f));
+                        cardBtn.GetComponent<Button>().interactable = false;
+                    }
+                    else
+                    {
+                        var itemCard = FindItemCardStatic(name);
+                        var bgCol = new Color(0.12f, 0.24f, 0.12f, 1f); // Green row for player items
+                        var cardBtn = CreateItemRow($"Слот {slotIndex + 1}: {name}", GetItemStatsText(itemCard), backpackContent, bgCol);
+                        
+                        cardBtn.GetComponent<Button>().onClick.AddListener(() => {
+                            if (targetCharData != null)
+                            {
+                                // Transfer from Player to Target
+                                if (AddItemToBackpack(targetCharData, name))
+                                {
+                                    player.characterRuntimeData.backpackSlots[slotIndex] = "";
+                                    OnInventoryModified(player);
+                                    OnInventoryModified(null); // NPC changed
+                                    RefreshUI();
+                                }
+                            }
                             else
-                                markedForRemoval.Add(slotIndex);
-                            RefreshUI();
+                            {
+                                // Discard item
+                                player.characterRuntimeData.backpackSlots[slotIndex] = "";
+                                OnInventoryModified(player);
+                                RefreshUI();
+                            }
                         });
                     }
                 }
@@ -312,9 +372,79 @@ namespace RPGTable.Runtime
                 var mirror = mirrorInstance.GetComponent<CampaignPlayerViewTradeMirror>();
                 if (mirror != null)
                 {
-                    mirror.Refresh(offeredItems, markedForRemoval);
+                    mirror.Refresh();
                 }
             }
+        }
+
+        private bool AddItemToBackpack(SavedCharacterData charData, string itemName)
+        {
+            if (charData == null) return false;
+            if (charData.backpackSlots == null) charData.backpackSlots = new string[8];
+
+            for (int i = 0; i < 8; i++)
+            {
+                if (string.IsNullOrEmpty(charData.backpackSlots[i]))
+                {
+                    charData.backpackSlots[i] = itemName;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private void OnInventoryModified(CampaignPlayerData player)
+        {
+            if (player == null) return;
+
+            // Recalculate stats for players
+            var baseData = string.IsNullOrEmpty(player.characterPath) 
+                ? new SavedCharacterData() 
+                : UserCharacterStore.LoadCharacter(player.characterPath);
+
+            int baseHp = baseData != null ? baseData.maxHp : 10;
+            int baseArmor = baseData != null ? baseData.maxArmor : 0;
+
+            int extraHp = 0;
+            int extraArmor = 0;
+
+            if (player.characterRuntimeData != null)
+            {
+                string[] equipped = {
+                    player.characterRuntimeData.eqHelmet, player.characterRuntimeData.eqArmor,
+                    player.characterRuntimeData.eqWeapon, player.characterRuntimeData.eqWeapon2,
+                    player.characterRuntimeData.eqShield, player.characterRuntimeData.eqBoots,
+                    player.characterRuntimeData.eqAmulet, player.characterRuntimeData.eqRing,
+                    player.characterRuntimeData.eqArtifact, player.characterRuntimeData.eqBelt
+                };
+
+                foreach (var itemName in equipped)
+                {
+                    if (string.IsNullOrEmpty(itemName)) continue;
+                    var item = FindItemCardStatic(itemName);
+                    if (item != null)
+                    {
+                        extraHp += item.bonusHp;
+                        extraArmor += item.armorPoints;
+                    }
+                }
+            }
+
+            player.maxHp = baseHp + extraHp;
+            player.currentHp = Mathf.Min(player.currentHp, player.maxHp);
+            player.maxArmor = baseArmor + extraArmor;
+            player.currentArmor = Mathf.Min(player.currentArmor, player.maxArmor);
+
+            CampaignGameSession.UpdateTokenCombatStats(
+                player.id, player.currentMapId,
+                player.currentHp, player.maxHp,
+                player.currentArmor, player.maxArmor,
+                player.currentMovementPoints, player.maxMovementPoints,
+                player.currentRolls, player.maxRolls,
+                player.activeWeaponIndex, player.rerollCoins,
+                player.statusEffects, player.isDead);
+
+            CampaignGameSession.TriggerPlayersChanged();
         }
 
         private GameObject CreateItemRow(string title, string subtitle, Transform parent, Color color)
@@ -370,88 +500,6 @@ namespace RPGTable.Runtime
                 if (item.scaleStat1 != "None") parts.Add($"{item.scaleStat1}x{item.coef1}");
             }
             return string.Join(", ", parts);
-        }
-
-        private void CommitTrade()
-        {
-            var player = CampaignGameSession.FindPlayer(targetPlayerId);
-            if (player != null && player.characterRuntimeData != null)
-            {
-                var data = player.characterRuntimeData;
-
-                // 1. Remove items marked for deletion
-                foreach (var idx in markedForRemoval)
-                {
-                    if (idx >= 0 && idx < data.backpackSlots.Length)
-                    {
-                        data.backpackSlots[idx] = "";
-                    }
-                }
-
-                // 2. Add offered items to empty slots
-                int offerIdx = 0;
-                for (int i = 0; i < data.backpackSlots.Length; i++)
-                {
-                    if (offerIdx >= offeredItems.Count) break;
-
-                    if (string.IsNullOrEmpty(data.backpackSlots[i]))
-                    {
-                        data.backpackSlots[i] = offeredItems[offerIdx];
-                        offerIdx++;
-                    }
-                }
-
-                // 3. Recalculate player stats
-                var baseData = string.IsNullOrEmpty(player.characterPath) 
-                    ? new RPGTable.CharacterEditor.SavedCharacterData() 
-                    : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(player.characterPath);
-
-                int baseHp = baseData != null ? baseData.maxHp : 10;
-                int baseArmor = baseData != null ? baseData.maxArmor : 0;
-
-                int extraHp = 0;
-                int extraArmor = 0;
-
-                string[] equipped = {
-                    data.eqHelmet, data.eqArmor, data.eqWeapon, data.eqWeapon2,
-                    data.eqShield, data.eqBoots, data.eqAmulet, data.eqRing,
-                    data.eqArtifact, data.eqBelt
-                };
-
-                foreach (var itemName in equipped)
-                {
-                    if (string.IsNullOrEmpty(itemName)) continue;
-                    var item = FindItemCardStatic(itemName);
-                    if (item != null)
-                    {
-                        extraHp += item.bonusHp;
-                        extraArmor += item.armorPoints;
-                    }
-                }
-
-                player.maxHp = baseHp + extraHp;
-                player.currentHp = Mathf.Min(player.currentHp, player.maxHp);
-                player.maxArmor = baseArmor + extraArmor;
-                player.currentArmor = Mathf.Min(player.currentArmor, player.maxArmor);
-
-                CampaignGameSession.UpdateTokenCombatStats(
-                    player.id, player.currentMapId,
-                    player.currentHp, player.maxHp,
-                    player.currentArmor, player.maxArmor,
-                    player.currentMovementPoints, player.maxMovementPoints,
-                    player.currentRolls, player.maxRolls,
-                    player.activeWeaponIndex, player.rerollCoins,
-                    player.statusEffects, player.isDead);
-
-                CampaignGameSession.TriggerPlayersChanged();
-            }
-
-            CloseWindow();
-        }
-
-        private void CancelTrade()
-        {
-            CloseWindow();
         }
 
         private void CloseWindow()
