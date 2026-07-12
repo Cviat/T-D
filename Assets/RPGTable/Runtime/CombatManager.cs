@@ -612,5 +612,59 @@ namespace RPGTable.Runtime
 
             Destroy(banner);
         }
+
+        public void SpawnFloatingStatusIcon(Vector3 position, Sprite sprite, float duration = 1.4f)
+        {
+            if (sprite == null) return;
+
+            var go = new GameObject("FloatingStatusIcon");
+            go.transform.position = position + new Vector3(0f, 1.2f, -0.6f); // Offset above head
+
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+            sr.sortingOrder = 500; // Render on top of tokens/map
+
+            // Make the icon a nice size (e.g., 0.5 units wide/high)
+            float scale = 0.5f / Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y);
+            go.transform.localScale = new Vector3(scale, scale, 1f);
+
+            // Also mirror on Player View Layer 31
+            var pvGo = Instantiate(go, go.transform.position, Quaternion.identity);
+            pvGo.name = "PlayerViewFloatingStatusIcon";
+            pvGo.layer = 31; // Player view layer
+            pvGo.transform.localScale = go.transform.localScale;
+
+            StartCoroutine(AnimateFloatingIcon(go, pvGo, duration));
+        }
+
+        private IEnumerator AnimateFloatingIcon(GameObject mainIcon, GameObject pvIcon, float duration)
+        {
+            var start = mainIcon.transform.position;
+            var end = start + new Vector3(0f, 0.9f, 0f);
+            var elapsed = 0f;
+
+            var sr1 = mainIcon.GetComponent<SpriteRenderer>();
+            var sr2 = pvIcon != null ? pvIcon.GetComponent<SpriteRenderer>() : null;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+                
+                var currentPos = Vector3.Lerp(start, end, t);
+                if (mainIcon != null) mainIcon.transform.position = currentPos;
+                if (pvIcon != null) pvIcon.transform.position = currentPos;
+
+                float alpha = 1f - Mathf.SmoothStep(0f, 1f, Mathf.Max(0f, (t - 0.25f) / 0.75f));
+                
+                if (sr1 != null) sr1.color = new Color(sr1.color.r, sr1.color.g, sr1.color.b, alpha);
+                if (sr2 != null) sr2.color = new Color(sr2.color.r, sr2.color.g, sr2.color.b, alpha);
+
+                yield return null;
+            }
+
+            if (mainIcon != null) Destroy(mainIcon);
+            if (pvIcon != null) Destroy(pvIcon);
+        }
     }
 }

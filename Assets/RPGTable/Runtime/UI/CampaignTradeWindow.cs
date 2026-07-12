@@ -278,7 +278,7 @@ namespace RPGTable.Runtime
             foreach (var item in itemCards)
             {
                 if (item == null) continue;
-                var cardBtn = CreateItemRow(item.title, GetItemStatsText(item), bankContent, new Color(0.2f, 0.16f, 0.12f, 1f));
+                var cardBtn = CreateItemRow(item.title, GetItemStatsText(item), bankContent, new Color(0.2f, 0.16f, 0.12f, 1f), item.icon);
                 cardBtn.GetComponent<Button>().onClick.AddListener(() => {
                     if (AddItemToBackpack(player?.characterRuntimeData, item.title))
                     {
@@ -302,13 +302,13 @@ namespace RPGTable.Runtime
                     var name = targetCharData.backpackSlots[slotIndex];
                     if (string.IsNullOrEmpty(name))
                     {
-                        var cardBtn = CreateItemRow($"Слот {slotIndex + 1}: [ПУСТО]", "", targetContent, new Color(0.1f, 0.08f, 0.07f, 0.3f));
+                        var cardBtn = CreateItemRow($"Слот {slotIndex + 1}: [ПУСТО]", "", targetContent, new Color(0.1f, 0.08f, 0.07f, 0.3f), null);
                         cardBtn.GetComponent<Button>().interactable = false;
                     }
                     else
                     {
                         var itemCard = FindItemCardStatic(name);
-                        var cardBtn = CreateItemRow($"Слот {slotIndex + 1}: {name}", GetItemStatsText(itemCard), targetContent, new Color(0.2f, 0.15f, 0.12f, 1f));
+                        var cardBtn = CreateItemRow($"Слот {slotIndex + 1}: {name}", GetItemStatsText(itemCard), targetContent, new Color(0.2f, 0.15f, 0.12f, 1f), itemCard != null ? itemCard.icon : null);
                         cardBtn.GetComponent<Button>().onClick.AddListener(() => {
                             // Transfer from Target to Player
                             if (AddItemToBackpack(player?.characterRuntimeData, name))
@@ -333,14 +333,14 @@ namespace RPGTable.Runtime
                     var name = player.characterRuntimeData.backpackSlots[slotIndex];
                     if (string.IsNullOrEmpty(name))
                     {
-                        var cardBtn = CreateItemRow($"Слот {slotIndex + 1}: [ПУСТО]", "", backpackContent, new Color(0.1f, 0.08f, 0.07f, 0.3f));
+                        var cardBtn = CreateItemRow($"Слот {slotIndex + 1}: [ПУСТО]", "", backpackContent, new Color(0.1f, 0.08f, 0.07f, 0.3f), null);
                         cardBtn.GetComponent<Button>().interactable = false;
                     }
                     else
                     {
                         var itemCard = FindItemCardStatic(name);
                         var bgCol = new Color(0.12f, 0.24f, 0.12f, 1f); // Green row for player items
-                        var cardBtn = CreateItemRow($"Слот {slotIndex + 1}: {name}", GetItemStatsText(itemCard), backpackContent, bgCol);
+                        var cardBtn = CreateItemRow($"Слот {slotIndex + 1}: {name}", GetItemStatsText(itemCard), backpackContent, bgCol, itemCard != null ? itemCard.icon : null);
                         
                         cardBtn.GetComponent<Button>().onClick.AddListener(() => {
                             if (targetCharData != null)
@@ -447,10 +447,10 @@ namespace RPGTable.Runtime
             CampaignGameSession.TriggerPlayersChanged();
         }
 
-        private GameObject CreateItemRow(string title, string subtitle, Transform parent, Color color)
+        private GameObject CreateItemRow(string title, string subtitle, Transform parent, Color color, Sprite iconSprite)
         {
             var rowGo = CampaignGameUI.CreatePanel(title, parent, color);
-            rowGo.AddComponent<LayoutElement>().preferredHeight = 44f;
+            rowGo.AddComponent<LayoutElement>().preferredHeight = 46f;
             
             var outline = rowGo.AddComponent<Outline>();
             outline.effectColor = new Color(0, 0, 0, 0.5f);
@@ -459,15 +459,60 @@ namespace RPGTable.Runtime
             var btn = rowGo.AddComponent<Button>();
             btn.targetGraphic = rowGo.GetComponent<Image>();
 
-            // Title label
-            var titleLbl = CampaignGameUI.CreateLabel(title, rowGo.transform, 11, FontStyle.Bold,
-                new Vector2(0f, 0.5f), new Vector2(1f, 1f), new Vector2(6f, 0f), new Vector2(-6f, -2f));
-            titleLbl.alignment = TextAnchor.LowerLeft;
+            // 1. Icon Image (Occupies left part of card, full height square)
+            var iconGo = new GameObject("Icon", typeof(RectTransform));
+            iconGo.transform.SetParent(rowGo.transform, false);
+            var iconRt = iconGo.GetComponent<RectTransform>();
+            iconRt.anchorMin = new Vector2(0f, 0f);
+            iconRt.anchorMax = new Vector2(0f, 1f);
+            iconRt.pivot = new Vector2(0f, 0.5f);
+            iconRt.offsetMin = Vector2.zero;
+            iconRt.offsetMax = new Vector2(46f, 0f); // Width = Height = 46px
+            
+            var img = iconGo.AddComponent<Image>();
+            if (iconSprite != null)
+            {
+                img.sprite = iconSprite;
+                img.color = Color.white;
+            }
+            else
+            {
+                img.color = new Color(0.12f, 0.1f, 0.08f, 0.8f); // Dark fallback box
+            }
+            
+            var iconLayout = iconGo.AddComponent<LayoutElement>();
+            iconLayout.preferredWidth = 46f;
+            iconLayout.preferredHeight = 46f;
 
-            // Subtitle stats label
-            var subLbl = CampaignGameUI.CreateLabel(subtitle, rowGo.transform, 9, FontStyle.Normal,
-                new Vector2(0f, 0f), new Vector2(1f, 0.5f), new Vector2(6f, 2f), new Vector2(-6f, 0f));
-            subLbl.alignment = TextAnchor.UpperLeft;
+            // 2. Text container (Vertical Stack next to the icon)
+            var textContainerGo = new GameObject("TextContainer", typeof(RectTransform));
+            textContainerGo.transform.SetParent(rowGo.transform, false);
+            var tcRt = textContainerGo.GetComponent<RectTransform>();
+            tcRt.anchorMin = new Vector2(0f, 0f);
+            tcRt.anchorMax = new Vector2(1f, 1f);
+            tcRt.pivot = new Vector2(0f, 0.5f);
+            tcRt.offsetMin = new Vector2(54f, 4f); // 8px space after icon, 4px padding bottom
+            tcRt.offsetMax = new Vector2(-6f, -4f); // 6px padding right, 4px padding top
+
+            var tcLayout = textContainerGo.AddComponent<VerticalLayoutGroup>();
+            tcLayout.spacing = 1f;
+            tcLayout.childControlHeight = true;
+            tcLayout.childControlWidth = true;
+            tcLayout.childForceExpandHeight = false;
+            tcLayout.childForceExpandWidth = true;
+            
+            var textLayout = textContainerGo.AddComponent<LayoutElement>();
+            textLayout.preferredWidth = 160f;
+
+            // Title Label
+            var titleLbl = CampaignGameUI.CreateLabel(title, textContainerGo.transform, 11, FontStyle.Bold,
+                Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            titleLbl.alignment = TextAnchor.MiddleLeft;
+
+            // Subtitle Label
+            var subLbl = CampaignGameUI.CreateLabel(subtitle, textContainerGo.transform, 9, FontStyle.Normal,
+                Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            subLbl.alignment = TextAnchor.MiddleLeft;
             subLbl.color = new Color(0.83f, 0.68f, 0.35f, 0.9f);
 
             return rowGo;

@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using RPGTable.Core;
@@ -147,7 +149,7 @@ namespace RPGTable.Runtime
             // Populate Target items
             if (targetCharData == null)
             {
-                CreateRow("У этой цели нет инвентаря", targetContent, Color.gray);
+                CreateRow("У этой цели нет инвентаря", targetContent, Color.gray, null);
             }
             else
             {
@@ -156,11 +158,12 @@ namespace RPGTable.Runtime
                     var name = targetCharData.backpackSlots?[i];
                     if (string.IsNullOrEmpty(name))
                     {
-                        CreateRow("- Пусто -", targetContent, new Color(0.1f, 0.08f, 0.07f, 0.4f));
+                        CreateRow("- Пусто -", targetContent, new Color(0.1f, 0.08f, 0.07f, 0.4f), null);
                     }
                     else
                     {
-                        CreateRow(name, targetContent, new Color(0.2f, 0.16f, 0.14f, 1f));
+                        var itemCard = FindItemCardStatic(name);
+                        CreateRow(name, targetContent, new Color(0.2f, 0.16f, 0.14f, 1f), itemCard != null ? itemCard.icon : null);
                     }
                 }
             }
@@ -175,25 +178,65 @@ namespace RPGTable.Runtime
                     var name = (backpack != null && i < backpack.Length) ? backpack[i] : "";
                     if (string.IsNullOrEmpty(name))
                     {
-                        CreateRow("- Пусто -", backpackContent, new Color(0.1f, 0.08f, 0.07f, 0.4f));
+                        CreateRow("- Пусто -", backpackContent, new Color(0.1f, 0.08f, 0.07f, 0.4f), null);
                     }
                     else
                     {
-                        CreateRow(name, backpackContent, new Color(0.12f, 0.28f, 0.12f, 1f));
+                        var itemCard = FindItemCardStatic(name);
+                        CreateRow(name, backpackContent, new Color(0.12f, 0.28f, 0.12f, 1f), itemCard != null ? itemCard.icon : null);
                     }
                 }
             }
         }
 
-        private void CreateRow(string text, Transform parent, Color color)
+        private void CreateRow(string text, Transform parent, Color color, Sprite iconSprite)
         {
             var rowGo = CampaignGameUI.CreatePanel(text, parent, color);
-            rowGo.AddComponent<LayoutElement>().preferredHeight = 32f;
+            rowGo.AddComponent<LayoutElement>().preferredHeight = 36f;
+
+            // 1. Icon Image (Occupies left part of card, full height square)
+            var iconGo = new GameObject("Icon", typeof(RectTransform));
+            iconGo.transform.SetParent(rowGo.transform, false);
+            var iconRt = iconGo.GetComponent<RectTransform>();
+            iconRt.anchorMin = new Vector2(0f, 0f);
+            iconRt.anchorMax = new Vector2(0f, 1f);
+            iconRt.pivot = new Vector2(0f, 0.5f);
+            iconRt.offsetMin = Vector2.zero;
+            iconRt.offsetMax = new Vector2(36f, 0f); // Width = Height = 36px
             
-            var label = CampaignGameUI.CreateLabel(text, rowGo.transform, 11, FontStyle.Bold,
-                Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            label.alignment = TextAnchor.MiddleCenter;
+            var img = iconGo.AddComponent<Image>();
+            if (iconSprite != null)
+            {
+                img.sprite = iconSprite;
+                img.color = Color.white;
+            }
+            else
+            {
+                img.color = new Color(0.12f, 0.1f, 0.08f, 0.8f);
+            }
+            
+            var iconLayout = iconGo.AddComponent<LayoutElement>();
+            iconLayout.preferredWidth = 36f;
+            iconLayout.preferredHeight = 36f;
+
+            // 2. Label (centered vertically next to icon)
+            var labelGo = new GameObject("Label", typeof(RectTransform));
+            labelGo.transform.SetParent(rowGo.transform, false);
+            var labelRt = labelGo.GetComponent<RectTransform>();
+            labelRt.anchorMin = new Vector2(0f, 0f);
+            labelRt.anchorMax = new Vector2(1f, 1f);
+            labelRt.pivot = new Vector2(0f, 0.5f);
+            labelRt.offsetMin = new Vector2(44f, 2f); // 8px space after icon
+            labelRt.offsetMax = new Vector2(-6f, -2f);
+
+            var label = labelGo.AddComponent<Text>();
+            label.text = text;
+            label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            label.fontSize = 11;
+            label.fontStyle = FontStyle.Bold;
+            label.alignment = TextAnchor.MiddleLeft;
             label.color = Color.white;
+            label.raycastTarget = false;
         }
 
         private static void ClearChildren(Transform t)
@@ -203,6 +246,20 @@ namespace RPGTable.Runtime
             {
                 Destroy(child.gameObject);
             }
+        }
+
+        private static ItemCard FindItemCardStatic(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            var items = Resources.LoadAll<ItemCard>("ItemCards");
+            foreach (var item in items)
+            {
+                if (item != null && string.Equals(item.title, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return item;
+                }
+            }
+            return null;
         }
     }
 }

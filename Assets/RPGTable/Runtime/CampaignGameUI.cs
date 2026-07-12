@@ -385,6 +385,10 @@ namespace RPGTable.Runtime
             if (inspectorPrefab != null)
             {
                 var inspectorGo = UnityEngine.Object.Instantiate(inspectorPrefab, rightInspectorRoot);
+                if (inspectorGo.GetComponent<UIDragHandler>() == null)
+                {
+                    inspectorGo.AddComponent<UIDragHandler>();
+                }
                 var inspectorView = inspectorGo.GetComponent<EntityInspectorView>();
                 if (inspectorView != null)
                 {

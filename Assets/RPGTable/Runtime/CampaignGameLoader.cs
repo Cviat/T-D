@@ -995,6 +995,11 @@ namespace RPGTable.Runtime
                 };
                 subject.statusEffects.Add(debuff);
             }
+
+            if (CombatManager.Instance != null && subject != null && attr != null && attr.icon != null)
+            {
+                CombatManager.Instance.SpawnFloatingStatusIcon(subject.transform.position, attr.icon);
+            }
         }
 
         private void ApplyStatChange(CampaignRuntimeToken token, CombatAttributeStat stat, int delta)
