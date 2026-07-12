@@ -1413,7 +1413,7 @@ namespace RPGTable.Runtime.Networking
                                 $"\"range\":{card.range}," +
                                 $"\"attackType\":\"{card.attackType.ToString()}\"," +
                                 $"\"effectType\":\"{card.effectType.ToString()}\"," +
-                                $"\"multiplier\":{card.multiplier}," +
+                                $"\"multiplier\":{card.multiplier.ToString(System.Globalization.CultureInfo.InvariantCulture)}," +
                                 $"\"defenseValue\":{card.defenseValue}" +
                                 "}");
                         }
@@ -1434,7 +1434,11 @@ namespace RPGTable.Runtime.Networking
                                 $"\"bonusStr\":{item.bonusStr}," +
                                 $"\"bonusAgi\":{item.bonusAgi}," +
                                 $"\"bonusInt\":{item.bonusInt}," +
-                                $"\"bonusHol\":{item.bonusHol}" +
+                                $"\"bonusHol\":{item.bonusHol}," +
+                                $"\"scaleStat1\":\"{JsonString(item.scaleStat1)}\"," +
+                                $"\"coef1\":{item.coef1.ToString(System.Globalization.CultureInfo.InvariantCulture)}," +
+                                $"\"scaleStat2\":\"{JsonString(item.scaleStat2)}\"," +
+                                $"\"coef2\":{item.coef2.ToString(System.Globalization.CultureInfo.InvariantCulture)}" +
                                 "}");
                         }
 
