@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using RPGTable.TokenEditor;
 using UnityEngine;
 using UnityEngine.UI;
@@ -108,6 +108,7 @@ namespace RPGTable.Runtime
 
             ConfigureWeaponSwitch(token, tokenData, charData, portrait, onDamage, onHeal);
             ConfigureHpButtons(onDamage, onHeal);
+            ConfigureTradeButton(token);
         }
 
         private void ConfigureWeaponSwitch(
@@ -274,6 +275,40 @@ namespace RPGTable.Runtime
             }
 
             return result.Length == 0 ? "-" : result;
+        }
+
+        private void ConfigureTradeButton(CampaignRuntimeToken token)
+        {
+            var isPlayer = !string.IsNullOrEmpty(token.PlayerId);
+            
+            var existing = transform.Find("Inspector Trade Button");
+            if (existing != null)
+            {
+                existing.gameObject.SetActive(isPlayer);
+                if (isPlayer)
+                {
+                    var btn = existing.GetComponent<Button>();
+                    btn.onClick.RemoveAllListeners();
+                    btn.onClick.AddListener(() => CampaignTradeWindow.Open(token.PlayerId));
+                }
+                return;
+            }
+
+            if (!isPlayer) return;
+
+            var parent = weaponSwitchButton != null ? weaponSwitchButton.transform.parent : transform;
+            var tradeBtnGo = CampaignGameUI.CreateButton("Торговля", parent, new Color(0.18f, 0.12f, 0.08f, 1f));
+            tradeBtnGo.name = "Inspector Trade Button";
+            
+            var layout = tradeBtnGo.GetComponent<LayoutElement>();
+            if (layout != null)
+            {
+                layout.preferredHeight = 36f;
+                layout.preferredWidth = 120f;
+            }
+
+            var btnComp = tradeBtnGo.GetComponent<Button>();
+            btnComp.onClick.AddListener(() => CampaignTradeWindow.Open(token.PlayerId));
         }
 
         private RPGTable.Core.ItemCard FindItemCard(string title)

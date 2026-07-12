@@ -51,6 +51,8 @@ namespace RPGTable.Runtime
 
         public static bool PlayerViewCameraControlActive { get; private set; }
         public string PlayerViewMapId => playerViewMapId;
+        private GameObject playerViewInterface;
+        public GameObject PlayerViewInterface => playerViewInterface;
 
         [StructLayout(LayoutKind.Sequential)]
         private struct NativePoint
@@ -101,6 +103,7 @@ namespace RPGTable.Runtime
             cameraObject.transform.position = new Vector3(0f, 0f, -10f);
 
             var canvasObject = new GameObject("Player View Interface", typeof(RectTransform));
+            playerViewInterface = canvasObject;
             var canvas = canvasObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.targetDisplay = playerViewCamera.targetDisplay;
