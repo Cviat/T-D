@@ -130,6 +130,7 @@ namespace RPGTable.Runtime.Networking
             public string playerId;
             public string[] attackSlots;
             public string[] attack2Slots;
+            public string[] defenseSlots;
         }
 
         [Serializable]
@@ -818,6 +819,66 @@ namespace RPGTable.Runtime.Networking
                 return;
             }
 
+            if (method == "GET" && url.StartsWith("/api/icon/ability?title="))
+            {
+                string title = Uri.UnescapeDataString(url.Substring("/api/icon/ability?title=".Length));
+                byte[] imgData = null;
+                ExecuteOnMainThreadBlocking(() => {
+                    var abilityCards = Resources.LoadAll<RPGTable.Core.AbilityCard>("AbilityCards");
+                    foreach (var card in abilityCards)
+                    {
+                        if (card != null && string.Equals(card.title, title, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (card.icon != null && card.icon.texture != null)
+                            {
+                                imgData = GetTextureBytes(card.icon.texture);
+                            }
+                            break;
+                        }
+                    }
+                });
+
+                if (imgData != null)
+                {
+                    SendResponse(stream, 200, "OK", "image/png", imgData);
+                }
+                else
+                {
+                    SendResponse(stream, 404, "Not Found", "text/plain", Encoding.UTF8.GetBytes("Icon not found"));
+                }
+                return;
+            }
+
+            if (method == "GET" && url.StartsWith("/api/icon/item?title="))
+            {
+                string title = Uri.UnescapeDataString(url.Substring("/api/icon/item?title=".Length));
+                byte[] imgData = null;
+                ExecuteOnMainThreadBlocking(() => {
+                    var itemCards = Resources.LoadAll<RPGTable.Core.ItemCard>("ItemCards");
+                    foreach (var item in itemCards)
+                    {
+                        if (item != null && string.Equals(item.title, title, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (item.icon != null && item.icon.texture != null)
+                            {
+                                imgData = GetTextureBytes(item.icon.texture);
+                            }
+                            break;
+                        }
+                    }
+                });
+
+                if (imgData != null)
+                {
+                    SendResponse(stream, 200, "OK", "image/png", imgData);
+                }
+                else
+                {
+                    SendResponse(stream, 404, "Not Found", "text/plain", Encoding.UTF8.GetBytes("Icon not found"));
+                }
+                return;
+            }
+
             if (method == "POST" && url == "/api/lobby/join")
             {
                 try
@@ -1364,6 +1425,7 @@ namespace RPGTable.Runtime.Networking
                                 $"\"title\":\"{JsonString(item.title)}\"," +
                                 $"\"description\":\"{JsonString(item.description)}\"," +
                                 $"\"itemType\":\"{item.itemType.ToString()}\"," +
+                                $"\"attackType\":\"{item.attackType.ToString()}\"," +
                                 $"\"armorPoints\":{item.armorPoints}," +
                                 $"\"bonusHp\":{item.bonusHp}," +
                                 $"\"bonusStr\":{item.bonusStr}," +
@@ -1436,6 +1498,8 @@ namespace RPGTable.Runtime.Networking
                                     player.characterRuntimeData.attackSlots = payload.attackSlots;
                                 if (payload.attack2Slots != null)
                                     player.characterRuntimeData.attack2Slots = payload.attack2Slots;
+                                if (payload.defenseSlots != null)
+                                    player.characterRuntimeData.defenseSlots = payload.defenseSlots;
 
                                 success = true;
                                 RPGTable.Runtime.CampaignGameSession.TriggerPlayersChanged();
@@ -1602,6 +1666,34 @@ namespace RPGTable.Runtime.Networking
                 player.currentRolls, player.maxRolls,
                 player.activeWeaponIndex, player.rerollCoins,
                 player.statusEffects, player.isDead);
+        }
+
+        private static byte[] GetTextureBytes(Texture texture)
+        {
+            if (texture == null) return null;
+            
+            RenderTexture rt = RenderTexture.GetTemporary(
+                texture.width,
+                texture.height,
+                0,
+                RenderTextureFormat.Default,
+                RenderTextureReadWrite.Linear);
+
+            Graphics.Blit(texture, rt);
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = rt;
+
+            Texture2D readableText = new Texture2D(texture.width, texture.height);
+            readableText.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+            readableText.Apply();
+
+            RenderTexture.active = previous;
+            RenderTexture.ReleaseTemporary(rt);
+
+            byte[] bytes = readableText.EncodeToPNG();
+            UnityEngine.Object.Destroy(readableText);
+
+            return bytes;
         }
 
         private static RPGTable.Core.ItemCard FindItemCardStatic(string name)

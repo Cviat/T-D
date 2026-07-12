@@ -32,9 +32,22 @@ function renderInventory() {
         const value = characterData[slot] || "";
         const cleanSlot = slot.replace("eq", ""); // eqHelmet -> Helmet
         const el = document.getElementById(`eq-${cleanSlot}`);
+        const slotEl = document.querySelector(`.equip-slot[data-slot="${slot}"]`);
+
         if (el) {
             el.textContent = value || "Пусто";
             el.style.color = value ? "var(--accent)" : "#888";
+        }
+
+        if (slotEl) {
+            if (value) {
+                const iconUrl = `/api/icon/item?title=${encodeURIComponent(value)}`;
+                slotEl.style.backgroundImage = `linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.9) 100%), url('${iconUrl}')`;
+                slotEl.style.backgroundSize = 'cover';
+                slotEl.style.backgroundPosition = 'center';
+            } else {
+                slotEl.style.backgroundImage = '';
+            }
         }
     });
 
@@ -45,40 +58,25 @@ function renderInventory() {
     for (let i = 0; i < 8; i++) {
         const item = characterData.backpackSlots?.[i] || "";
         const slotEl = document.createElement('div');
-        slotEl.style.cssText = "border: 2px solid var(--line); padding: 10px; border-radius: 4px; background: rgba(0,0,0,0.5); text-align: center; cursor: pointer; min-height: 48px; display: flex; align-items: center; justify-content: center; font-size: 13px;";
+        slotEl.style.cssText = "border: 2px solid var(--line); padding: 10px; border-radius: 4px; background: rgba(0,0,0,0.5); text-align: center; cursor: pointer; min-height: 54px; display: flex; align-items: center; justify-content: center; font-size: 13px; position: relative;";
         slotEl.textContent = item || "Пусто";
+        
         if (item) {
             slotEl.style.color = "#fff";
             slotEl.style.borderColor = "var(--line-active)";
+            
+            const iconUrl = `/api/icon/item?title=${encodeURIComponent(item)}`;
+            slotEl.style.backgroundImage = `linear-gradient(180deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.8) 100%), url('${iconUrl}')`;
+            slotEl.style.backgroundSize = 'cover';
+            slotEl.style.backgroundPosition = 'center';
+            
             // Add click event to equip item
             slotEl.addEventListener('click', () => equipItem(item, i));
         } else {
             slotEl.style.color = "#666";
+            slotEl.style.backgroundImage = '';
         }
         bpContainer.appendChild(slotEl);
-    }
-
-    // Render item pool (all available items)
-    const poolList = document.getElementById('item-pool-list');
-    poolList.innerHTML = '';
-    
-    if (characterData.allItems) {
-        characterData.allItems.forEach(item => {
-            const itemEl = document.createElement('div');
-            itemEl.className = 'character-card'; // Reuse style for nice fantasy frame
-            itemEl.style.cursor = 'pointer';
-            itemEl.innerHTML = `
-                <div class="avatar" style="background-image: none; border-color: var(--line); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--accent); font-family: 'Cinzel', serif;">
-                    ${item.itemType[0]}
-                </div>
-                <div>
-                    <strong>${item.title}</strong>
-                    <p style="margin: 0; font-size: 12px; color: var(--muted);">${item.description || 'Снаряжение'}</p>
-                </div>
-            `;
-            itemEl.addEventListener('click', () => addLootToBackpack(item.title));
-            poolList.appendChild(itemEl);
-        });
     }
 
     // Add click events to equip slots to unequip item
@@ -94,29 +92,6 @@ function renderInventory() {
             newSlotEl.addEventListener('click', () => unequipItem(slotName, currentItem));
         }
     });
-}
-
-async function addLootToBackpack(itemName) {
-    // Find first empty backpack slot index
-    const emptyIndex = characterData.backpackSlots.findIndex(s => !s);
-    if (emptyIndex === -1) {
-        alert("Рюкзак полон!");
-        return;
-    }
-
-    try {
-        const response = await apiPost('/api/character/equip-item', {
-            playerId: currentSession.playerId,
-            slotName: "",
-            itemName: itemName,
-            backpackIndex: emptyIndex
-        });
-        if (response.status === 'success') {
-            await refreshInventory();
-        }
-    } catch (err) {
-        console.error(err);
-    }
 }
 
 async function equipItem(itemName, backpackIndex) {
