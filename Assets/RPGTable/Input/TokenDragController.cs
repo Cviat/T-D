@@ -73,15 +73,7 @@ namespace RPGTable.Input
                 return;
             }
 
-            // Place at raw mouse position first
             transform.position = MouseWorldPosition() + dragOffset;
-
-            // Then snap to footprint-aligned cell so the token visibly jumps by its footprint size
-            BoardGrid grid = GameObject.FindAnyObjectByType<BoardGrid>();
-            if (grid != null && token != null)
-            {
-                token.SnapToGrid(grid);
-            }
         }
 
         private void OnMouseUp()

@@ -439,6 +439,16 @@ namespace RPGTable.Runtime
             return 0;
         }
 
+        public bool IsPlayerConnected(string playerId)
+        {
+            if (string.IsNullOrEmpty(playerId)) return false;
+            if (WebServerManager.LastSeenTimes.TryGetValue(playerId, out var lastSeen))
+            {
+                return (System.DateTime.UtcNow - lastSeen).TotalSeconds < 10.0;
+            }
+            return false;
+        }
+
         private int GetAbilityRange(string name)
         {
             return GetAbilityRangeStatic(name);
@@ -473,10 +483,10 @@ namespace RPGTable.Runtime
                 return;
             }
 
-            // Check if attacker is player
-            if (!string.IsNullOrEmpty(attacker.PlayerId))
+            // Check if attacker is player and is connected
+            if (!string.IsNullOrEmpty(attacker.PlayerId) && IsPlayerConnected(attacker.PlayerId))
             {
-                Debug.Log($"[CampaignGameLoader] Attacker is player (Id: {attacker.PlayerId}). Creating pending roll...");
+                Debug.Log($"[CampaignGameLoader] Attacker is player (Id: {attacker.PlayerId}) and is connected. Creating pending roll...");
                 // Create PendingRoll for the player
                 if (WebServerManager.Instance != null)
                 {
@@ -499,8 +509,8 @@ namespace RPGTable.Runtime
             }
             else
             {
-                Debug.Log("[CampaignGameLoader] Attacker is NPC. Auto-rolling D6 attack...");
-                // Attacker is NPC (or GM local play with non-player token)
+                Debug.Log($"[CampaignGameLoader] Attacker '{attacker.DisplayName}' is NPC or disconnected player. Auto-rolling D6 attack...");
+                // Attacker is NPC or disconnected player. Perform auto D6 roll
                 int roll = UnityEngine.Random.Range(1, 7);
                 ProcessAttackRoll(attacker, target, roll);
             }
@@ -617,7 +627,8 @@ namespace RPGTable.Runtime
             int finalDamage = Mathf.RoundToInt(baseDmg * ability.multiplier);
 
             // Is target a player?
-            if (!string.IsNullOrEmpty(target.PlayerId))
+            // Is target a player and is connected?
+            if (!string.IsNullOrEmpty(target.PlayerId) && IsPlayerConnected(target.PlayerId))
             {
                 // Target is a player! Create a defense pending roll
                 if (WebServerManager.Instance != null)
@@ -642,7 +653,7 @@ namespace RPGTable.Runtime
             }
             else
             {
-                // Target is NPC/monster. Roll defense automatically!
+                // Target is NPC/monster or disconnected player. Roll defense automatically!
                 int defenseRoll = UnityEngine.Random.Range(1, 7);
                 ProcessDefenseRoll(attacker, target, ability, attackRoll, finalDamage, defenseRoll);
             }

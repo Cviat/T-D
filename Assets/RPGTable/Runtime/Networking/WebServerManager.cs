@@ -141,6 +141,7 @@ namespace RPGTable.Runtime.Networking
         
         public List<ConnectedPlayer> ConnectedPlayers = new List<ConnectedPlayer>();
         public Dictionary<string, PendingRoll> ActiveRolls = new Dictionary<string, PendingRoll>();
+        public static readonly System.Collections.Concurrent.ConcurrentDictionary<string, System.DateTime> LastSeenTimes = new System.Collections.Concurrent.ConcurrentDictionary<string, System.DateTime>();
         public bool GameStarted = false;
 
         private readonly System.Collections.Concurrent.ConcurrentQueue<Action> mainThreadActions = new System.Collections.Concurrent.ConcurrentQueue<Action>();
@@ -911,6 +912,7 @@ namespace RPGTable.Runtime.Networking
             if (method == "GET" && url.StartsWith("/api/game/state?playerId="))
             {
                 string playerId = url.Substring("/api/game/state?playerId=".Length);
+                LastSeenTimes[playerId] = System.DateTime.UtcNow;
                 string json = "{}";
                 string promptText = null;
                 var enemiesJson = new List<string>();
