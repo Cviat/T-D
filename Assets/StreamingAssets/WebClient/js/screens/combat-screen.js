@@ -1,7 +1,10 @@
 import { apiGet, apiPost } from '../api.js';
+import { showDiceWidget } from '../components/dice-widget.js';
+import { saveSession } from '../session.js';
 
 let gameTimer = null;
 let currentTargetId = null;
+let currentSessionRef = null;
 
 export function startGamePolling(session) {
     stopGamePolling();
@@ -10,8 +13,10 @@ export function startGamePolling(session) {
 
     const tick = async () => {
         try {
-            const state = await apiGet(`/api/game/state?playerId=${encodeURIComponent(session.playerId)}`);
-            renderGameState(state);
+            if (currentSessionRef && currentSessionRef.current) {
+                const state = await apiGet(`/api/game/state?playerId=${encodeURIComponent(currentSessionRef.current.playerId)}`);
+                renderGameState(state);
+            }
         } catch (error) {
             console.error(error);
         }
@@ -30,6 +35,8 @@ export function stopGamePolling() {
 }
 
 export function initCombatControls(sessionRef) {
+    currentSessionRef = sessionRef;
+
     document.querySelectorAll('[data-move]').forEach(button => {
         let intervalId = null;
         const [dx, dy] = button.dataset.move.split(',').map(Number);
@@ -72,9 +79,44 @@ export function initCombatControls(sessionRef) {
     document.getElementById('focus-camera-button').addEventListener('click', () => focusCamera(sessionRef));
     document.getElementById('inventory-button').addEventListener('click', () => window.dispatchEvent(new CustomEvent('route', { detail: 'inventory' })));
     document.getElementById('settings-button').addEventListener('click', () => window.dispatchEvent(new CustomEvent('route', { detail: 'character-editor' })));
+    
+    // Switch weapon and End Turn buttons
+    document.getElementById('weapon-button').addEventListener('click', () => switchWeapon(sessionRef));
+    document.getElementById('end-turn-button').addEventListener('click', () => endTurn(sessionRef));
+}
+
+async function switchWeapon(sessionRef) {
+    if (!sessionRef.current?.playerId) return;
+    try {
+        const response = await apiPost('/api/action/switch-weapon', {
+            playerId: sessionRef.current.playerId
+        });
+        if (response.status === 'success') {
+            const state = await apiGet(`/api/game/state?playerId=${encodeURIComponent(sessionRef.current.playerId)}`);
+            renderGameState(state);
+        }
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+async function endTurn(sessionRef) {
+    if (!sessionRef.current?.playerId) return;
+    try {
+        const response = await apiPost('/api/action/end-turn', {
+            playerId: sessionRef.current.playerId
+        });
+        if (response.status === 'success') {
+            const state = await apiGet(`/api/game/state?playerId=${encodeURIComponent(sessionRef.current.playerId)}`);
+            renderGameState(state);
+        }
+    } catch (error) {
+        console.error(error);
+    }
 }
 
 function renderGameState(state) {
+    console.log("[CombatScreen] renderGameState state:", state);
     document.getElementById('stat-hp').textContent = valuePair(state.hp, state.maxHp);
     document.getElementById('stat-armor').textContent = valuePair(state.armor, state.maxArmor);
     document.getElementById('stat-move').textContent = valuePair(state.movement, state.maxMovement);
@@ -84,12 +126,40 @@ function renderGameState(state) {
         : 'Свободное перемещение';
     document.getElementById('active-weapon').textContent = `Оружие: ${state.activeWeapon || '-'}`;
 
+    const endTurnBtn = document.getElementById('end-turn-button');
+    if (state.isCombatActive && state.isMyTurn) {
+        endTurnBtn.classList.remove('hidden');
+    } else {
+        endTurnBtn.classList.add('hidden');
+    }
+
     const transitionModal = document.getElementById('transition-modal');
     if (state.prompt) {
         document.getElementById('transition-text').textContent = state.prompt;
         transitionModal.classList.add('active');
     } else {
         transitionModal.classList.remove('active');
+    }
+
+    // Check for pending roll
+    const diceModal = document.getElementById('dice-modal');
+    if (state.pendingRoll && currentSessionRef && currentSessionRef.current) {
+        if (state.pendingRoll.playerId === currentSessionRef.current.playerId) {
+            if (!diceModal.classList.contains('active')) {
+                showDiceWidget(state.pendingRoll, currentSessionRef.current, async (rollResult) => {
+                    await apiPost('/api/roll/submit', {
+                        playerId: currentSessionRef.current.playerId,
+                        rollResult
+                    });
+                    await forceRefreshState();
+                }, (updatedSession) => {
+                    currentSessionRef.current = updatedSession;
+                    saveSession(updatedSession);
+                });
+            }
+        }
+    } else {
+        diceModal.classList.remove('active');
     }
 
     const targets = document.getElementById('targets-container');
@@ -103,12 +173,27 @@ function renderGameState(state) {
             target.style.backgroundImage = `url('${enemy.portraitUrl}')`;
         }
         target.addEventListener('click', () => {
+            if (state.isCombatActive && !state.isMyTurn) {
+                alert("Сейчас не ваш ход!");
+                return;
+            }
             currentTargetId = enemy.id;
             document.getElementById('attack-target-name').textContent = `Атаковать: ${enemy.name}?`;
             toggleModal('attack-modal', true);
         });
         targets.appendChild(target);
     });
+}
+
+async function forceRefreshState() {
+    if (currentSessionRef && currentSessionRef.current) {
+        try {
+            const state = await apiGet(`/api/game/state?playerId=${encodeURIComponent(currentSessionRef.current.playerId)}`);
+            renderGameState(state);
+        } catch (error) {
+            console.error(error);
+        }
+    }
 }
 
 async function sendTransition(sessionRef, action) {
@@ -122,11 +207,12 @@ async function sendTransition(sessionRef, action) {
 
 async function sendAttack(sessionRef) {
     if (!sessionRef.current?.playerId || !currentTargetId) return;
-    await apiPost('/api/action/attack', {
+    await apiPost('/api/action/request-attack', {
         playerId: sessionRef.current.playerId,
         targetId: currentTargetId
     });
     toggleModal('attack-modal', false);
+    await forceRefreshState();
 }
 
 async function focusCamera(sessionRef) {

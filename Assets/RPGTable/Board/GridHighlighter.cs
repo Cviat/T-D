@@ -41,52 +41,67 @@ namespace RPGTable.Board
             var boardToken = token.GetComponent<BoardToken>();
             if (boardToken == null) return;
 
-            Vector2Int startCell = boardToken.gridPosition;
+            int fp = Mathf.Max(1, boardToken.footprintSize);
+            Vector2Int startCell = boardToken.gridPosition; // top-left corner of the token
 
-            // 1. Calculate action range (max range from equipped abilities)
-            int actionRange = GetMaxAbilityRange(token);
+            int moveSteps  = token.CurrentMovementPoints;  // steps (each step = fp cells)
+            int actionRange = GetMaxAbilityRange(token);   // ability range in cells (not steps)
 
-            // 2. Calculate cells
-            HashSet<Vector2Int> moveCells = new HashSet<Vector2Int>();
+            // Build sets of all cells that would be painted
+            HashSet<Vector2Int> moveCells   = new HashSet<Vector2Int>();
             HashSet<Vector2Int> actionCells = new HashSet<Vector2Int>();
 
-            int moveRange = token.CurrentMovementPoints;
+            // --- Movement range: stamp footprint at each reachable step position ---
+            for (int sx = -moveSteps; sx <= moveSteps; sx++)
+            {
+                for (int sy = -moveSteps; sy <= moveSteps; sy++)
+                {
+                    if (sx == 0 && sy == 0) continue;
+                    if (Mathf.Max(Mathf.Abs(sx), Mathf.Abs(sy)) > moveSteps) continue;
 
-            // Chebyshev distance loop
-            // Chebyshev distance: Max(abs(dx), abs(dy)) <= R
-            int maxR = Mathf.Max(moveRange, actionRange);
+                    // Top-left corner of candidate position (each step = fp cells)
+                    Vector2Int topLeft = new Vector2Int(startCell.x + sx * fp, startCell.y + sy * fp);
+
+                    // Make sure the entire footprint fits on the board
+                    if (topLeft.x < 0 || topLeft.y < 0 ||
+                        topLeft.x + fp > grid.width || topLeft.y + fp > grid.height)
+                        continue;
+
+                    // Stamp all fp×fp cells for this position
+                    for (int fx = 0; fx < fp; fx++)
+                        for (int fy = 0; fy < fp; fy++)
+                            moveCells.Add(new Vector2Int(topLeft.x + fx, topLeft.y + fy));
+                }
+            }
+
+            // --- Action range: Chebyshev in cells from the token's CENTER ---
+            // (ability range is about reach, not step-size)
+            Vector2 center = new Vector2(startCell.x + (fp - 1) * 0.5f, startCell.y + (fp - 1) * 0.5f);
+            int maxR = actionRange;
             for (int x = -maxR; x <= maxR; x++)
             {
                 for (int y = -maxR; y <= maxR; y++)
                 {
-                    Vector2Int targetCell = new Vector2Int(startCell.x + x, startCell.y + y);
+                    Vector2Int targetCell = new Vector2Int(Mathf.RoundToInt(center.x) + x, Mathf.RoundToInt(center.y) + y);
                     if (!grid.Contains(targetCell)) continue;
-                    if (targetCell == startCell) continue;
+
+                    // Skip cells already occupied by the token itself
+                    bool ownCell = targetCell.x >= startCell.x && targetCell.x < startCell.x + fp &&
+                                   targetCell.y >= startCell.y && targetCell.y < startCell.y + fp;
+                    if (ownCell) continue;
 
                     int dist = Mathf.Max(Mathf.Abs(x), Mathf.Abs(y));
-                    
-                    if (dist <= moveRange)
-                    {
-                        moveCells.Add(targetCell);
-                    }
-                    else if (dist <= actionRange)
-                    {
+                    if (dist <= actionRange)
                         actionCells.Add(targetCell);
-                    }
                 }
             }
 
-            // Spawn highlights
-            // Action cells first (so they are rendered behind or we just draw them separately)
+            // Draw action range first (underneath), then movement range on top
             foreach (var cell in actionCells)
-            {
                 SpawnHighlight(cell, actionRangeColor);
-            }
 
             foreach (var cell in moveCells)
-            {
                 SpawnHighlight(cell, moveRangeColor);
-            }
 
             // Spawn reticle on targetable enemies in action range
             var allTokens = GameObject.FindObjectsByType<RPGTable.Runtime.CampaignRuntimeToken>(FindObjectsInactive.Exclude);

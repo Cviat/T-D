@@ -926,13 +926,49 @@ namespace RPGTable.Runtime
             layout.childControlHeight = false;
 
             var combatMgr = CombatManager.Instance;
-            foreach (var token in combatMgr.Queue)
+            var loader = GameObject.FindAnyObjectByType<CampaignGameLoader>();
+            string mapId = loader != null && loader.Context != null && loader.Context.CurrentMapNode != null ? loader.Context.CurrentMapNode.id : "";
+
+            foreach (var tokenId in combatMgr.Queue)
             {
-                if (token == null || token.IsDead) continue;
+                if (string.IsNullOrEmpty(tokenId)) continue;
+
+                int hp, maxHp, armor, maxArmor, movement, maxMovement, rolls, maxRolls, activeWeapon, rerollCoins;
+                List<RPGTable.Core.ActiveStatusEffect> statusEffects;
+                bool dead;
+
+                if (!CampaignGameSession.TryGetTokenCombatStats(tokenId, mapId, out hp, out maxHp, out armor, out maxArmor, out movement, out maxMovement, out rolls, out maxRolls, out activeWeapon, out rerollCoins, out statusEffects, out dead))
+                {
+                    continue;
+                }
+
+                if (dead) continue;
+
+                string displayName = "";
+                string tokenPath = "";
+                string characterPath = "";
+
+                var player = CampaignGameSession.FindPlayer(tokenId);
+                if (player != null)
+                {
+                    displayName = player.name;
+                    tokenPath = player.tokenPath;
+                    characterPath = player.characterPath;
+                }
+                else
+                {
+                    var npc = CampaignGameSession.FindNPCState(mapId, tokenId);
+                    if (npc != null)
+                    {
+                        displayName = npc.displayName;
+                        tokenPath = npc.tokenPath;
+                        characterPath = npc.characterPath;
+                    }
+                }
 
                 Sprite portrait = null;
-                var tokenData = UserTokenStore.LoadToken(token.TokenPath);
-                var charData = string.IsNullOrEmpty(token.CharacterPath) ? null : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(token.CharacterPath);
+                var tokenData = UserTokenStore.LoadToken(tokenPath);
+                var charData = string.IsNullOrEmpty(characterPath) ? null : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(characterPath);
                 if (charData != null) portrait = RPGTable.CharacterEditor.UserCharacterStore.LoadSprite(charData.portraitPath);
                 if (portrait == null && tokenData != null) portrait = UserTokenStore.LoadSprite(tokenData.portraitPath);
 
@@ -955,7 +991,7 @@ namespace RPGTable.Runtime
                 portImg.sprite = portrait;
                 portImg.preserveAspect = true;
 
-                float hpPercent = (float)token.CurrentHp / token.MaxHp;
+                float hpPercent = maxHp > 0 ? (float)hp / maxHp : 1f;
                 if (hpPercent < 1f)
                 {
                     var redGo = new GameObject("RedOverlay", typeof(RectTransform));
@@ -971,7 +1007,7 @@ namespace RPGTable.Runtime
                     redImg.color = new Color(0.85f, 0.15f, 0.15f, 0.5f);
                 }
 
-                if (token == combatMgr.ActiveToken)
+                if (tokenId == combatMgr.ActiveTokenId)
                 {
                     var outline = card.AddComponent<Outline>();
                     outline.effectColor = new Color(0.2f, 0.9f, 0.2f, 1f);
@@ -987,7 +1023,7 @@ namespace RPGTable.Runtime
                 nameRect.anchoredPosition = new Vector2(0f, -12f);
                 nameRect.sizeDelta = new Vector2(0f, 16f);
                 var nameTxt = nameGo.AddComponent<Text>();
-                nameTxt.text = token.DisplayName;
+                nameTxt.text = displayName;
                 nameTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
                 nameTxt.fontSize = 9;
                 nameTxt.alignment = TextAnchor.MiddleCenter;

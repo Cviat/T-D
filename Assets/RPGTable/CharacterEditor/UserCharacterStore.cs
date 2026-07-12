@@ -24,6 +24,7 @@ namespace RPGTable.CharacterEditor
         public int xp = 0;
         public string characterClass = "Воин";
         public int skillPoints = 0;
+        public int rerollCoins = 3;
         public int strength = 10;
         public int agility = 10;
         public int intelligence = 10;

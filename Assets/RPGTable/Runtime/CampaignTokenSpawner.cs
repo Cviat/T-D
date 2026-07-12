@@ -6,6 +6,7 @@ using RPGTable.Input;
 using RPGTable.MapEditor;
 using RPGTable.TokenEditor;
 using UnityEngine;
+using RuntimeMapTokenState = RPGTable.Runtime.CampaignGameSession.RuntimeMapTokenState;
 
 namespace RPGTable.Runtime
 {
@@ -21,8 +22,6 @@ namespace RPGTable.Runtime
 
         private readonly CampaignGameContext context;
         private readonly CampaignGameLoader loader;
-        private readonly Dictionary<string, List<RuntimeMapTokenState>> mapTokenStates =
-            new Dictionary<string, List<RuntimeMapTokenState>>();
         private readonly Dictionary<string, Vector2Int> occupiedCells =
             new Dictionary<string, Vector2Int>();
         private readonly Dictionary<string, string> pendingSpawnExitIds =
@@ -32,19 +31,6 @@ namespace RPGTable.Runtime
         private Sprite deadTokenSprite;
 
         public string SelectedBankTokenPath { get; set; }
-
-        internal sealed class RuntimeMapTokenState
-        {
-            public string runtimeId;
-            public string displayName;
-            public string characterPath;
-            public string tokenPath;
-            public TokenTeam team;
-            public bool visibleToPlayers;
-            public Vector2Int gridPosition;
-            public bool isDead;
-            public int currentHp;
-        }
 
         internal CampaignTokenSpawner(CampaignGameContext context, CampaignGameLoader loader)
         {
@@ -66,12 +52,31 @@ namespace RPGTable.Runtime
 
         public List<RuntimeMapTokenState> GetMapTokenStates(string mapId)
         {
-            if (!string.IsNullOrWhiteSpace(mapId) && mapTokenStates.TryGetValue(mapId, out var states))
+            if (!string.IsNullOrWhiteSpace(mapId) && CampaignGameSession.MapTokenStates.TryGetValue(mapId, out var states))
             {
                 return states;
             }
 
             return null;
+        }
+
+        public void UpdateStoredTokenState(string mapId, CampaignRuntimeToken token)
+        {
+            if (string.IsNullOrEmpty(mapId) || token == null) return;
+            var states = GetMapTokenStates(mapId);
+            if (states != null)
+            {
+                var tokenId = EnsureRuntimeTokenId(token);
+                var state = states.Find(s => s.runtimeId == tokenId);
+                if (state != null)
+                {
+                    state.currentHp = token.CurrentHp;
+                    state.currentArmor = token.CurrentArmor;
+                    state.maxHp = token.MaxHp;
+                    state.maxArmor = token.MaxArmor;
+                    state.isDead = token.IsDead;
+                }
+            }
         }
 
         // ── Token state persistence ──────────────────────────────────────
@@ -126,11 +131,14 @@ namespace RPGTable.Runtime
                     visibleToPlayers = runtimeToken.VisibleToPlayers,
                     gridPosition = boardToken.gridPosition,
                     isDead = runtimeToken.IsDead,
-                    currentHp = runtimeToken.CurrentHp
+                    currentHp = runtimeToken.CurrentHp,
+                    maxHp = runtimeToken.MaxHp,
+                    currentArmor = runtimeToken.CurrentArmor,
+                    maxArmor = runtimeToken.MaxArmor
                 });
             }
 
-            mapTokenStates[context.CurrentMapNode.id] = states;
+            CampaignGameSession.MapTokenStates[context.CurrentMapNode.id] = states;
         }
 
         // ── Spawning ─────────────────────────────────────────────────────
@@ -174,18 +182,12 @@ namespace RPGTable.Runtime
                 player.gridX = cell.x;
                 player.gridY = cell.y;
                 var runtimeToken = CreateTokenObject(player.name, player.characterPath, player.tokenPath, cell, TokenTeam.Player, true, player.id);
-                runtimeToken.IsDead = player.isDead;
-
-                if (player.maxHp <= 0)
-                {
-                    player.maxHp = runtimeToken.MaxHp;
-                }
-                if (player.currentHp <= 0)
-                {
-                    player.currentHp = player.maxHp;
-                }
-                runtimeToken.CurrentHp = player.currentHp;
-                runtimeToken.MaxHp = player.maxHp;
+                runtimeToken.InitializeStats(
+                    player.maxHp <= 0 ? runtimeToken.MaxHp : player.maxHp,
+                    player.currentHp <= 0 ? (player.maxHp <= 0 ? runtimeToken.MaxHp : player.maxHp) : player.currentHp,
+                    player.maxArmor <= 0 ? runtimeToken.MaxArmor : player.maxArmor,
+                    player.currentArmor <= 0 ? (player.maxArmor <= 0 ? runtimeToken.MaxArmor : player.maxArmor) : player.currentArmor,
+                    player.isDead);
 
                 if (runtimeToken.IsDead)
                 {
@@ -198,7 +200,7 @@ namespace RPGTable.Runtime
 
         public void SpawnStoredTokensForCurrentMap()
         {
-            if (context.CurrentMapNode == null || !mapTokenStates.TryGetValue(context.CurrentMapNode.id, out var states))
+            if (context.CurrentMapNode == null || !CampaignGameSession.MapTokenStates.TryGetValue(context.CurrentMapNode.id, out var states))
             {
                 return;
             }
@@ -214,12 +216,12 @@ namespace RPGTable.Runtime
                 var charPath = player != null ? player.characterPath : state.characterPath;
                 var runtimeToken = CreateTokenObject(state.displayName, charPath, state.tokenPath, cell, state.team, state.visibleToPlayers, null);
                 runtimeToken.RuntimeId = string.IsNullOrWhiteSpace(state.runtimeId) ? NewRuntimeTokenId() : state.runtimeId;
-                runtimeToken.IsDead = state.isDead;
-                runtimeToken.CurrentHp = state.currentHp;
-                if (state.currentHp <= 0 && !runtimeToken.IsDead)
-                {
-                    runtimeToken.CurrentHp = runtimeToken.MaxHp;
-                }
+                runtimeToken.InitializeStats(
+                    state.maxHp <= 0 ? runtimeToken.MaxHp : state.maxHp,
+                    state.currentHp <= 0 ? (state.maxHp <= 0 ? runtimeToken.MaxHp : state.maxHp) : state.currentHp,
+                    state.maxArmor <= 0 ? runtimeToken.MaxArmor : state.maxArmor,
+                    state.currentArmor <= 0 ? (state.maxArmor <= 0 ? runtimeToken.MaxArmor : state.maxArmor) : state.currentArmor,
+                    state.isDead);
 
                 if (runtimeToken.IsDead)
                 {
@@ -303,6 +305,15 @@ namespace RPGTable.Runtime
             runtime.CurrentHp = runtime.MaxHp;
             runtime.MaxArmor = charData != null ? charData.maxArmor : 0;
             runtime.CurrentArmor = runtime.MaxArmor;
+            if (!string.IsNullOrWhiteSpace(playerId))
+            {
+                var player = CampaignGameSession.FindPlayer(playerId);
+                runtime.RerollCoins = player != null ? player.rerollCoins : (charData != null ? charData.rerollCoins : 3);
+            }
+            else
+            {
+                runtime.RerollCoins = charData != null ? charData.rerollCoins : 3;
+            }
 
             tokenObject.AddComponent<TokenDragController>();
             tokenObject.AddComponent<TokenHealthArmorBars>();
@@ -363,17 +374,9 @@ namespace RPGTable.Runtime
                 return;
             }
 
-            runtimeToken.IsDead = true;
-
-            if (!string.IsNullOrWhiteSpace(runtimeToken.PlayerId))
-            {
-                var player = CampaignGameSession.FindPlayer(runtimeToken.PlayerId);
-
-                if (player != null)
-                {
-                    player.isDead = true;
-                }
-            }
+            // Set the dead flag on the token backing field directly (no event loop) then sync through session
+            // so that OnTokenDataChanged fires and Player View clones update their visuals reactively.
+            runtimeToken.IsDead = true;  // this calls SyncToSession → UpdateTokenData → OnTokenDataChanged
 
             ApplyDeadVisual(runtimeToken);
         }
@@ -430,8 +433,10 @@ namespace RPGTable.Runtime
             var rootRenderer = runtimeToken.GetComponent<SpriteRenderer>();
             var sortingOrder = rootRenderer == null ? nextTokenSortingOrder : rootRenderer.sortingOrder + 5;
             var deadSprite = LoadDeadTokenSprite();
+
             var layer = CreateSpriteLayer("Dead Token", runtimeToken.transform, deadSprite, sortingOrder, Color.white);
-            FitSprite(layer.transform, deadSprite, targetSize);
+            // Use FitSpriteCover to ensure the dead token fills the footprint area correctly on all views
+            FitSpriteCover(layer.transform, deadSprite, new Vector2(targetSize, targetSize));
         }
 
         // ── Utility ──────────────────────────────────────────────────────
@@ -750,6 +755,10 @@ namespace RPGTable.Runtime
         {
             var layer = new GameObject(name);
             layer.transform.SetParent(parent, false);
+            if (parent != null)
+            {
+                layer.layer = parent.gameObject.layer;
+            }
             layer.transform.localPosition = Vector3.zero;
             var renderer = layer.AddComponent<SpriteRenderer>();
             renderer.sprite = sprite;

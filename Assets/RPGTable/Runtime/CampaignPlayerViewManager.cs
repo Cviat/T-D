@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using RPGTable.Board;
 using RPGTable.Core;
@@ -50,6 +50,7 @@ namespace RPGTable.Runtime
         private string playerViewMapId;
 
         public static bool PlayerViewCameraControlActive { get; private set; }
+        public string PlayerViewMapId => playerViewMapId;
 
         [StructLayout(LayoutKind.Sequential)]
         private struct NativePoint
@@ -64,11 +65,14 @@ namespace RPGTable.Runtime
         [DllImport("user32.dll")]
         private static extern int GetSystemMetrics(int index);
 
+        public static CampaignPlayerViewManager Instance { get; private set; }
+
         internal CampaignPlayerViewManager(
             CampaignGameContext context,
             CampaignMapLoader mapLoader,
             CampaignTokenSpawner tokenSpawner)
         {
+            Instance = this;
             this.context = context;
             this.mapLoader = mapLoader;
             this.tokenSpawner = tokenSpawner;
@@ -723,51 +727,15 @@ namespace RPGTable.Runtime
         private bool MoveExistingPlayerViewToken(string key, Vector3 targetPosition, HashSet<string> activeTokenKeys)
         {
             activeTokenKeys.Add(key);
-
-            if (!playerViewTokenTransforms.TryGetValue(key, out var tokenTransform) || tokenTransform == null)
-            {
-                return false;
-            }
-
-            if (tokenTransform.GetComponent<TokenAttackAnimator>() != null)
-            {
-                return true;
-            }
-
-            playerViewTokenPositions[key] = targetPosition;
-
-            if ((tokenTransform.position - targetPosition).sqrMagnitude <= 0.0001f)
-            {
-                return true;
-            }
-
-            var mover = tokenTransform.GetComponent<PlayerViewTokenMover>();
-
-            if (mover == null)
-            {
-                mover = tokenTransform.gameObject.AddComponent<PlayerViewTokenMover>();
-            }
-
-            mover.Initialize(targetPosition);
-            return true;
+            return playerViewTokenTransforms.ContainsKey(key) && playerViewTokenTransforms[key] != null;
         }
 
-        // в”Ђв”Ђ Helpers в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+        // ── Helpers ──────────────────────────────────────────────────────────
 
         private void PlacePlayerViewToken(Transform tokenTransform, string key, Vector3 targetPosition, HashSet<string> activeTokenKeys)
         {
             activeTokenKeys.Add(key);
-
-            if (playerViewTokenPositions.TryGetValue(key, out var previousPosition))
-            {
-                tokenTransform.position = previousPosition;
-                tokenTransform.gameObject.AddComponent<PlayerViewTokenMover>().Initialize(targetPosition);
-            }
-            else
-            {
-                tokenTransform.position = targetPosition;
-            }
-
+            tokenTransform.position = targetPosition;
             playerViewTokenPositions[key] = targetPosition;
             playerViewTokenTransforms[key] = tokenTransform;
         }
@@ -778,6 +746,11 @@ namespace RPGTable.Runtime
                 (cell.x + 0.5f) * CellSize + (footprint - 1) * CellSize * 0.5f,
                 (cell.y + 0.5f) * CellSize + (footprint - 1) * CellSize * 0.5f,
                 0f);
+        }
+
+        public Vector3 GetPlayerViewTokenWorldPosition(Vector2Int cell, int footprint)
+        {
+            return PlayerViewTokenWorldPosition(cell, footprint);
         }
 
         private void PrunePlayerViewTokenPositions(HashSet<string> activeTokenKeys)
@@ -842,11 +815,10 @@ namespace RPGTable.Runtime
             runtimeToken.IsDead = isDead;
             runtimeToken.FootprintSize = Mathf.Max(1, footprint);
             runtimeToken.MaxHp = source != null ? source.MaxHp : (charData != null ? charData.maxHp : 10);
-            runtimeToken.CurrentHp = source != null
-                ? source.CurrentHp
-                : Mathf.Clamp(fallbackCurrentHp <= 0 ? runtimeToken.MaxHp : fallbackCurrentHp, 0, runtimeToken.MaxHp);
+            int fallbackHp = source != null ? source.CurrentHp : (fallbackCurrentHp <= 0 ? runtimeToken.MaxHp : fallbackCurrentHp);
             runtimeToken.MaxArmor = source != null ? source.MaxArmor : (charData != null ? charData.maxArmor : 0);
-            runtimeToken.CurrentArmor = source != null ? source.CurrentArmor : runtimeToken.MaxArmor;
+            int fallbackArmor = source != null ? source.CurrentArmor : runtimeToken.MaxArmor;
+            runtimeToken.InitializeStats(runtimeToken.MaxHp, fallbackHp, runtimeToken.MaxArmor, fallbackArmor, isDead);
             runtimeToken.MaxMovementPoints = source != null ? source.MaxMovementPoints : runtimeToken.MaxMovementPoints;
             runtimeToken.CurrentMovementPoints = source != null ? source.CurrentMovementPoints : runtimeToken.CurrentMovementPoints;
             runtimeToken.MaxRolls = source != null ? source.MaxRolls : runtimeToken.MaxRolls;
@@ -1003,9 +975,7 @@ namespace RPGTable.Runtime
                 key += $"|{player.id}:{player.currentMapId}:{player.gridX}:{player.gridY}:{player.tokenPath}:{player.isDead}:{player.currentHp}:{player.maxHp}:{runtimeToken?.CurrentHp}:{runtimeToken?.MaxHp}:{runtimeToken?.CurrentArmor}:{runtimeToken?.MaxArmor}";
             }
 
-            var selectedPlayer = CampaignGameSession.FindPlayer(context.SelectedPlayerId);
-
-            if (selectedPlayer != null && selectedPlayer.currentMapId == context.CurrentMapNode?.id && context.TokenRoot != null)
+            if (context.CurrentMapNode != null && context.TokenRoot != null)
             {
                 foreach (var runtimeToken in context.TokenRoot.GetComponentsInChildren<CampaignRuntimeToken>())
                 {
@@ -1115,7 +1085,7 @@ namespace RPGTable.Runtime
         /// We access them via reflection-free callback stored during construction.
         /// For simplicity we access the spawner's internal state through a delegate.
         /// </summary>
-        private bool mapTokenStatesContains(string mapId, out List<CampaignTokenSpawner.RuntimeMapTokenState> states)
+        private bool mapTokenStatesContains(string mapId, out List<CampaignGameSession.RuntimeMapTokenState> states)
         {
             // Access is done through the spawner's GetMapTokenStates method
             states = tokenSpawner.GetMapTokenStates(mapId);

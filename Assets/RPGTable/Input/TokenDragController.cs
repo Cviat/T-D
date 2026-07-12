@@ -15,6 +15,7 @@ namespace RPGTable.Input
         private Camera mainCamera;
         private Vector3 dragOffset;
         private bool dragging;
+        public bool IsDragging => dragging;
         private Vector2Int startGridPos;
 
         private void Awake()
@@ -30,10 +31,7 @@ namespace RPGTable.Input
                 return;
             }
 
-            if (!PrimaryMousePressed())
-            {
-                return;
-            }
+
 
             if (ViewModeController.Instance != null && ViewModeController.Instance.IsPlayerView)
             {
@@ -75,7 +73,15 @@ namespace RPGTable.Input
                 return;
             }
 
+            // Place at raw mouse position first
             transform.position = MouseWorldPosition() + dragOffset;
+
+            // Then snap to footprint-aligned cell so the token visibly jumps by its footprint size
+            BoardGrid grid = GameObject.FindAnyObjectByType<BoardGrid>();
+            if (grid != null && token != null)
+            {
+                token.SnapToGrid(grid);
+            }
         }
 
         private void OnMouseUp()
@@ -103,14 +109,17 @@ namespace RPGTable.Input
             }
 
             token.SnapToGrid(activeGrid);
+            Vector2Int newGridPos = token.gridPosition;
 
             var runtimeToken = GetComponent<RPGTable.Runtime.CampaignRuntimeToken>();
             if (runtimeToken != null)
             {
-                int distance = Mathf.Max(Mathf.Abs(token.gridPosition.x - startGridPos.x), Mathf.Abs(token.gridPosition.y - startGridPos.y));
-                if (distance > 0 && RPGTable.Runtime.CampaignGameSession.IsCombatActive)
+                int fp = Mathf.Max(1, token.footprintSize);
+                int cellDist = Mathf.Max(Mathf.Abs(newGridPos.x - startGridPos.x), Mathf.Abs(newGridPos.y - startGridPos.y));
+                int steps = Mathf.Max(1, Mathf.CeilToInt((float)cellDist / fp)); // round up: partial footprint = 1 step
+                if (cellDist > 0 && RPGTable.Runtime.CampaignGameSession.IsCombatActive)
                 {
-                    if (distance > runtimeToken.CurrentMovementPoints)
+                    if (steps > runtimeToken.CurrentMovementPoints)
                     {
                         token.gridPosition = startGridPos;
                         var size = Mathf.Max(1, token.footprintSize);
@@ -120,21 +129,39 @@ namespace RPGTable.Input
                         transform.position = activeGrid != null
                             ? activeGrid.CellToWorld(startGridPos) + offset
                             : transform.position;
+                        return;
                     }
                     else
                     {
-                    runtimeToken.CurrentMovementPoints = Mathf.Max(0, runtimeToken.CurrentMovementPoints - distance);
+                        runtimeToken.CurrentMovementPoints = Mathf.Max(0, runtimeToken.CurrentMovementPoints - steps);
                     }
                 }
 
-#if UNITY_2023_1_OR_NEWER
-                var loader = FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
-#else
-                var loader = FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
-#endif
-                if (loader != null)
+                if (cellDist > 0)
                 {
-                    loader.SelectRuntimeToken(runtimeToken);
+                    string mapId = "";
+#if UNITY_2023_1_OR_NEWER
+                    var loader = FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+#else
+                    var loader = FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+#endif
+                    if (loader != null && loader.Context != null && loader.Context.CurrentMapNode != null)
+                    {
+                        mapId = loader.Context.CurrentMapNode.id;
+                    }
+
+
+
+                    RPGTable.Runtime.CampaignGameSession.MoveToken(
+                        string.IsNullOrEmpty(runtimeToken.PlayerId) ? runtimeToken.RuntimeId : runtimeToken.PlayerId,
+                        mapId,
+                        newGridPos
+                    );
+
+                    if (loader != null)
+                    {
+                        loader.SelectRuntimeToken(runtimeToken);
+                    }
                 }
             }
         }

@@ -28,18 +28,33 @@ namespace RPGTable.Runtime
             }
         }
 
-        public List<CampaignRuntimeToken> Queue { get; } = new List<CampaignRuntimeToken>();
+        public List<string> Queue { get; } = new List<string>();
         public int ActiveTokenIndex { get; private set; } = -1;
         public int CurrentTurnNumber { get; private set; } = 1;
         private readonly Dictionary<int, int> floatingTextStacks = new Dictionary<int, int>();
 
-        public CampaignRuntimeToken ActiveToken
+        public string ActiveTokenId
         {
             get
             {
                 if (ActiveTokenIndex >= 0 && ActiveTokenIndex < Queue.Count)
                 {
                     return Queue[ActiveTokenIndex];
+                }
+                return "";
+            }
+        }
+
+        public CampaignRuntimeToken ActiveToken
+        {
+            get
+            {
+                var id = ActiveTokenId;
+                if (string.IsNullOrEmpty(id)) return null;
+                var tokens = GameObject.FindObjectsByType<CampaignRuntimeToken>(FindObjectsInactive.Exclude);
+                foreach (var t in tokens)
+                {
+                    if (!t.IsPlayerViewClone && t.RuntimeId == id) return t;
                 }
                 return null;
             }
@@ -64,11 +79,46 @@ namespace RPGTable.Runtime
 
             Queue.Clear();
             var allTokens = GameObject.FindObjectsByType<CampaignRuntimeToken>(FindObjectsInactive.Exclude);
+            var sortedList = new List<CampaignRuntimeToken>();
             foreach (var token in allTokens)
             {
                 if (!token.IsPlayerViewClone && !token.IsDead)
                 {
-                    Queue.Add(token);
+                    sortedList.Add(token);
+                }
+            }
+
+            // Sort by initiative (from BoardToken initiative field) descending
+            sortedList.Sort((a, b) => {
+                var btA = a.GetComponent<BoardToken>();
+                var btB = b.GetComponent<BoardToken>();
+                int initA = btA != null ? btA.initiative : 0;
+                int initB = btB != null ? btB.initiative : 0;
+                return initB.CompareTo(initA);
+            });
+
+            var loader = GameObject.FindAnyObjectByType<CampaignGameLoader>();
+            foreach (var token in sortedList)
+            {
+                string id = string.IsNullOrEmpty(token.PlayerId) ? token.RuntimeId : token.PlayerId;
+                Queue.Add(id);
+
+                string mapId = loader != null && loader.Context != null && loader.Context.CurrentMapNode != null ? loader.Context.CurrentMapNode.id : "";
+                int hp, maxHp, armor, maxArmor, movement, maxMovement, rolls, maxRolls, activeWeapon, rerollCoins;
+                List<RPGTable.Core.ActiveStatusEffect> statusEffects;
+                bool dead;
+
+                if (CampaignGameSession.TryGetTokenCombatStats(id, mapId, out hp, out maxHp, out armor, out maxArmor, out movement, out maxMovement, out rolls, out maxRolls, out activeWeapon, out rerollCoins, out statusEffects, out dead))
+                {
+                    CampaignGameSession.UpdateTokenCombatStats(
+                        id, mapId,
+                        hp, maxHp,
+                        armor, maxArmor,
+                        3, 3, // Set movement points to 3 at start of combat
+                        rolls, maxRolls,
+                        activeWeapon, rerollCoins,
+                        statusEffects, dead
+                    );
                 }
             }
 
@@ -77,15 +127,6 @@ namespace RPGTable.Runtime
                 EndCombat();
                 return;
             }
-
-            // Sort by initiative (from BoardToken initiative field) descending
-            Queue.Sort((a, b) => {
-                var btA = a.GetComponent<BoardToken>();
-                var btB = b.GetComponent<BoardToken>();
-                int initA = btA != null ? btA.initiative : 0;
-                int initB = btB != null ? btB.initiative : 0;
-                return initB.CompareTo(initA);
-            });
 
             // Refresh UI
             var ui = GameObject.FindAnyObjectByType<CampaignGameLoader>()?.UI;
@@ -133,59 +174,61 @@ namespace RPGTable.Runtime
             }
         }
 
-        public void StartTokenTurn(CampaignRuntimeToken token)
+        public void StartTokenTurn(string tokenId)
         {
-            if (token == null || token.IsDead)
+            if (string.IsNullOrEmpty(tokenId))
+            {
+                EndTokenTurn();
+                return;
+            }
+
+            var loader = FindAnyObjectByType<CampaignGameLoader>();
+            string mapId = loader != null && loader.Context != null && loader.Context.CurrentMapNode != null ? loader.Context.CurrentMapNode.id : "";
+
+            int hp, maxHp, armor, maxArmor, movement, maxMovement, rolls, maxRolls, activeWeapon, rerollCoins;
+            List<RPGTable.Core.ActiveStatusEffect> statusEffects;
+            bool dead;
+
+            if (!CampaignGameSession.TryGetTokenCombatStats(tokenId, mapId, out hp, out maxHp, out armor, out maxArmor, out movement, out maxMovement, out rolls, out maxRolls, out activeWeapon, out rerollCoins, out statusEffects, out dead))
+            {
+                EndTokenTurn();
+                return;
+            }
+
+            if (dead)
             {
                 EndTokenTurn();
                 return;
             }
 
             // Restore action rolls and movement points
-            token.CurrentMovementPoints = token.MaxMovementPoints;
-            token.CurrentRolls = token.MaxRolls;
-
-            // Pan camera to the active token
-            FocusCameraOn(token.transform.position);
+            movement = maxMovement;
+            rolls = maxRolls;
 
             // Tick and apply status effects
-            ProcessStatusEffects(token);
+            statusEffects = ProcessStatusEffectsData(statusEffects, ref hp, maxHp, ref armor, maxArmor, ref movement, ref rolls, ref dead);
 
-            // Check if token died from status ticks or is stunned
-            if (token.IsDead)
+            CampaignGameSession.UpdateTokenCombatStats(tokenId, mapId, hp, maxHp, armor, maxArmor, movement, maxMovement, rolls, maxRolls, activeWeapon, rerollCoins, statusEffects, dead);
+
+            if (dead)
             {
                 EndTokenTurn();
                 return;
             }
 
-            bool isStunned = false;
-            foreach (var effect in token.statusEffects)
+            // Pan camera to the active token
+            var tokenVisual = ActiveToken;
+            if (tokenVisual != null)
             {
-                if (string.Equals(effect.effectName, "Stun", StringComparison.OrdinalIgnoreCase) || string.Equals(effect.effectName, "Оглушение", StringComparison.OrdinalIgnoreCase))
+                FocusCameraOn(tokenVisual.transform.position);
+                if (loader != null)
                 {
-                    isStunned = true;
+                    loader.SelectRuntimeToken(tokenVisual);
                 }
             }
 
-            if (isStunned)
-            {
-                token.CurrentRolls = 0;
-                token.CurrentMovementPoints = 0;
-            }
-
-            // Auto-select token to update inspector and highlights
-#if UNITY_2023_1_OR_NEWER
-            var loader = FindAnyObjectByType<CampaignGameLoader>();
-#else
-            var loader = FindAnyObjectByType<CampaignGameLoader>();
-#endif
-            if (loader != null)
-            {
-                loader.SelectRuntimeToken(token);
-            }
-
             // If stunned/has no rolls left, auto-end turn after a delay
-            if (token.CurrentRolls <= 0)
+            if (rolls <= 0)
             {
                 StartCoroutine(DelayedEndTurn(1.5f));
             }
@@ -223,8 +266,9 @@ namespace RPGTable.Runtime
             }
 
             // Skip dead tokens
-            var nextToken = ActiveToken;
-            if (nextToken != null && nextToken.IsDead)
+            var nextTokenId = ActiveTokenId;
+            var tokenVisual = ActiveToken;
+            if (tokenVisual != null && tokenVisual.IsDead)
             {
                 EndCombat();
                 return;
@@ -236,15 +280,39 @@ namespace RPGTable.Runtime
                 ui.RefreshCombatUI();
             }
 
-            if (nextToken != null)
+            if (!string.IsNullOrEmpty(nextTokenId))
             {
-                StartTokenTurn(nextToken);
+                StartTokenTurn(nextTokenId);
             }
         }
 
         private void RemoveInvalidQueueEntries()
         {
-            Queue.RemoveAll(token => token == null || token.IsPlayerViewClone || token.IsDead || token.CurrentHp <= 0);
+            Queue.RemoveAll(id => {
+                var tokens = GameObject.FindObjectsByType<CampaignRuntimeToken>(FindObjectsInactive.Exclude);
+                CampaignRuntimeToken activeToken = null;
+                foreach (var t in tokens)
+                {
+                    if (!t.IsPlayerViewClone && (t.RuntimeId == id || t.PlayerId == id))
+                    {
+                        activeToken = t;
+                        break;
+                    }
+                }
+
+                if (activeToken != null)
+                {
+                    return activeToken.IsDead || activeToken.CurrentHp <= 0;
+                }
+
+                var player = CampaignGameSession.FindPlayer(id);
+                if (player != null) return player.isDead || player.currentHp <= 0;
+                var loader = FindAnyObjectByType<CampaignGameLoader>();
+                string mapId = loader != null && loader.Context != null && loader.Context.CurrentMapNode != null ? loader.Context.CurrentMapNode.id : "";
+                var npc = CampaignGameSession.FindNPCState(mapId, id);
+                if (npc != null) return npc.isDead || npc.currentHp <= 0;
+                return true;
+            });
 
             if (ActiveTokenIndex >= Queue.Count)
             {
@@ -257,71 +325,83 @@ namespace RPGTable.Runtime
             var hasParty = false;
             var hasEnemy = false;
 
-            var allTokens = GameObject.FindObjectsByType<CampaignRuntimeToken>(FindObjectsInactive.Exclude);
-            foreach (var token in allTokens)
+            foreach (var p in CampaignGameSession.CurrentPlayers)
             {
-                if (token == null || token.IsPlayerViewClone || token.IsDead || token.CurrentHp <= 0)
-                {
-                    continue;
-                }
-
-                if (token.Team == TokenTeam.Enemy)
-                {
-                    hasEnemy = true;
-                }
-                else if (token.Team == TokenTeam.Player || token.Team == TokenTeam.Ally)
+                if (!p.isDead && p.currentHp > 0)
                 {
                     hasParty = true;
                 }
+            }
 
-                if (hasParty && hasEnemy)
+            var allTokens = GameObject.FindObjectsByType<CampaignRuntimeToken>(FindObjectsInactive.Exclude);
+            foreach (var t in allTokens)
+            {
+                if (t != null && !t.IsPlayerViewClone && !t.IsDead)
                 {
-                    return true;
+                    if (t.Team == TokenTeam.Player || t.Team == TokenTeam.Ally)
+                    {
+                        hasParty = true;
+                    }
+                    else if (t.Team == TokenTeam.Enemy)
+                    {
+                        hasEnemy = true;
+                    }
                 }
             }
 
-            return false;
+            var loader = FindAnyObjectByType<CampaignGameLoader>();
+            string mapId = loader != null && loader.Context != null && loader.Context.CurrentMapNode != null ? loader.Context.CurrentMapNode.id : "";
+            if (!string.IsNullOrEmpty(mapId) && CampaignGameSession.MapTokenStates.TryGetValue(mapId, out var npcList))
+            {
+                foreach (var npc in npcList)
+                {
+                    if (npc != null && !npc.isDead && npc.currentHp > 0)
+                    {
+                        if (npc.team == TokenTeam.Enemy) hasEnemy = true;
+                        else if (npc.team == TokenTeam.Ally) hasParty = true;
+                    }
+                }
+            }
+
+            return hasParty && hasEnemy;
         }
 
-        private void ProcessStatusEffects(CampaignRuntimeToken token)
+        private List<RPGTable.Core.ActiveStatusEffect> ProcessStatusEffectsData(
+            List<RPGTable.Core.ActiveStatusEffect> effects,
+            ref int hp, int maxHp,
+            ref int armor, int maxArmor,
+            ref int movement,
+            ref int rolls,
+            ref bool dead)
         {
-            for (int i = token.statusEffects.Count - 1; i >= 0; i--)
+            var nextEffects = new List<RPGTable.Core.ActiveStatusEffect>(effects);
+            for (int i = nextEffects.Count - 1; i >= 0; i--)
             {
-                var effect = token.statusEffects[i];
-                
+                var effect = nextEffects[i];
                 switch (effect.affectedStat)
                 {
                     case CombatAttributeStat.HP:
-                        token.CurrentHp = Mathf.Clamp(token.CurrentHp + effect.value, 0, token.MaxHp);
-                        if (token.CurrentHp <= 0)
-                        {
-                            token.IsDead = true;
-#if UNITY_2023_1_OR_NEWER
-                            var loader = FindAnyObjectByType<CampaignGameLoader>();
-#else
-                            var loader = FindAnyObjectByType<CampaignGameLoader>();
-#endif
-                            if (loader != null) loader.KillRuntimeToken(token);
-                        }
+                        hp = Mathf.Clamp(hp + effect.value, 0, maxHp);
+                        if (hp <= 0) dead = true;
                         break;
                     case CombatAttributeStat.MovementPoints:
-                        token.CurrentMovementPoints = Mathf.Max(0, token.CurrentMovementPoints + effect.value);
+                        movement = Mathf.Max(0, movement + effect.value);
                         break;
                     case CombatAttributeStat.Rolls:
-                        token.CurrentRolls = Mathf.Max(0, token.CurrentRolls + effect.value);
+                        rolls = Mathf.Max(0, rolls + effect.value);
                         break;
                     case CombatAttributeStat.Armor:
-                        token.CurrentArmor = Mathf.Clamp(token.CurrentArmor + effect.value, 0, token.MaxArmor);
+                        armor = Mathf.Clamp(armor + effect.value, 0, maxArmor);
                         break;
                 }
 
-                // Decrement duration
                 effect.durationTurns--;
                 if (effect.durationTurns <= 0)
                 {
-                    token.statusEffects.RemoveAt(i);
+                    nextEffects.RemoveAt(i);
                 }
             }
+            return nextEffects;
         }
 
         private void FocusCameraOn(Vector3 position)

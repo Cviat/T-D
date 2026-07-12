@@ -33,10 +33,18 @@ namespace RPGTable.Core
 
             var size = Mathf.Max(1, footprintSize);
             var offset = new Vector3((size - 1) * grid.cellSize * 0.5f, (size - 1) * grid.cellSize * 0.5f, 0f);
-            gridPosition = grid.WorldToCell(transform.position - offset);
+
+            // Find nearest raw cell under the cursor
+            Vector2Int raw = grid.WorldToCell(transform.position - offset);
+
+            // Snap to footprint-aligned position: round to nearest multiple of footprintSize
+            int snappedX = Mathf.RoundToInt((float)raw.x / size) * size;
+            int snappedY = Mathf.RoundToInt((float)raw.y / size) * size;
+
             gridPosition = new Vector2Int(
-                Mathf.Clamp(gridPosition.x, 0, Mathf.Max(0, grid.width - size)),
-                Mathf.Clamp(gridPosition.y, 0, Mathf.Max(0, grid.height - size)));
+                Mathf.Clamp(snappedX, 0, Mathf.Max(0, grid.width  - size)),
+                Mathf.Clamp(snappedY, 0, Mathf.Max(0, grid.height - size)));
+
             transform.position = grid.CellToWorld(gridPosition) + offset;
         }
 

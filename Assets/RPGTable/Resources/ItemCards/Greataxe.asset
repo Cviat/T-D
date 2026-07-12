@@ -27,7 +27,5 @@ MonoBehaviour:
   bonusAgi: 0
   bonusInt: 0
   bonusHol: 0
-  attribute: "\u041E\u0433\u043B\u0443\u0448\u0435\u043D\u0438\u0435"
-  attributes:
-  - {fileID: 11400000, guid: 978841042e343f64f8e45a8f980f0337, type: 2}
+  attributes: []
   attackType: 0

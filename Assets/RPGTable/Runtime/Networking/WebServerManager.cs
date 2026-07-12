@@ -91,8 +91,56 @@ namespace RPGTable.Runtime.Networking
             public string playerId;
             public string targetId;
         }
+
+        [Serializable]
+        public class RequestAttackPayload
+        {
+            public string playerId;
+            public string targetId;
+        }
+
+        [Serializable]
+        public class SubmitRollPayload
+        {
+            public string playerId;
+            public int rollResult;
+        }
+
+        [Serializable]
+        public class RerollPayload
+        {
+            public string playerId;
+        }
+
+        [Serializable]
+        public class SwitchWeaponPayload
+        {
+            public string playerId;
+        }
+
+        [Serializable]
+        public class EndTurnPayload
+        {
+            public string playerId;
+        }
+
+        [Serializable]
+        public class PendingRoll
+        {
+            public string id;
+            public string type; // "attack" or "defense"
+            public string playerId;
+            public string targetTokenId;
+            public string attackerTokenId;
+            public string attackerAbilityName;
+            public int attackerRollResult;
+            public float baseDamage;
+            public bool canReroll;
+            public int rerollCost;
+        }
         
         public List<ConnectedPlayer> ConnectedPlayers = new List<ConnectedPlayer>();
+        public Dictionary<string, PendingRoll> ActiveRolls = new Dictionary<string, PendingRoll>();
         public bool GameStarted = false;
 
         private readonly System.Collections.Concurrent.ConcurrentQueue<Action> mainThreadActions = new System.Collections.Concurrent.ConcurrentQueue<Action>();
@@ -239,7 +287,8 @@ namespace RPGTable.Runtime.Networking
                 return false;
             }
 
-            if (!TryFindRuntimeTokenByPlayerId(playerId, out var runtimeToken))
+            var player = RPGTable.Runtime.CampaignGameSession.FindPlayer(playerId);
+            if (player == null || player.isDead)
             {
                 return false;
             }
@@ -247,61 +296,61 @@ namespace RPGTable.Runtime.Networking
             if (RPGTable.Runtime.CampaignGameSession.IsCombatActive)
             {
                 if (RPGTable.Runtime.CombatManager.Instance == null
-                    || RPGTable.Runtime.CombatManager.Instance.ActiveToken != runtimeToken
-                    || runtimeToken.CurrentMovementPoints <= 0)
+                    || RPGTable.Runtime.CombatManager.Instance.ActiveTokenId != playerId
+                    || player.currentMovementPoints <= 0)
                 {
                     return false;
                 }
             }
 
-            var boardToken = runtimeToken.GetComponent<RPGTable.Core.BoardToken>();
             var grid = GameObject.FindAnyObjectByType<RPGTable.Board.BoardGrid>();
-            if (boardToken == null || grid == null)
+            if (grid == null)
             {
                 return false;
             }
 
-            var size = Mathf.Max(1, boardToken.footprintSize);
-            var next = boardToken.gridPosition + new Vector2Int(Mathf.Clamp(dirX, -1, 1), Mathf.Clamp(dirY, -1, 1));
+            int footprint = 1;
+            if (!string.IsNullOrEmpty(player.tokenPath))
+            {
+                var tokenData = RPGTable.TokenEditor.UserTokenStore.LoadToken(player.tokenPath);
+                footprint = RPGTable.Runtime.CampaignTokenSpawner.GetFootprint(tokenData);
+            }
+
+            var size = Mathf.Max(1, footprint);
+            // Each tap moves one full footprint-step (e.g. 2x2 token → 2 cells per tap)
+            int stepX = Mathf.Clamp(dirX, -1, 1) * footprint;
+            int stepY = Mathf.Clamp(dirY, -1, 1) * footprint;
+            var next = new Vector2Int(player.gridX + stepX, player.gridY + stepY);
             next.x = Mathf.Clamp(next.x, 0, Mathf.Max(0, grid.width - size));
             next.y = Mathf.Clamp(next.y, 0, Mathf.Max(0, grid.height - size));
 
-            int distance = Mathf.Max(Mathf.Abs(next.x - boardToken.gridPosition.x), Mathf.Abs(next.y - boardToken.gridPosition.y));
-            if (distance <= 0)
+            // Each tap = 1 step; divide cell distance by footprint to get step count
+            int stepsDistance = Mathf.Max(Mathf.Abs(next.x - player.gridX), Mathf.Abs(next.y - player.gridY)) / Mathf.Max(1, footprint);
+            if (stepsDistance <= 0)
             {
                 return false;
             }
 
-            if (RPGTable.Runtime.CampaignGameSession.IsCombatActive && distance > runtimeToken.CurrentMovementPoints)
+            if (RPGTable.Runtime.CampaignGameSession.IsCombatActive && stepsDistance > player.currentMovementPoints)
             {
                 return false;
             }
-
-            boardToken.gridPosition = next;
-            var offset = new Vector3((size - 1) * grid.cellSize * 0.5f, (size - 1) * grid.cellSize * 0.5f, 0f);
-            runtimeToken.transform.position = grid.CellToWorld(next) + offset;
 
             if (RPGTable.Runtime.CampaignGameSession.IsCombatActive)
             {
-                runtimeToken.CurrentMovementPoints = Mathf.Max(0, runtimeToken.CurrentMovementPoints - distance);
+                player.currentMovementPoints = Mathf.Max(0, player.currentMovementPoints - stepsDistance);
+                // Fire the data-changed event so the GM grid highlights refresh
+                RPGTable.Runtime.CampaignGameSession.UpdateTokenCombatStats(
+                    playerId, player.currentMapId,
+                    player.currentHp, player.maxHp,
+                    player.currentArmor, player.maxArmor,
+                    player.currentMovementPoints, player.maxMovementPoints,
+                    player.currentRolls, player.maxRolls,
+                    player.activeWeaponIndex, player.rerollCoins,
+                    player.statusEffects, player.isDead);
             }
 
-            var player = RPGTable.Runtime.CampaignGameSession.FindPlayer(playerId);
-            if (player != null)
-            {
-                player.gridX = next.x;
-                player.gridY = next.y;
-                player.currentHp = runtimeToken.CurrentHp;
-                player.maxHp = runtimeToken.MaxHp;
-            }
-
-            var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
-            if (loader != null && loader.UI != null)
-            {
-                loader.UI.RefreshActiveTokensPanel();
-                loader.UI.RefreshEntityInspector(runtimeToken);
-            }
-
+            RPGTable.Runtime.CampaignGameSession.MoveToken(playerId, player.currentMapId, next);
             return true;
         }
 
@@ -866,138 +915,166 @@ namespace RPGTable.Runtime.Networking
                 string promptText = null;
                 var enemiesJson = new List<string>();
                 string playerStateJson = "";
+                string pendingRollJson = "null";
 
                 ExecuteOnMainThreadBlocking(() => {
+                    var player = RPGTable.Runtime.CampaignGameSession.FindPlayer(playerId);
+                    if (player != null)
+                    {
 #if UNITY_2023_1_OR_NEWER
-                    var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+                        var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
 #else
-                    var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+                        var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
 #endif
-                    if (loader != null && loader.PendingTransitionPlayerId == playerId)
-                    {
-                        promptText = loader.PendingTransitionPrompt;
-                    }
-
-                    var allBoardTokens = GameObject.FindObjectsByType<RPGTable.Core.BoardToken>(FindObjectsInactive.Exclude);
-                    var myBoardToken = System.Linq.Enumerable.FirstOrDefault(allBoardTokens, t => 
-                    {
-                        var r = t.GetComponent<RPGTable.Runtime.CampaignRuntimeToken>();
-                        return r != null && r.PlayerId == playerId;
-                    });
-
-                    if (myBoardToken != null)
-                    {
-                        var myRuntimeToken = myBoardToken.GetComponent<RPGTable.Runtime.CampaignRuntimeToken>();
-                        if (myRuntimeToken != null)
+                        if (loader != null && loader.PendingTransitionPlayerId == playerId)
                         {
-                            var charData = string.IsNullOrWhiteSpace(myRuntimeToken.CharacterPath)
-                                ? null
-                                : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(myRuntimeToken.CharacterPath);
-                            string activeWeapon = "";
-                            if (charData != null)
-                            {
-                                activeWeapon = myRuntimeToken.ActiveWeaponIndex == 0 ? charData.eqWeapon : charData.eqWeapon2;
-                            }
-
-                            var statusJson = new List<string>();
-                            foreach (var effect in myRuntimeToken.statusEffects)
-                            {
-                                if (effect == null)
-                                {
-                                    continue;
-                                }
-
-                                statusJson.Add($"{{\"name\":\"{JsonString(effect.effectName)}\",\"turns\":{effect.durationTurns},\"value\":{effect.value}}}");
-                            }
-
-                            bool isMyTurn = RPGTable.Runtime.CampaignGameSession.IsCombatActive
-                                && RPGTable.Runtime.CombatManager.Instance != null
-                                && RPGTable.Runtime.CombatManager.Instance.ActiveToken == myRuntimeToken;
-
-                            playerStateJson =
-                                $"\"hp\":{myRuntimeToken.CurrentHp}," +
-                                $"\"maxHp\":{myRuntimeToken.MaxHp}," +
-                                $"\"armor\":{myRuntimeToken.CurrentArmor}," +
-                                $"\"maxArmor\":{myRuntimeToken.MaxArmor}," +
-                                $"\"movement\":{myRuntimeToken.CurrentMovementPoints}," +
-                                $"\"maxMovement\":{myRuntimeToken.MaxMovementPoints}," +
-                                $"\"rolls\":{myRuntimeToken.CurrentRolls}," +
-                                $"\"maxRolls\":{myRuntimeToken.MaxRolls}," +
-                                $"\"activeWeapon\":\"{JsonString(activeWeapon)}\"," +
-                                $"\"activeWeaponIndex\":{myRuntimeToken.ActiveWeaponIndex}," +
-                                $"\"isMyTurn\":{isMyTurn.ToString().ToLowerInvariant()}," +
-                                $"\"isCombatActive\":{RPGTable.Runtime.CampaignGameSession.IsCombatActive.ToString().ToLowerInvariant()}," +
-                                $"\"statuses\":[{string.Join(",", statusJson)}],";
+                            promptText = loader.PendingTransitionPrompt;
                         }
 
-                        foreach (var targetBoardToken in allBoardTokens)
+                        var charData = string.IsNullOrWhiteSpace(player.characterPath)
+                            ? null
+                            : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(player.characterPath);
+                        string activeWeapon = "";
+                        if (charData != null)
                         {
-                            if (targetBoardToken != myBoardToken && targetBoardToken.team != RPGTable.Core.TokenTeam.Player)
-                            {
-                                var targetRuntime = targetBoardToken.GetComponent<RPGTable.Runtime.CampaignRuntimeToken>();
-                                if (targetRuntime == null)
-                                {
-                                    targetRuntime = targetBoardToken.gameObject.AddComponent<RPGTable.Runtime.CampaignRuntimeToken>();
-                                    targetRuntime.RuntimeId = System.Guid.NewGuid().ToString("N");
-                                    targetRuntime.DisplayName = targetBoardToken.displayName;
-                                    targetRuntime.Team = targetBoardToken.team;
-                                    targetRuntime.MaxHp = 10;
-                                    targetRuntime.CurrentHp = 10;
-                                    
-                                    var grid = GameObject.FindAnyObjectByType<RPGTable.Board.BoardGrid>();
-                                    if (grid != null) targetBoardToken.SnapToGrid(grid);
-                                }
+                            activeWeapon = player.activeWeaponIndex == 0 ? charData.eqWeapon : charData.eqWeapon2;
+                        }
 
-                                if (!targetRuntime.IsDead)
+                        var statusJson = new List<string>();
+                        foreach (var effect in player.statusEffects)
+                        {
+                            if (effect == null) continue;
+                            statusJson.Add($"{{\"name\":\"{JsonString(effect.effectName)}\",\"turns\":{effect.durationTurns},\"value\":{effect.value}}}");
+                        }
+
+                        var attackSlotsJson = new List<string>();
+                        var defenseSlotsJson = new List<string>();
+                        if (charData != null)
+                        {
+                            var slots = (player.activeWeaponIndex == 0) ? charData.attackSlots : charData.attack2Slots;
+                            if (slots != null)
+                            {
+                                foreach (var s in slots) attackSlotsJson.Add($"\"{JsonString(s)}\"");
+                            }
+                            if (charData.defenseSlots != null)
+                            {
+                                foreach (var s in charData.defenseSlots) defenseSlotsJson.Add($"\"{JsonString(s)}\"");
+                            }
+                        }
+
+                        bool isMyTurn = RPGTable.Runtime.CampaignGameSession.IsCombatActive
+                            && RPGTable.Runtime.CombatManager.Instance != null
+                            && RPGTable.Runtime.CombatManager.Instance.ActiveTokenId == playerId;
+
+                        playerStateJson =
+                            $"\"hp\":{player.currentHp}," +
+                            $"\"maxHp\":{player.maxHp}," +
+                            $"\"armor\":{player.currentArmor}," +
+                            $"\"maxArmor\":{player.maxArmor}," +
+                            $"\"movement\":{player.currentMovementPoints}," +
+                            $"\"maxMovement\":{player.maxMovementPoints}," +
+                            $"\"rolls\":{player.currentRolls}," +
+                            $"\"maxRolls\":{player.maxRolls}," +
+                            $"\"activeWeapon\":\"{JsonString(activeWeapon)}\"," +
+                            $"\"activeWeaponIndex\":{player.activeWeaponIndex}," +
+                            $"\"isMyTurn\":{isMyTurn.ToString().ToLowerInvariant()}," +
+                            $"\"isCombatActive\":{RPGTable.Runtime.CampaignGameSession.IsCombatActive.ToString().ToLowerInvariant()}," +
+                            $"\"statuses\":[{string.Join(",", statusJson)}]," +
+                            $"\"attacks\":[{string.Join(",", attackSlotsJson)}]," +
+                            $"\"defenses\":[{string.Join(",", defenseSlotsJson)}]," +
+                            $"\"rerollCoins\":{player.rerollCoins},";
+
+                        int myFootprint = 1;
+                        if (!string.IsNullOrEmpty(player.tokenPath))
+                        {
+                            var tokenData = RPGTable.TokenEditor.UserTokenStore.LoadToken(player.tokenPath);
+                            myFootprint = RPGTable.Runtime.CampaignTokenSpawner.GetFootprint(tokenData);
+                        }
+
+                        int myMinX = player.gridX;
+                        int myMaxX = player.gridX + myFootprint - 1;
+                        int myMinY = player.gridY;
+                        int myMaxY = player.gridY + myFootprint - 1;
+
+                        int maxRange = 2;
+                        if (loader != null)
+                        {
+                            maxRange = Mathf.Max(2, RPGTable.Runtime.CampaignGameLoader.GetMaxAbilityRange(player.characterPath, player.activeWeaponIndex));
+                        }
+
+                        if (!string.IsNullOrEmpty(player.currentMapId) && RPGTable.Runtime.CampaignGameSession.MapTokenStates.TryGetValue(player.currentMapId, out var npcList))
+                        {
+                            foreach (var npc in npcList)
+                            {
+                                if (npc != null && !npc.isDead && npc.team != RPGTable.Core.TokenTeam.Player)
                                 {
-                                    Vector2Int targetGridPos = targetBoardToken.gridPosition;
-                                    var grid = GameObject.FindAnyObjectByType<RPGTable.Board.BoardGrid>();
-                                    if (grid != null)
+                                    int npcFootprint = 1;
+                                    if (!string.IsNullOrEmpty(npc.tokenPath))
                                     {
-                                        var size = Mathf.Max(1, targetBoardToken.footprintSize);
-                                        var offset = new Vector3((size - 1) * grid.cellSize * 0.5f, (size - 1) * grid.cellSize * 0.5f, 0f);
-                                        targetGridPos = grid.WorldToCell(targetBoardToken.transform.position - offset);
-                                        // Also snap it if it was completely uninitialized
-                                        if (targetBoardToken.gridPosition == Vector2Int.zero && targetBoardToken.transform.position.sqrMagnitude > 0.1f)
-                                        {
-                                            targetBoardToken.SnapToGrid(grid);
-                                        }
+                                        var npcData = RPGTable.TokenEditor.UserTokenStore.LoadToken(npc.tokenPath);
+                                        npcFootprint = RPGTable.Runtime.CampaignTokenSpawner.GetFootprint(npcData);
                                     }
 
-                                    int myMinX = myBoardToken.gridPosition.x;
-                                    int myMaxX = myBoardToken.gridPosition.x + myBoardToken.footprintSize - 1;
-                                    int myMinY = myBoardToken.gridPosition.y;
-                                    int myMaxY = myBoardToken.gridPosition.y + myBoardToken.footprintSize - 1;
-
-                                    int tMinX = targetGridPos.x;
-                                    int tMaxX = targetGridPos.x + targetBoardToken.footprintSize - 1;
-                                    int tMinY = targetGridPos.y;
-                                    int tMaxY = targetGridPos.y + targetBoardToken.footprintSize - 1;
+                                    int tMinX = npc.gridPosition.x;
+                                    int tMaxX = npc.gridPosition.x + npcFootprint - 1;
+                                    int tMinY = npc.gridPosition.y;
+                                    int tMaxY = npc.gridPosition.y + npcFootprint - 1;
 
                                     int dx = Mathf.Max(0, Mathf.Max(myMinX - tMaxX, tMinX - myMaxX));
                                     int dy = Mathf.Max(0, Mathf.Max(myMinY - tMaxY, tMinY - myMaxY));
 
-                                    // dx/dy = 1 means touching. dx/dy = 2 means 1 empty cell between them.
-                                    if (dx <= 2 && dy <= 2)
+                                    if (dx <= maxRange && dy <= maxRange)
                                     {
-                                        var data = RPGTable.TokenEditor.UserTokenStore.LoadToken(targetRuntime.TokenPath);
+                                        var data = RPGTable.TokenEditor.UserTokenStore.LoadToken(npc.tokenPath);
                                         string pPath = data != null && data.portraitPath != null ? Convert.ToBase64String(Encoding.UTF8.GetBytes(data.portraitPath)) : "";
                                         string url = $"/api/image?path={pPath}";
-                                        enemiesJson.Add($"{{\"id\":\"{targetRuntime.RuntimeId}\",\"name\":\"{targetRuntime.DisplayName}\",\"portraitUrl\":\"{url}\",\"hp\":{targetRuntime.CurrentHp},\"maxHp\":{targetRuntime.MaxHp}}}");
+                                        enemiesJson.Add($"{{\"id\":\"{npc.runtimeId}\",\"name\":\"{npc.displayName}\",\"portraitUrl\":\"{url}\",\"hp\":{npc.currentHp},\"maxHp\":{npc.maxHp}}}");
                                     }
                                 }
                             }
                         }
+
+                        if (ActiveRolls.TryGetValue(playerId, out var pr))
+                        {
+                            string attackerName = "";
+                            if (pr.type == "defense" && !string.IsNullOrEmpty(pr.attackerTokenId))
+                            {
+                                var attackerToken = RPGTable.Runtime.CampaignGameSession.FindPlayer(pr.attackerTokenId);
+                                if (attackerToken != null)
+                                {
+                                    attackerName = attackerToken.name;
+                                }
+                                else if (!string.IsNullOrEmpty(player.currentMapId))
+                                {
+                                    var npc = RPGTable.Runtime.CampaignGameSession.FindNPCState(player.currentMapId, pr.attackerTokenId);
+                                    if (npc != null) attackerName = npc.displayName;
+                                }
+                            }
+
+                             pendingRollJson = "{" +
+                                $"\"id\":\"{JsonString(pr.id)}\"," +
+                                $"\"type\":\"{JsonString(pr.type)}\"," +
+                                $"\"playerId\":\"{JsonString(pr.playerId)}\"," +
+                                $"\"targetTokenId\":\"{JsonString(pr.targetTokenId)}\"," +
+                                $"\"attackerTokenId\":\"{JsonString(pr.attackerTokenId)}\"," +
+                                $"\"attackerName\":\"{JsonString(attackerName)}\"," +
+                                $"\"attackerAbilityName\":\"{JsonString(pr.attackerAbilityName)}\"," +
+                                $"\"attackerRollResult\":{pr.attackerRollResult}," +
+                                $"\"baseDamage\":{pr.baseDamage}," +
+                                $"\"canReroll\":{pr.canReroll.ToString().ToLowerInvariant()}," +
+                                $"\"rerollCost\":{pr.rerollCost}" +
+                                "}";
+                         }
                     }
                 });
 
                 if (!string.IsNullOrEmpty(promptText))
                 {
-                    json = $"{{{playerStateJson}\"prompt\":\"{JsonString(promptText)}\", \"enemies\":[{string.Join(",", enemiesJson)}]}}";
+                    json = $"{{{playerStateJson}\"prompt\":\"{JsonString(promptText)}\", \"enemies\":[{string.Join(",", enemiesJson)}], \"pendingRoll\":{pendingRollJson}}}";
                 }
                 else
                 {
-                    json = $"{{{playerStateJson}\"enemies\":[{string.Join(",", enemiesJson)}]}}";
+                    json = $"{{{playerStateJson}\"enemies\":[{string.Join(",", enemiesJson)}], \"pendingRoll\":{pendingRollJson}}}";
                 }
                 
                 SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(json));
@@ -1039,80 +1116,196 @@ namespace RPGTable.Runtime.Networking
                 return;
             }
 
-            if (method == "POST" && url == "/api/action/attack")
+            if (method == "POST" && (url == "/api/action/request-attack" || url == "/api/action/attack"))
             {
                 try
                 {
-                    var payload = JsonUtility.FromJson<AttackPayload>(requestStr);
+                    var payload = JsonUtility.FromJson<RequestAttackPayload>(requestStr);
+                    if (payload != null)
+                    {
+                        Debug.Log($"[WebServerManager] request-attack payload: playerId={payload.playerId}, targetId={payload.targetId}");
+                    }
                     if (payload != null && !string.IsNullOrEmpty(payload.playerId) && !string.IsNullOrEmpty(payload.targetId))
                     {
+                        bool success = false;
+                        string failReason = "unknown";
                         ExecuteOnMainThreadBlocking(() => {
-                            var tokens = GameObject.FindObjectsByType<RPGTable.Runtime.CampaignRuntimeToken>(FindObjectsInactive.Exclude);
-                            var myToken = System.Linq.Enumerable.FirstOrDefault(tokens, t => t.PlayerId == payload.playerId);
-                            var targetToken = System.Linq.Enumerable.FirstOrDefault(tokens, t => t.RuntimeId == payload.targetId);
-
-                            if (myToken != null && targetToken != null && !targetToken.IsDead)
+                            var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+                            if (loader != null)
                             {
-                                // Apply damage
-                                targetToken.CurrentHp -= 1;
-                                // Update GM UI
-#if UNITY_2023_1_OR_NEWER
-                                var uiLoader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
-#else
-                                var uiLoader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
-#endif
-                                if (uiLoader != null)
+                                var tokens = GameObject.FindObjectsByType<RPGTable.Runtime.CampaignRuntimeToken>(FindObjectsInactive.Exclude);
+                                var myToken = System.Linq.Enumerable.FirstOrDefault(tokens, t => !t.IsPlayerViewClone && t.PlayerId == payload.playerId);
+                                var targetToken = System.Linq.Enumerable.FirstOrDefault(tokens, t => !t.IsPlayerViewClone && t.RuntimeId == payload.targetId);
+                                
+                                if (myToken == null) Debug.LogWarning($"[WebServerManager] myToken not found for playerId={payload.playerId}");
+                                if (targetToken == null) Debug.LogWarning($"[WebServerManager] targetToken not found for targetId={payload.targetId}");
+                                
+                                if (myToken != null && targetToken != null)
                                 {
-                                    uiLoader.UI.RefreshActiveTokensPanel();
-                                }
-
-                                if (targetToken.CurrentHp <= 0)
-                                {
-                                    var targetBoardToken = targetToken.GetComponent<RPGTable.Core.BoardToken>();
-                                    if (uiLoader != null && targetBoardToken != null)
+                                    if (targetToken.IsDead)
                                     {
-                                        uiLoader.StartCoroutine(DelayDeathRoutine(targetToken, targetBoardToken.footprintSize, uiLoader));
+                                        failReason = "target is dead";
+                                    }
+                                    else
+                                    {
+                                        Debug.Log($"[WebServerManager] Calling loader.InitiateAttackSequence attacker={myToken.DisplayName}, target={targetToken.DisplayName}");
+                                        loader.InitiateAttackSequence(myToken, targetToken);
+                                        success = true;
                                     }
                                 }
-
-                                // Animate GM token
-                                var animator = myToken.GetComponent<RPGTable.Runtime.TokenAttackAnimator>();
-                                if (animator == null) animator = myToken.gameObject.AddComponent<RPGTable.Runtime.TokenAttackAnimator>();
-                                animator.AnimateAttack(targetToken.transform.position);
-
-                                var targetAnimator = targetToken.GetComponent<RPGTable.Runtime.TokenAttackAnimator>();
-                                if (targetAnimator == null) targetAnimator = targetToken.gameObject.AddComponent<RPGTable.Runtime.TokenAttackAnimator>();
-                                targetAnimator.AnimateDamage(myToken.transform.position);
-
-                                // Animate Player View token (layer 31)
-                                GameObject pvMyToken = null;
-                                GameObject pvTargetToken = null;
-                                foreach (var obj in GameObject.FindObjectsByType<Transform>(FindObjectsInactive.Exclude))
+                                else
                                 {
-                                    if (obj.gameObject.layer == 31)
-                                    {
-                                        if (obj.name == myToken.name || obj.name == myToken.DisplayName) pvMyToken = obj.gameObject;
-                                        if (obj.name == targetToken.name || obj.name == targetToken.DisplayName) pvTargetToken = obj.gameObject;
-                                    }
-                                }
-                                if (pvMyToken != null && pvTargetToken != null)
-                                {
-                                    var pvAnimator = pvMyToken.GetComponent<RPGTable.Runtime.TokenAttackAnimator>();
-                                    if (pvAnimator == null) pvAnimator = pvMyToken.AddComponent<RPGTable.Runtime.TokenAttackAnimator>();
-                                    pvAnimator.AnimateAttack(pvTargetToken.transform.position);
-
-                                    var pvTargetAnimator = pvTargetToken.GetComponent<RPGTable.Runtime.TokenAttackAnimator>();
-                                    if (pvTargetAnimator == null) pvTargetAnimator = pvTargetToken.AddComponent<RPGTable.Runtime.TokenAttackAnimator>();
-                                    pvTargetAnimator.AnimateDamage(pvMyToken.transform.position);
+                                    failReason = "token not found";
                                 }
                             }
+                            else
+                            {
+                                failReason = "loader not found";
+                            }
                         });
-                        SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes("{\"status\":\"success\"}"));
+                        string resp = success ? "{\"status\":\"success\"}" : $"{{\"status\":\"failed\",\"reason\":\"{failReason}\"}}";
+                        SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(resp));
+                    }
+                    else
+                    {
+                        SendResponse(stream, 400, "Bad Request", "text/plain", Encoding.UTF8.GetBytes("Invalid payload"));
                     }
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"[WebServerManager] attack error: {ex}");
+                    Debug.LogError($"[WebServerManager] request-attack error: {ex}");
+                    SendResponse(stream, 500, "Internal Server Error", "text/plain", Encoding.UTF8.GetBytes(ex.Message));
+                }
+                return;
+            }
+
+            if (method == "POST" && url == "/api/roll/submit")
+            {
+                try
+                {
+                    var payload = JsonUtility.FromJson<SubmitRollPayload>(requestStr);
+                    if (payload != null && !string.IsNullOrEmpty(payload.playerId))
+                    {
+                        bool success = false;
+                        ExecuteOnMainThreadBlocking(() => {
+                            var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+                            if (loader != null)
+                            {
+                                success = loader.SubmitRoll(payload.playerId, payload.rollResult);
+                            }
+                        });
+                        string resp = success ? "{\"status\":\"success\"}" : "{\"status\":\"failed\"}";
+                        SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(resp));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[WebServerManager] roll/submit error: {ex}");
+                    SendResponse(stream, 500, "Internal Server Error", "text/plain", Encoding.UTF8.GetBytes(ex.Message));
+                }
+                return;
+            }
+
+            if (method == "POST" && url == "/api/roll/reroll")
+            {
+                try
+                {
+                    var payload = JsonUtility.FromJson<RerollPayload>(requestStr);
+                    if (payload != null && !string.IsNullOrEmpty(payload.playerId))
+                    {
+                        int newRoll = 0;
+                        ExecuteOnMainThreadBlocking(() => {
+                            var player = CampaignGameSession.FindPlayer(payload.playerId);
+                            if (player != null && player.rerollCoins > 0)
+                            {
+                                player.rerollCoins--;
+                                newRoll = UnityEngine.Random.Range(1, 7);
+                                CampaignGameSession.UpdateTokenCombatStats(
+                                    player.id, player.currentMapId,
+                                    player.currentHp, player.maxHp,
+                                    player.currentArmor, player.maxArmor,
+                                    player.currentMovementPoints, player.maxMovementPoints,
+                                    player.currentRolls, player.maxRolls,
+                                    player.activeWeaponIndex, player.rerollCoins,
+                                    player.statusEffects, player.isDead);
+                            }
+                        });
+                        string resp = newRoll > 0 
+                            ? $"{{\"status\":\"success\",\"rollResult\":{newRoll}}}"
+                            : "{\"status\":\"failed\",\"reason\":\"No coins left\"}";
+                        SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(resp));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[WebServerManager] roll/reroll error: {ex}");
+                    SendResponse(stream, 500, "Internal Server Error", "text/plain", Encoding.UTF8.GetBytes(ex.Message));
+                }
+                return;
+            }
+
+            if (method == "POST" && url == "/api/action/switch-weapon")
+            {
+                try
+                {
+                    var payload = JsonUtility.FromJson<SwitchWeaponPayload>(requestStr);
+                    if (payload != null && !string.IsNullOrEmpty(payload.playerId))
+                    {
+                        bool success = false;
+                        ExecuteOnMainThreadBlocking(() => {
+                            var player = CampaignGameSession.FindPlayer(payload.playerId);
+                            if (player != null)
+                            {
+                                player.activeWeaponIndex = player.activeWeaponIndex == 0 ? 1 : 0;
+                                CampaignGameSession.UpdateTokenCombatStats(
+                                    player.id, player.currentMapId,
+                                    player.currentHp, player.maxHp,
+                                    player.currentArmor, player.maxArmor,
+                                    player.currentMovementPoints, player.maxMovementPoints,
+                                    player.currentRolls, player.maxRolls,
+                                    player.activeWeaponIndex, player.rerollCoins,
+                                    player.statusEffects, player.isDead);
+                                success = true;
+                            }
+                        });
+                        string resp = success ? "{\"status\":\"success\"}" : "{\"status\":\"failed\"}";
+                        SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(resp));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[WebServerManager] switch-weapon error: {ex}");
+                    SendResponse(stream, 500, "Internal Server Error", "text/plain", Encoding.UTF8.GetBytes(ex.Message));
+                }
+                return;
+            }
+
+            if (method == "POST" && url == "/api/action/end-turn")
+            {
+                try
+                {
+                    var payload = JsonUtility.FromJson<EndTurnPayload>(requestStr);
+                    if (payload != null && !string.IsNullOrEmpty(payload.playerId))
+                    {
+                        bool success = false;
+                        ExecuteOnMainThreadBlocking(() => {
+                            if (RPGTable.Runtime.CampaignGameSession.IsCombatActive 
+                                && RPGTable.Runtime.CombatManager.Instance != null
+                                && RPGTable.Runtime.CombatManager.Instance.ActiveToken != null
+                                && RPGTable.Runtime.CombatManager.Instance.ActiveToken.PlayerId == payload.playerId)
+                            {
+                                RPGTable.Runtime.CombatManager.Instance.EndTokenTurn();
+                                success = true;
+                            }
+                        });
+                        string resp = success ? "{\"status\":\"success\"}" : "{\"status\":\"failed\"}";
+                        SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(resp));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[WebServerManager] end-turn error: {ex}");
+                    SendResponse(stream, 500, "Internal Server Error", "text/plain", Encoding.UTF8.GetBytes(ex.Message));
                 }
                 return;
             }

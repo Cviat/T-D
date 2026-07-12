@@ -19,10 +19,50 @@ namespace RPGTable.Runtime
         public bool isReady;
         public int currentHp;
         public int maxHp;
+        public int currentArmor;
+        public int maxArmor;
+        public int rerollCoins = 3;
+        public int currentMovementPoints = 3;
+        public int maxMovementPoints = 3;
+        public int currentRolls = 1;
+        public int maxRolls = 1;
+        public int activeWeaponIndex = 0;
+        public List<RPGTable.Core.ActiveStatusEffect> statusEffects = new List<RPGTable.Core.ActiveStatusEffect>();
     }
 
     public static class CampaignGameSession
     {
+        [Serializable]
+        public class RuntimeMapTokenState
+        {
+            public string runtimeId;
+            public string displayName;
+            public string characterPath;
+            public string tokenPath;
+            public RPGTable.Core.TokenTeam team;
+            public bool visibleToPlayers;
+            public UnityEngine.Vector2Int gridPosition;
+            public bool isDead;
+            public int currentHp;
+            public int maxHp;
+            public int currentArmor;
+            public int maxArmor;
+            public int currentMovementPoints = 3;
+            public int maxMovementPoints = 3;
+            public int currentRolls = 1;
+            public int maxRolls = 1;
+            public int activeWeaponIndex = 0;
+            public List<RPGTable.Core.ActiveStatusEffect> statusEffects = new List<RPGTable.Core.ActiveStatusEffect>();
+        }
+
+        public static readonly Dictionary<string, List<RuntimeMapTokenState>> MapTokenStates = 
+            new Dictionary<string, List<RuntimeMapTokenState>>();
+
+        public static event Action<string, string, int, int, bool> OnTokenDataChanged;
+        public static event Action<string, string, UnityEngine.Vector2Int> OnTokenPositionChanged;
+        public static event Action<string, string, string, string> OnTokenActionTriggered;
+        public static event Action<string> OnTokenFocused;
+
         private static readonly List<CampaignPlayerData> Players = new List<CampaignPlayerData>();
         private static int nextPlayerIndex = 1;
 
@@ -45,7 +85,8 @@ namespace RPGTable.Runtime
             {
                 id = $"player_{nextPlayerIndex++}",
                 name = "Турбослав",
-                avatarResourceName = "DefaultPlayer"
+                avatarResourceName = "DefaultPlayer",
+                rerollCoins = 3
             };
 
             Players.Add(player);
@@ -59,6 +100,7 @@ namespace RPGTable.Runtime
             string portraitPath,
             string tokenPath)
         {
+            var charData = string.IsNullOrWhiteSpace(characterPath) ? null : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(characterPath);
             var player = new CampaignPlayerData
             {
                 id = $"player_{nextPlayerIndex++}",
@@ -66,7 +108,12 @@ namespace RPGTable.Runtime
                 avatarResourceName = "DefaultPlayer",
                 characterPath = characterPath,
                 portraitPath = portraitPath,
-                tokenPath = tokenPath
+                tokenPath = tokenPath,
+                rerollCoins = charData != null ? charData.rerollCoins : 3,
+                maxHp = charData != null ? charData.maxHp : 10,
+                currentHp = charData != null ? charData.maxHp : 10,
+                maxArmor = charData != null ? charData.maxArmor : 0,
+                currentArmor = charData != null ? charData.maxArmor : 0
             };
 
             Players.Add(player);
@@ -82,7 +129,12 @@ namespace RPGTable.Runtime
                 name = string.IsNullOrWhiteSpace(playerName) ? "Player" : playerName,
                 avatarResourceName = "DefaultPlayer",
                 portraitPath = portraitPath,
-                isReady = false
+                isReady = false,
+                rerollCoins = 3,
+                maxHp = 10,
+                currentHp = 10,
+                maxArmor = 0,
+                currentArmor = 0
             };
 
             Players.Add(player);
@@ -104,6 +156,7 @@ namespace RPGTable.Runtime
                 return false;
             }
 
+            var charData = string.IsNullOrWhiteSpace(characterPath) ? null : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(characterPath);
             player.name = string.IsNullOrWhiteSpace(characterName) ? player.name : characterName;
             player.characterPath = characterPath;
             if (!string.IsNullOrWhiteSpace(portraitPath))
@@ -112,6 +165,11 @@ namespace RPGTable.Runtime
             }
             player.tokenPath = tokenPath;
             player.isReady = !string.IsNullOrWhiteSpace(tokenPath);
+            player.rerollCoins = charData != null ? charData.rerollCoins : 3;
+            player.maxHp = charData != null ? charData.maxHp : 10;
+            player.currentHp = player.maxHp;
+            player.maxArmor = charData != null ? charData.maxArmor : 0;
+            player.currentArmor = player.maxArmor;
             OnPlayersChanged?.Invoke();
             return true;
         }
@@ -190,6 +248,211 @@ namespace RPGTable.Runtime
                 Players.Clear();
                 OnPlayersChanged?.Invoke();
             }
+        }
+
+        public static RuntimeMapTokenState FindNPCState(string mapId, string runtimeId)
+        {
+            if (string.IsNullOrEmpty(mapId) || string.IsNullOrEmpty(runtimeId)) return null;
+            if (MapTokenStates.TryGetValue(mapId, out var list))
+            {
+                return list.Find(s => s.runtimeId == runtimeId);
+            }
+            return null;
+        }
+
+        public static void UpdateNPCState(string mapId, string runtimeId, int currentHp, int currentArmor, bool isDead)
+        {
+            var state = FindNPCState(mapId, runtimeId);
+            if (state != null)
+            {
+                state.currentHp = currentHp;
+                state.currentArmor = currentArmor;
+                state.isDead = isDead;
+            }
+        }
+
+        public static bool TryGetTokenData(string id, string mapId, out int hp, out int maxHp, out int armor, out int maxArmor, out bool dead)
+        {
+            hp = 0; maxHp = 0; armor = 0; maxArmor = 0; dead = false;
+
+            var player = FindPlayer(id);
+            if (player != null)
+            {
+                hp = player.currentHp;
+                maxHp = player.maxHp;
+                armor = player.currentArmor;
+                maxArmor = player.maxArmor;
+                dead = player.isDead;
+                return true;
+            }
+
+            var npc = FindNPCState(mapId, id);
+            if (npc != null)
+            {
+                hp = npc.currentHp;
+                maxHp = npc.maxHp;
+                armor = npc.currentArmor;
+                maxArmor = npc.maxArmor;
+                dead = npc.isDead;
+                return true;
+            }
+
+            return false;
+        }
+
+        public static void UpdateTokenData(string id, string mapId, int hp, int armor, bool dead)
+        {
+            var player = FindPlayer(id);
+            if (player != null)
+            {
+                player.currentHp = hp;
+                player.currentArmor = armor;
+                player.isDead = dead;
+                OnTokenDataChanged?.Invoke(id, mapId, hp, armor, dead);
+                return;
+            }
+
+            UpdateNPCState(mapId, id, hp, armor, dead);
+            OnTokenChanged(id, mapId, hp, armor, dead);
+        }
+
+        private static void OnTokenChanged(string id, string mapId, int hp, int armor, bool dead)
+        {
+            OnTokenDataChanged?.Invoke(id, mapId, hp, armor, dead);
+        }
+
+        public static void MoveToken(string id, string mapId, UnityEngine.Vector2Int nextPos)
+        {
+            var player = FindPlayer(id);
+            if (player != null)
+            {
+                player.gridX = nextPos.x;
+                player.gridY = nextPos.y;
+                player.currentMapId = mapId;
+                OnTokenPositionChanged?.Invoke(id, mapId, nextPos);
+                return;
+            }
+
+            var npc = FindNPCState(mapId, id);
+            if (npc != null)
+            {
+                npc.gridPosition = nextPos;
+                OnTokenPositionChanged?.Invoke(id, mapId, nextPos);
+            }
+        }
+
+        public static void TriggerTokenAction(string attackerId, string targetId, string actionType, string details = "")
+        {
+            OnTokenActionTriggered?.Invoke(attackerId, targetId, actionType, details);
+        }
+
+        public static void FocusToken(string id)
+        {
+            OnTokenFocused?.Invoke(id);
+        }
+
+        public static void UpdateTokenCombatStats(
+            string id,
+            string mapId,
+            int hp, int maxHp,
+            int armor, int maxArmor,
+            int movement, int maxMovement,
+            int rolls, int maxRolls,
+            int activeWeapon,
+            int rerollCoins,
+            List<RPGTable.Core.ActiveStatusEffect> statusEffects,
+            bool dead)
+        {
+            var player = FindPlayer(id);
+            if (player != null)
+            {
+                player.currentHp = hp;
+                player.maxHp = maxHp;
+                player.currentArmor = armor;
+                player.maxArmor = maxArmor;
+                player.currentMovementPoints = movement;
+                player.maxMovementPoints = maxMovement;
+                player.currentRolls = rolls;
+                player.maxRolls = maxRolls;
+                player.activeWeaponIndex = activeWeapon;
+                player.rerollCoins = rerollCoins;
+                player.statusEffects = statusEffects ?? new List<RPGTable.Core.ActiveStatusEffect>();
+                player.isDead = dead;
+                OnTokenDataChanged?.Invoke(id, mapId, hp, armor, dead);
+                return;
+            }
+
+            var npc = FindNPCState(mapId, id);
+            if (npc != null)
+            {
+                npc.currentHp = hp;
+                npc.maxHp = maxHp;
+                npc.currentArmor = armor;
+                npc.maxArmor = maxArmor;
+                npc.currentMovementPoints = movement;
+                npc.maxMovementPoints = maxMovement;
+                npc.currentRolls = rolls;
+                npc.maxRolls = maxRolls;
+                npc.activeWeaponIndex = activeWeapon;
+                npc.statusEffects = statusEffects ?? new List<RPGTable.Core.ActiveStatusEffect>();
+                npc.isDead = dead;
+                OnTokenDataChanged?.Invoke(id, mapId, hp, armor, dead);
+            }
+        }
+
+        public static bool TryGetTokenCombatStats(
+            string id,
+            string mapId,
+            out int hp, out int maxHp,
+            out int armor, out int maxArmor,
+            out int movement, out int maxMovement,
+            out int rolls, out int maxRolls,
+            out int activeWeapon,
+            out int rerollCoins,
+            out List<RPGTable.Core.ActiveStatusEffect> statusEffects,
+            out bool dead)
+        {
+            hp = 0; maxHp = 0; armor = 0; maxArmor = 0; dead = false;
+            movement = 3; maxMovement = 3; rolls = 1; maxRolls = 1; activeWeapon = 0; rerollCoins = 3;
+            statusEffects = new List<RPGTable.Core.ActiveStatusEffect>();
+
+            var player = FindPlayer(id);
+            if (player != null)
+            {
+                hp = player.currentHp;
+                maxHp = player.maxHp;
+                armor = player.currentArmor;
+                maxArmor = player.maxArmor;
+                movement = player.currentMovementPoints;
+                maxMovement = player.maxMovementPoints;
+                rolls = player.currentRolls;
+                maxRolls = player.maxRolls;
+                activeWeapon = player.activeWeaponIndex;
+                rerollCoins = player.rerollCoins;
+                statusEffects = player.statusEffects;
+                dead = player.isDead;
+                return true;
+            }
+
+            var npc = FindNPCState(mapId, id);
+            if (npc != null)
+            {
+                hp = npc.currentHp;
+                maxHp = npc.maxHp;
+                armor = npc.currentArmor;
+                maxArmor = npc.maxArmor;
+                movement = npc.currentMovementPoints;
+                maxMovement = npc.maxMovementPoints;
+                rolls = npc.currentRolls;
+                maxRolls = npc.maxRolls;
+                activeWeapon = npc.activeWeaponIndex;
+                rerollCoins = 3;
+                statusEffects = npc.statusEffects;
+                dead = npc.isDead;
+                return true;
+            }
+
+            return false;
         }
 
         public static void ResetRuntimePositions()

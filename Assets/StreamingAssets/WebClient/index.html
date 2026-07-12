@@ -115,6 +115,7 @@
             <div class="panel compact">
                 <div class="panel-title" id="turn-state">Ожидание</div>
                 <p class="muted" id="active-weapon">Оружие: -</p>
+                <button id="end-turn-button" class="button primary hidden" style="margin-top: 10px; width: 100%;" type="button">Завершить ход</button>
             </div>
 
             <div id="targets-container" class="targets-container"></div>
@@ -160,6 +161,21 @@
             <h2 id="attack-target-name">Атака</h2>
             <button id="attack-confirm" class="button primary" type="button">Атаковать</button>
             <button id="attack-cancel" class="button secondary" type="button">Отмена</button>
+        </div>
+    </div>
+
+    <div id="dice-modal" class="modal">
+        <div class="modal-content text-center">
+            <h2 id="dice-title">Бросок кубика</h2>
+            <p id="dice-prompt" class="muted">Вам нужно бросить кубик D6</p>
+            <div class="dice-container">
+                <div id="dice-value" class="dice-d6">?</div>
+            </div>
+            <div class="dice-actions">
+                <button id="dice-roll-btn" class="button primary" type="button">Бросить</button>
+                <button id="dice-reroll-btn" class="button secondary hidden" type="button">Перебросить (Монеты: <span id="dice-coins">-</span>)</button>
+                <button id="dice-submit-btn" class="button success hidden" type="button">Отправить</button>
+            </div>
         </div>
     </div>
 
