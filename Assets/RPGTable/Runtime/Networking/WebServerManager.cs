@@ -1411,7 +1411,10 @@ namespace RPGTable.Runtime.Networking
                                 $"\"description\":\"{JsonString(card.description)}\"," +
                                 $"\"cost\":{card.cost}," +
                                 $"\"range\":{card.range}," +
-                                $"\"attackType\":\"{card.attackType.ToString()}\"" +
+                                $"\"attackType\":\"{card.attackType.ToString()}\"," +
+                                $"\"effectType\":\"{card.effectType.ToString()}\"," +
+                                $"\"multiplier\":{card.multiplier}," +
+                                $"\"defenseValue\":{card.defenseValue}" +
                                 "}");
                         }
 

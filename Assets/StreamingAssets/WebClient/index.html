@@ -119,7 +119,14 @@
                 </div>
             </div>
 
-            <button class="button secondary" data-route="game" type="button" style="margin-bottom: 20px;">Назад</button>
+            <div id="ability-details-panel" class="panel" style="display: none; border-color: var(--accent); background: rgba(0,0,0,0.5); margin-top: 15px;">
+                <div class="panel-title" id="ability-details-title" style="color: var(--accent); font-family: 'Cinzel', serif;">Детали способности</div>
+                <div id="ability-details-content" style="font-size: 13px; line-height: 1.4; color: #fff;">
+                    <!-- Filled dynamically -->
+                </div>
+            </div>
+
+            <button class="button secondary" data-route="game" type="button" style="margin-bottom: 20px; margin-top: 15px;">Назад</button>
         </section>
 
         <section id="screen-game" class="screen">
@@ -228,9 +235,14 @@
                 </div>
             </div>
 
+            <div id="item-details-panel" class="panel" style="display: none; border-color: var(--accent); background: rgba(0,0,0,0.5); margin-top: 15px;">
+                <div class="panel-title" id="item-details-title" style="color: var(--accent); font-family: 'Cinzel', serif;">Детали предмета</div>
+                <div id="item-details-content" style="font-size: 13px; line-height: 1.4; color: #fff;">
+                    <!-- Filled dynamically -->
+                </div>
+            </div>
 
-
-            <button class="button secondary" data-route="game" type="button" style="margin-bottom: 20px;">Назад</button>
+            <button class="button secondary" data-route="game" type="button" style="margin-bottom: 20px; margin-top: 15px;">Назад</button>
         </section>
     </main>
 
