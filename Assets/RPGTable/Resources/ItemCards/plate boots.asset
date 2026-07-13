@@ -12,20 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0effc282f1594bd43b89f2e352655850, type: 3}
   m_Name: plate boots
   m_EditorClassIdentifier: Assembly-CSharp::RPGTable.Core.ItemCard
-  title: plate boots
-  description: "\u041A\u043E\u0436\u0430\u043D\u044B\u0435 \u0441\u0430\u043F\u043E\u0433\u0438."
+  title: "\u0422\u044F\u0436\u0435\u043B\u044B\u0435 \u043B\u0430\u0442\u043D\u044B\u0435
+    \u0441\u0430\u043F\u043E\u0433\u0438"
+  description: "\u0422\u044F\u0436\u0435\u043B\u044B\u0435 \u043B\u0430\u0442\u043D\u044B\u0435
+    \u0441\u0430\u043F\u043E\u0433\u0438 "
   icon: {fileID: 21300000, guid: cd7b401a96a069e45a2313a33309ef26, type: 3}
   itemType: 4
   scaleStat1: None
   coef1: 0
   scaleStat2: None
   coef2: 0
-  armorPoints: 2
+  armorPoints: 6
   bonusHp: 0
   bonusStr: 0
-  bonusAgi: 0
+  bonusAgi: -2
   bonusInt: 0
   bonusHol: 0
-  attribute: 
   attributes: []
   attackType: 0

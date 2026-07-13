@@ -23,9 +23,8 @@ MonoBehaviour:
   armorPoints: 2
   bonusHp: 0
   bonusStr: 0
-  bonusAgi: 0
+  bonusAgi: 2
   bonusInt: 0
   bonusHol: 0
-  attribute: 
   attributes: []
   attackType: 0

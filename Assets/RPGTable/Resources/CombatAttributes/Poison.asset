@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b59057c9bdd22564a82074ca28b7bcc9, type: 3}
   m_Name: Poison
   m_EditorClassIdentifier: Assembly-CSharp::RPGTable.Core.CombatAttribute
-  icon: {fileID: 21300000, guid: c51afa706b02a044694b30f33f81d239, type: 3}
+  icon: {fileID: 21300000, guid: 2531e15fe967a354d9d28c9cfc1d71ca, type: 3}
   attributeName: "\u041E\u0442\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435"
   affectedStat: 1
   value: -4

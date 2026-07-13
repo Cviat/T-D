@@ -129,12 +129,40 @@ namespace RPGTable.TokenEditor
             return targetPath;
         }
 
+        /// <summary>
+        /// Resolves an "Assets/…" relative path (used for built-in frame sprites) to an
+        /// absolute disk path so that File.Exists / File.ReadAllBytes work at runtime.
+        /// </summary>
+        private static string ResolveAbsolutePath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return path;
+
+            // Already absolute (user-imported images stored in persistentDataPath)
+            if (Path.IsPathRooted(path))
+                return path;
+
+            // Asset-relative path like "Assets/RPGTable/Art/TokenFrames/Frame_01.png"
+            if (path.StartsWith("Assets/", System.StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("Assets\\", System.StringComparison.OrdinalIgnoreCase))
+            {
+                // Application.dataPath ends with "/Assets", so strip the leading "Assets" part
+                var relativePart = path.Substring("Assets".Length).TrimStart('/', '\\');
+                return Path.Combine(Application.dataPath, relativePart);
+            }
+
+            return path;
+        }
+
         public static Sprite LoadSprite(string path)
         {
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            var resolvedPath = ResolveAbsolutePath(path);
+            if (string.IsNullOrWhiteSpace(resolvedPath) || !File.Exists(resolvedPath))
             {
                 return null;
             }
+            // Normalise the cache key to the original path so callers don't need to care
+            path = resolvedPath;
 
             if (spriteCache.TryGetValue(path, out var cached) && cached != null)
             {

@@ -12,6 +12,10 @@ namespace RPGTable.Board
         [SerializeField] private Color moveRangeColor = new Color(0.2f, 0.8f, 0.2f, 0.35f); // Green
         [SerializeField] private Color actionRangeColor = new Color(0.8f, 0.2f, 0.2f, 0.25f); // Red
 
+        public HashSet<Vector2Int> MoveCells { get; private set; } = new HashSet<Vector2Int>();
+        public HashSet<Vector2Int> ActionCells { get; private set; } = new HashSet<Vector2Int>();
+        public HashSet<Vector2Int> MovePositions { get; private set; } = new HashSet<Vector2Int>();
+
         private BoardGrid grid;
         private readonly List<GameObject> activeHighlights = new List<GameObject>();
 
@@ -47,10 +51,6 @@ namespace RPGTable.Board
             int moveSteps  = token.CurrentMovementPoints;  // steps (each step = fp cells)
             int actionRange = GetMaxAbilityRange(token);   // ability range in cells (not steps)
 
-            // Build sets of all cells that would be painted
-            HashSet<Vector2Int> moveCells   = new HashSet<Vector2Int>();
-            HashSet<Vector2Int> actionCells = new HashSet<Vector2Int>();
-
             // --- Movement range: stamp footprint at each reachable step position ---
             for (int sx = -moveSteps; sx <= moveSteps; sx++)
             {
@@ -67,10 +67,12 @@ namespace RPGTable.Board
                         topLeft.x + fp > grid.width || topLeft.y + fp > grid.height)
                         continue;
 
+                    MovePositions.Add(topLeft);
+
                     // Stamp all fp×fp cells for this position
                     for (int fx = 0; fx < fp; fx++)
                         for (int fy = 0; fy < fp; fy++)
-                            moveCells.Add(new Vector2Int(topLeft.x + fx, topLeft.y + fy));
+                            MoveCells.Add(new Vector2Int(topLeft.x + fx, topLeft.y + fy));
                 }
             }
 
@@ -92,20 +94,20 @@ namespace RPGTable.Board
 
                     int dist = Mathf.Max(Mathf.Abs(x), Mathf.Abs(y));
                     if (dist <= actionRange)
-                        actionCells.Add(targetCell);
+                        ActionCells.Add(targetCell);
                 }
             }
 
             // Draw action range first (underneath), then movement range on top
-            foreach (var cell in actionCells)
-                SpawnHighlight(cell, actionRangeColor);
+            foreach (var cell in ActionCells)
+                SpawnHighlight(cell, actionRangeColor, -6, -0.04f);
 
-            foreach (var cell in moveCells)
-                SpawnHighlight(cell, moveRangeColor);
+            foreach (var cell in MoveCells)
+                SpawnHighlight(cell, moveRangeColor, -5, -0.05f);
 
             // Spawn reticle on targetable enemies in action range
             var allTokens = GameObject.FindObjectsByType<RPGTable.Runtime.CampaignRuntimeToken>(FindObjectsInactive.Exclude);
-            Sprite reticleSprite = Resources.Load<Sprite>("image/Gemini_Generated_Image_m2vmn7m2vmn7m2vm");
+            Sprite reticleSprite = Resources.Load<Sprite>("image/icon_reticle");
             foreach (var t in allTokens)
             {
                 if (t == token || t.IsPlayerViewClone || t.IsDead) continue;
@@ -153,17 +155,17 @@ namespace RPGTable.Board
             activeHighlights.Add(reticleGo);
         }
 
-        private void SpawnHighlight(Vector2Int cell, Color color)
+        private void SpawnHighlight(Vector2Int cell, Color color, int sortingOrder, float zOffset)
         {
             var highlightGo = new GameObject("GridHighlight");
             highlightGo.transform.SetParent(transform, false);
-            highlightGo.transform.position = grid.CellToWorld(cell) + new Vector3(0f, 0f, -0.05f); // slightly in front of map, behind tokens
-            highlightGo.transform.localScale = new Vector3(grid.cellSize * 0.95f, grid.cellSize * 0.95f, 1f); // slightly smaller for a nice border effect!
+            highlightGo.transform.position = grid.CellToWorld(cell) + new Vector3(0f, 0f, zOffset);
+            highlightGo.transform.localScale = new Vector3(grid.cellSize * 0.95f, grid.cellSize * 0.95f, 1f);
 
             var renderer = highlightGo.AddComponent<SpriteRenderer>();
             renderer.sprite = RuntimeSpriteFactory.Square;
             renderer.color = color;
-            renderer.sortingOrder = -5; // Behind tokens (usually sortingOrder 0+), in front of background grid (sortingOrder -20)
+            renderer.sortingOrder = sortingOrder;
 
             activeHighlights.Add(highlightGo);
         }
@@ -178,6 +180,9 @@ namespace RPGTable.Board
                 }
             }
             activeHighlights.Clear();
+            MoveCells.Clear();
+            ActionCells.Clear();
+            MovePositions.Clear();
         }
 
         private int GetMaxAbilityRange(RPGTable.Runtime.CampaignRuntimeToken token)
@@ -222,20 +227,20 @@ namespace RPGTable.Board
 
         private static bool AreHostile(TokenTeam attackerTeam, TokenTeam targetTeam)
         {
+            if (attackerTeam == targetTeam)
+            {
+                return false;
+            }
+
             bool attackerIsParty = attackerTeam == TokenTeam.Player || attackerTeam == TokenTeam.Ally;
             bool targetIsParty = targetTeam == TokenTeam.Player || targetTeam == TokenTeam.Ally;
 
-            if (attackerIsParty && targetTeam == TokenTeam.Enemy)
+            if (attackerIsParty && targetIsParty)
             {
-                return true;
+                return false;
             }
 
-            if (attackerTeam == TokenTeam.Enemy && targetIsParty)
-            {
-                return true;
-            }
-
-            return false;
+            return true;
         }
     }
 }

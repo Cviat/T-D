@@ -322,14 +322,13 @@ namespace RPGTable.Runtime
 
         private bool HasOpposingLivingSides()
         {
-            var hasParty = false;
-            var hasEnemy = false;
+            var aliveFactions = new System.Collections.Generic.HashSet<string>();
 
             foreach (var p in CampaignGameSession.CurrentPlayers)
             {
                 if (!p.isDead && p.currentHp > 0)
                 {
-                    hasParty = true;
+                    aliveFactions.Add("Party");
                 }
             }
 
@@ -340,11 +339,15 @@ namespace RPGTable.Runtime
                 {
                     if (t.Team == TokenTeam.Player || t.Team == TokenTeam.Ally)
                     {
-                        hasParty = true;
+                        aliveFactions.Add("Party");
                     }
                     else if (t.Team == TokenTeam.Enemy)
                     {
-                        hasEnemy = true;
+                        aliveFactions.Add("Enemy");
+                    }
+                    else if (t.Team == TokenTeam.Neutral)
+                    {
+                        aliveFactions.Add("Neutral");
                     }
                 }
             }
@@ -357,13 +360,23 @@ namespace RPGTable.Runtime
                 {
                     if (npc != null && !npc.isDead && npc.currentHp > 0)
                     {
-                        if (npc.team == TokenTeam.Enemy) hasEnemy = true;
-                        else if (npc.team == TokenTeam.Ally) hasParty = true;
+                        if (npc.team == TokenTeam.Player || npc.team == TokenTeam.Ally)
+                        {
+                            aliveFactions.Add("Party");
+                        }
+                        else if (npc.team == TokenTeam.Enemy)
+                        {
+                            aliveFactions.Add("Enemy");
+                        }
+                        else if (npc.team == TokenTeam.Neutral)
+                        {
+                            aliveFactions.Add("Neutral");
+                        }
                     }
                 }
             }
 
-            return hasParty && hasEnemy;
+            return aliveFactions.Count > 1;
         }
 
         private List<RPGTable.Core.ActiveStatusEffect> ProcessStatusEffectsData(

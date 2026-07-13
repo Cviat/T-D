@@ -200,9 +200,52 @@ namespace RPGTable.Runtime
 
         public void SpawnStoredTokensForCurrentMap()
         {
-            if (context.CurrentMapNode == null || !CampaignGameSession.MapTokenStates.TryGetValue(context.CurrentMapNode.id, out var states))
+            if (context.CurrentMapNode == null)
             {
                 return;
+            }
+
+            if (!CampaignGameSession.MapTokenStates.TryGetValue(context.CurrentMapNode.id, out var states))
+            {
+                states = new List<RuntimeMapTokenState>();
+                string campaignPath = CampaignGameSession.SelectedCampaignPath;
+                if (!string.IsNullOrEmpty(campaignPath) && System.IO.File.Exists(campaignPath))
+                {
+                    var campaignData = UserCampaignStore.LoadCampaign(campaignPath);
+                    if (campaignData != null && campaignData.maps != null)
+                    {
+                        foreach (var nodeData in campaignData.maps)
+                        {
+                            if (nodeData.id == context.CurrentMapNode.id && nodeData.presetTokens != null)
+                            {
+                                foreach (var preset in nodeData.presetTokens)
+                                {
+                                    var tokenData = UserTokenStore.LoadToken(preset.tokenPath);
+                                    var charData = RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(preset.characterPath);
+                                    if (tokenData == null) continue;
+
+                                    states.Add(new RuntimeMapTokenState
+                                    {
+                                        runtimeId = NewRuntimeTokenId(),
+                                        displayName = preset.displayName ?? (charData != null ? charData.name : tokenData.name),
+                                        characterPath = preset.characterPath,
+                                        tokenPath = preset.tokenPath,
+                                        team = preset.team,
+                                        visibleToPlayers = preset.visibleToPlayers,
+                                        gridPosition = context.Grid != null ? context.Grid.WorldToCell(new Vector3(preset.worldPosition.x, preset.worldPosition.y, 0f)) : Vector2Int.zero,
+                                        isDead = false,
+                                        currentHp = charData != null ? charData.maxHp : 10,
+                                        maxHp = charData != null ? charData.maxHp : 10,
+                                        currentArmor = charData != null ? charData.maxArmor : 0,
+                                        maxArmor = charData != null ? charData.maxArmor : 0
+                                    });
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+                CampaignGameSession.MapTokenStates[context.CurrentMapNode.id] = states;
             }
 
             for (var i = 0; i < states.Count; i++)

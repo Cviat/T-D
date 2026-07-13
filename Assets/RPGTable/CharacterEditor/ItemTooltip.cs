@@ -38,17 +38,22 @@ namespace RPGTable.CharacterEditor
             if (gameObject.activeSelf)
             {
                 Vector3 mousePos = UnityEngine.Input.mousePosition;
-                
-                float xOffset = 15f;
-                float yOffset = -15f;
+                float width = rectTransform.sizeDelta.x;
+                float height = rectTransform.sizeDelta.y;
 
-                if (mousePos.x + 250f > Screen.width)
+                float xOffset = 15f;
+                // Position above the cursor by default. Top of tooltip is at mouse.y + height + 15
+                float yOffset = 15f + height;
+
+                if (mousePos.x + xOffset + width > Screen.width)
                 {
-                    xOffset = -255f;
+                    xOffset = -15f - width;
                 }
-                if (mousePos.y - 150f < 0)
+                
+                if (mousePos.y + yOffset > Screen.height)
                 {
-                    yOffset = 15f;
+                    // Fallback to below the cursor
+                    yOffset = -15f;
                 }
 
                 rectTransform.position = mousePos + new Vector3(xOffset, yOffset, 0f);

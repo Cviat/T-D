@@ -279,6 +279,15 @@ namespace RPGTable.Runtime
             }
         }
 
+        public static void UpdateNPCTeam(string mapId, string runtimeId, RPGTable.Core.TokenTeam team)
+        {
+            var state = FindNPCState(mapId, runtimeId);
+            if (state != null)
+            {
+                state.team = team;
+            }
+        }
+
         public static bool TryGetTokenData(string id, string mapId, out int hp, out int maxHp, out int armor, out int maxArmor, out bool dead)
         {
             hp = 0; maxHp = 0; armor = 0; maxArmor = 0; dead = false;

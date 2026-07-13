@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b59057c9bdd22564a82074ca28b7bcc9, type: 3}
   m_Name: Stun
   m_EditorClassIdentifier: Assembly-CSharp::RPGTable.Core.CombatAttribute
-  icon: {fileID: 21300000, guid: 4dc051a0301cecb4aa1a85036ace2a58, type: 3}
+  icon: {fileID: 8485011702818584661, guid: 26128b33321d29341b5bc92da7321350, type: 3}
   attributeName: "\u041E\u0433\u043B\u0443\u0448\u0435\u043D\u0438\u0435"
   affectedStat: 3
   value: -999

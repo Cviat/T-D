@@ -369,13 +369,17 @@ namespace RPGTable.Runtime
                 Vector2Int dest = new Vector2Int(destX, destY);
                 if (moveSteps > 0 && moveSteps <= activeToken.CurrentMovementPoints)
                 {
-                    activeToken.CurrentMovementPoints -= moveSteps;
-                    CampaignGameSession.MoveToken(
-                        string.IsNullOrEmpty(activeToken.PlayerId) ? activeToken.RuntimeId : activeToken.PlayerId,
-                        context.CurrentMapNode.id,
-                        dest
-                    );
-                    SelectRuntimeToken(activeToken);
+                    if (RPGTable.Board.GridHighlighter.Instance != null &&
+                        RPGTable.Board.GridHighlighter.Instance.MovePositions.Contains(dest))
+                    {
+                        activeToken.CurrentMovementPoints -= moveSteps;
+                        CampaignGameSession.MoveToken(
+                            string.IsNullOrEmpty(activeToken.PlayerId) ? activeToken.RuntimeId : activeToken.PlayerId,
+                            context.CurrentMapNode.id,
+                            dest
+                        );
+                        SelectRuntimeToken(activeToken);
+                    }
                 }
             }
         }
@@ -956,20 +960,20 @@ namespace RPGTable.Runtime
 
         private static bool AreHostile(TokenTeam attackerTeam, TokenTeam targetTeam)
         {
+            if (attackerTeam == targetTeam)
+            {
+                return false;
+            }
+
             bool attackerIsParty = attackerTeam == TokenTeam.Player || attackerTeam == TokenTeam.Ally;
             bool targetIsParty = targetTeam == TokenTeam.Player || targetTeam == TokenTeam.Ally;
 
-            if (attackerIsParty && targetTeam == TokenTeam.Enemy)
+            if (attackerIsParty && targetIsParty)
             {
-                return true;
+                return false;
             }
 
-            if (attackerTeam == TokenTeam.Enemy && targetIsParty)
-            {
-                return true;
-            }
-
-            return false;
+            return true;
         }
 
         private void ApplyAttributeEffect(CampaignRuntimeToken attacker, CampaignRuntimeToken target, CombatAttribute attr)

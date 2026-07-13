@@ -465,11 +465,23 @@ namespace RPGTable.MapEditor
     }
 
     [Serializable]
+    public sealed class SavedCampaignTokenData
+    {
+        public string displayName;
+        public string characterPath;
+        public string tokenPath;
+        public Vector2 worldPosition;
+        public RPGTable.Core.TokenTeam team;
+        public bool visibleToPlayers;
+    }
+
+    [Serializable]
     public sealed class SavedCampaignMapNodeData
     {
         public string id;
         public string mapPath;
         public Vector2 boardPosition;
+        public SavedCampaignTokenData[] presetTokens;
     }
 
     [Serializable]

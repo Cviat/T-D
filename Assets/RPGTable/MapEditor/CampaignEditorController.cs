@@ -39,6 +39,15 @@ namespace RPGTable.MapEditor
         private void Start()
         {
             ReloadMapList();
+
+            if (!string.IsNullOrEmpty(CampaignEditSession.ActiveCampaignName))
+            {
+                var path = System.IO.Path.Combine(UserCampaignStore.CampaignsFolder, $"{CampaignEditSession.ActiveCampaignName}.json");
+                if (System.IO.File.Exists(path))
+                {
+                    OpenCampaign(path);
+                }
+            }
         }
 
         public void BackToMainMenu()
@@ -134,7 +143,7 @@ namespace RPGTable.MapEditor
             }
         }
 
-        private void AddMapNode(string mapPath, Vector2 boardPosition, string existingId)
+        private void AddMapNode(string mapPath, Vector2 boardPosition, string existingId, SavedCampaignTokenData[] presetTokens = null)
         {
             var mapData = UserMapStore.LoadMap(mapPath);
 
@@ -169,6 +178,11 @@ namespace RPGTable.MapEditor
                 mapData.name,
                 mapData.exitPoints,
                 startMapId == nodeId);
+
+            if (presetTokens != null)
+            {
+                node.presetTokens.AddRange(presetTokens);
+            }
 
             nodes.Add(node);
             RefreshStartMapVisuals();
@@ -243,6 +257,18 @@ namespace RPGTable.MapEditor
             links.Add(linkView);
         }
 
+        public void OpenMapForPresetTokens(CampaignMapNode node)
+        {
+            string campName = string.IsNullOrEmpty(currentCampaignName) ? "Unnamed Campaign" : currentCampaignName;
+            SaveCampaign(campName);
+
+            CampaignEditSession.ActiveCampaignName = campName;
+            CampaignEditSession.EditingNodeId = node.Id;
+            CampaignEditSession.EditingMapPath = node.MapPath;
+
+            SceneManager.LoadScene("MapEditor");
+        }
+
         private void SaveCampaign(string campaignName)
         {
             var data = new SavedCampaignData
@@ -261,7 +287,8 @@ namespace RPGTable.MapEditor
                 {
                     id = node.Id,
                     mapPath = node.MapPath,
-                    boardPosition = node.RectTransform.anchoredPosition
+                    boardPosition = node.RectTransform.anchoredPosition,
+                    presetTokens = node.presetTokens.ToArray()
                 };
             }
 
@@ -300,7 +327,7 @@ namespace RPGTable.MapEditor
             {
                 foreach (var map in data.maps)
                 {
-                    AddMapNode(map.mapPath, map.boardPosition, map.id);
+                    AddMapNode(map.mapPath, map.boardPosition, map.id, map.presetTokens);
                 }
             }
 

@@ -49,6 +49,36 @@ namespace RPGTable.MapEditor
             }
         }
 
+        private GameObject draggedCharGo;
+        private PlacedMapToken draggedPlacedToken;
+        private string draggedCharPath;
+
+        public void BeginCharacterDrag(string characterPath, Sprite portrait)
+        {
+            if (portrait == null) return;
+
+            if (draggedCharGo != null) Destroy(draggedCharGo);
+            if (draggedElement != null) Destroy(draggedElement);
+
+            var charData = RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(characterPath);
+            if (charData == null) return;
+
+            var tokenData = RPGTable.TokenEditor.UserTokenStore.LoadToken(charData.tokenPath);
+            int footprint = tokenData != null ? Mathf.Max(1, tokenData.footprintSize) : 1;
+
+            draggedCharGo = new GameObject("DraggedToken");
+            draggedCharGo.transform.position = MouseWorldPosition();
+            
+            var collider = draggedCharGo.AddComponent<BoxCollider2D>();
+            collider.size = Vector2.one * footprint;
+
+            draggedPlacedToken = draggedCharGo.AddComponent<PlacedMapToken>();
+            draggedPlacedToken.Initialize(charData.name, characterPath, charData.tokenPath, MouseWorldPosition(), RPGTable.Core.TokenTeam.Enemy, true, footprint, true);
+            draggedPlacedToken.SetupVisuals(charData.tokenPath, footprint);
+
+            draggedCharPath = characterPath;
+        }
+
         private void Awake()
         {
             if (worldCamera == null)
@@ -59,6 +89,24 @@ namespace RPGTable.MapEditor
 
         private void Update()
         {
+            if (draggedCharGo != null)
+            {
+                draggedCharGo.transform.position = MouseWorldPosition();
+                
+                if (PrimaryReleased() && !IsPointerOverUi())
+                {
+                    var pToken = draggedCharGo.GetComponent<PlacedMapToken>();
+                    if (pToken != null)
+                    {
+                        pToken.SendMessage("OnMouseUp");
+                    }
+                    draggedCharGo = null;
+                    draggedPlacedToken = null;
+                    draggedCharPath = null;
+                }
+                return;
+            }
+
             if (draggedElement == null)
             {
                 return;

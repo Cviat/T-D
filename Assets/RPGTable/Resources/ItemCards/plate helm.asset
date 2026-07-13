@@ -13,19 +13,19 @@ MonoBehaviour:
   m_Name: plate helm
   m_EditorClassIdentifier: Assembly-CSharp::RPGTable.Core.ItemCard
   title: plate helm
-  description: "\u041D\u0430\u0434\u0435\u0436\u043D\u044B\u0439 \u0448\u043B\u0435\u043C."
+  description: "\u0422\u044F\u0436\u0435\u043B\u044B\u0439 \u043B\u0430\u0442\u043D\u044B\u0439 
+    \u0448\u043B\u0435\u043C."
   icon: {fileID: 21300000, guid: 45603c38f879a314bb0baedd8f1f5eba, type: 3}
   itemType: 0
   scaleStat1: None
   coef1: 0
   scaleStat2: None
   coef2: 0
-  armorPoints: 2
+  armorPoints: 4
   bonusHp: 0
   bonusStr: 0
-  bonusAgi: 0
+  bonusAgi: -2
   bonusInt: 0
   bonusHol: 0
-  attribute: 
   attributes: []
   attackType: 0

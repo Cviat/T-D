@@ -168,6 +168,7 @@ namespace RPGTable.Runtime
 
             var players = new List<CampaignRuntimeToken>();
             var allies = new List<CampaignRuntimeToken>();
+            var neutrals = new List<CampaignRuntimeToken>();
             var enemies = new List<CampaignRuntimeToken>();
 
             foreach (var token in activeTokens)
@@ -176,9 +177,13 @@ namespace RPGTable.Runtime
                 {
                     players.Add(token);
                 }
-                else if (token.Team == TokenTeam.Ally || token.Team == TokenTeam.Neutral)
+                else if (token.Team == TokenTeam.Ally)
                 {
                     allies.Add(token);
+                }
+                else if (token.Team == TokenTeam.Neutral)
+                {
+                    neutrals.Add(token);
                 }
                 else if (token.Team == TokenTeam.Enemy)
                 {
@@ -203,6 +208,15 @@ namespace RPGTable.Runtime
                 foreach (var a in allies)
                 {
                     CreateActiveTokenCard(a, cardPrefab);
+                }
+            }
+
+            if (neutrals.Count > 0)
+            {
+                CreateCategoryHeader("НЕЙТРАЛЫ", new Color(0.45f, 0.38f, 0.12f, 1f));
+                foreach (var n in neutrals)
+                {
+                    CreateActiveTokenCard(n, cardPrefab);
                 }
             }
 

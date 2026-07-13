@@ -12,6 +12,8 @@ namespace RPGTable.MapEditor
         private RectTransform rectTransform;
         private Text startText;
 
+        public readonly List<SavedCampaignTokenData> presetTokens = new List<SavedCampaignTokenData>();
+
         public string Id { get; private set; }
         public string MapPath { get; private set; }
         public RectTransform RectTransform => rectTransform;
@@ -45,6 +47,12 @@ namespace RPGTable.MapEditor
 
         public void OnPointerClick(PointerEventData eventData)
         {
+            if (eventData.button == PointerEventData.InputButton.Left && eventData.clickCount == 2)
+            {
+                controller.OpenMapForPresetTokens(this);
+                return;
+            }
+
             if (eventData.button != PointerEventData.InputButton.Right)
             {
                 return;

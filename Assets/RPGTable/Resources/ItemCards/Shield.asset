@@ -20,12 +20,11 @@ MonoBehaviour:
   coef1: 0
   scaleStat2: None
   coef2: 0
-  armorPoints: 4
+  armorPoints: 6
   bonusHp: 0
   bonusStr: 0
   bonusAgi: 0
   bonusInt: 0
   bonusHol: 0
-  attribute: 
   attributes: []
   attackType: 0

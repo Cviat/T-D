@@ -31,13 +31,46 @@ namespace RPGTable.MapEditor
         {
             Clear();
 
-            foreach (var path in UserElementAssetStore.GetImagePaths())
+            var grid = contentRoot != null ? contentRoot.GetComponent<GridLayoutGroup>() : null;
+            if (grid != null)
             {
-                var sprite = UserElementAssetStore.LoadSprite(path);
-
-                if (sprite != null)
+                if (CampaignEditSession.IsEditingPresetTokens)
                 {
-                    CreateItem(path, sprite);
+                    grid.cellSize = new Vector2(240f, 64f);
+                }
+                else
+                {
+                    grid.cellSize = new Vector2(96f, 96f);
+                }
+            }
+
+            if (CampaignEditSession.IsEditingPresetTokens)
+            {
+                foreach (var path in RPGTable.CharacterEditor.UserCharacterStore.GetCharacterPaths())
+                {
+                    var charData = RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(path);
+                    if (charData == null) continue;
+
+                    var tokenData = RPGTable.TokenEditor.UserTokenStore.LoadToken(charData.tokenPath);
+                    if (tokenData == null) continue;
+
+                    var portrait = RPGTable.TokenEditor.UserTokenStore.LoadSprite(tokenData.portraitPath);
+                    if (portrait != null)
+                    {
+                        CreateCharacterPaletteItem(path, charData.name, portrait, charData.maxHp);
+                    }
+                }
+            }
+            else
+            {
+                foreach (var path in UserElementAssetStore.GetImagePaths())
+                {
+                    var sprite = UserElementAssetStore.LoadSprite(path);
+
+                    if (sprite != null)
+                    {
+                        CreateItem(path, sprite);
+                    }
                 }
             }
         }
@@ -45,7 +78,19 @@ namespace RPGTable.MapEditor
         private void Start()
         {
             EnsureMapControls();
-            Reload();
+            if (CampaignEditSession.IsEditingPresetTokens)
+            {
+                var mapController = GetComponent<MapEditorMapController>();
+                if (mapController != null)
+                {
+                    mapController.OpenMapPresetTokens();
+                }
+                Reload();
+            }
+            else
+            {
+                Reload();
+            }
         }
 
         private void EnsureMapControls()
@@ -59,26 +104,54 @@ namespace RPGTable.MapEditor
 
             mapController.Initialize(spawner);
 
-            EnsureMapButton("Back Button", "Back", new Vector2(0f, -18f), mapController, MapEditorMapButtonAction.Back);
-            EnsureMapButton("Save Map Button", "Save Map", new Vector2(0f, -76f), mapController, MapEditorMapButtonAction.Save);
-            EnsureMapButton("Open Map Button", "Import Map", new Vector2(0f, -134f), mapController, MapEditorMapButtonAction.Open);
-            EnsureMapButton("Add Exit Button", "Add Exit", new Vector2(0f, -192f), mapController, MapEditorMapButtonAction.AddExit);
-            EnsureMapButton("Add Spawn Button", "Add Spawn", new Vector2(0f, -250f), mapController, MapEditorMapButtonAction.AddSpawn);
-
-            var importButton = transform.Find("Import Image Button") as RectTransform;
-
-            if (importButton != null)
+            if (CampaignEditSession.IsEditingPresetTokens)
             {
-                importButton.sizeDelta = new Vector2(240f, 48f);
-                importButton.anchorMin = new Vector2(0.5f, 1f);
-                importButton.anchorMax = new Vector2(0.5f, 1f);
-                importButton.pivot = new Vector2(0.5f, 1f);
-                importButton.anchoredPosition = new Vector2(0f, -308f);
+                EnsureMapButton("Back Button", "Назад", new Vector2(0f, -18f), mapController, MapEditorMapButtonAction.Back);
+                EnsureMapButton("Save Map Button", "Применить", new Vector2(0f, -76f), mapController, MapEditorMapButtonAction.Save);
+                
+                var openBtn = transform.Find("Open Map Button");
+                if (openBtn != null) openBtn.gameObject.SetActive(false);
+                var exitBtn = transform.Find("Add Exit Button");
+                if (exitBtn != null) exitBtn.gameObject.SetActive(false);
+                var spawnBtn = transform.Find("Add Spawn Button");
+                if (spawnBtn != null) spawnBtn.gameObject.SetActive(false);
+                var importBtn = transform.Find("Import Image Button");
+                if (importBtn != null) importBtn.gameObject.SetActive(false);
+
+                if (contentRoot != null)
+                {
+                    contentRoot.offsetMax = new Vector2(-18f, -140f);
+                }
             }
-
-            if (contentRoot != null)
+            else
             {
-                contentRoot.offsetMax = new Vector2(-18f, -374f);
+                EnsureMapButton("Back Button", "Back", new Vector2(0f, -18f), mapController, MapEditorMapButtonAction.Back);
+                EnsureMapButton("Save Map Button", "Save Map", new Vector2(0f, -76f), mapController, MapEditorMapButtonAction.Save);
+                EnsureMapButton("Open Map Button", "Import Map", new Vector2(0f, -134f), mapController, MapEditorMapButtonAction.Open);
+                EnsureMapButton("Add Exit Button", "Add Exit", new Vector2(0f, -192f), mapController, MapEditorMapButtonAction.AddExit);
+                EnsureMapButton("Add Spawn Button", "Add Spawn", new Vector2(0f, -250f), mapController, MapEditorMapButtonAction.AddSpawn);
+
+                var openBtn = transform.Find("Open Map Button");
+                if (openBtn != null) openBtn.gameObject.SetActive(true);
+                var exitBtn = transform.Find("Add Exit Button");
+                if (exitBtn != null) exitBtn.gameObject.SetActive(true);
+                var spawnBtn = transform.Find("Add Spawn Button");
+                if (spawnBtn != null) spawnBtn.gameObject.SetActive(true);
+                var importBtn = transform.Find("Import Image Button") as RectTransform;
+                if (importBtn != null)
+                {
+                    importBtn.gameObject.SetActive(true);
+                    importBtn.sizeDelta = new Vector2(240f, 48f);
+                    importBtn.anchorMin = new Vector2(0.5f, 1f);
+                    importBtn.anchorMax = new Vector2(0.5f, 1f);
+                    importBtn.pivot = new Vector2(0.5f, 1f);
+                    importBtn.anchoredPosition = new Vector2(0f, -308f);
+                }
+
+                if (contentRoot != null)
+                {
+                    contentRoot.offsetMax = new Vector2(-18f, -374f);
+                }
             }
         }
 
@@ -152,6 +225,20 @@ namespace RPGTable.MapEditor
 
             var paletteItem = item.AddComponent<MapEditorPaletteItem>();
             paletteItem.Initialize(path, sprite, spawner, this);
+        }
+
+        private void CreateCharacterPaletteItem(string path, string charName, Sprite portrait, int maxHp)
+        {
+            var cardPrefab = Resources.Load<GameObject>("Prefabs/TokenCard");
+            if (cardPrefab != null && contentRoot != null)
+            {
+                var item = UnityEngine.Object.Instantiate(cardPrefab, contentRoot);
+                var cardView = item.GetComponent<RPGTable.Runtime.TokenCardView>();
+                if (cardView != null)
+                {
+                    cardView.Setup(charName, portrait, maxHp, maxHp, false, () => spawner.BeginCharacterDrag(path, portrait));
+                }
+            }
         }
 
         private void Clear()
@@ -1220,9 +1307,22 @@ namespace RPGTable.MapEditor
             spawner = elementSpawner;
         }
 
+        public void OpenMapPresetTokens()
+        {
+            OpenMap(CampaignEditSession.EditingMapPath);
+            LoadPresetTokensForEditing();
+        }
+
         public void RequestSaveMap()
         {
-            MapEditorMapDialog.ShowSave(currentMapName, SaveMap);
+            if (CampaignEditSession.IsEditingPresetTokens)
+            {
+                SavePresetTokens();
+            }
+            else
+            {
+                MapEditorMapDialog.ShowSave(currentMapName, SaveMap);
+            }
         }
 
         public void RequestOpenMap()
@@ -1244,6 +1344,13 @@ namespace RPGTable.MapEditor
 
         public void BackToMainMenu()
         {
+            if (CampaignEditSession.IsEditingPresetTokens)
+            {
+                CampaignEditSession.Clear();
+                SceneManager.LoadScene("CampaignEditor");
+                return;
+            }
+
             if (Application.CanStreamedLevelBeLoaded(mainMenuSceneName))
             {
                 SceneManager.LoadScene(mainMenuSceneName);
@@ -1251,6 +1358,89 @@ namespace RPGTable.MapEditor
             }
 
             Debug.LogWarning($"Scene '{mainMenuSceneName}' is not in Build Settings yet.");
+        }
+
+        private void SavePresetTokens()
+        {
+            var campaignPath = System.IO.Path.Combine(UserCampaignStore.CampaignsFolder, $"{CampaignEditSession.ActiveCampaignName}.json");
+            var campaignData = UserCampaignStore.LoadCampaign(campaignPath);
+            if (campaignData == null) return;
+
+            var placedTokens = FindObjectsByType<PlacedMapToken>(FindObjectsInactive.Exclude);
+            var presetTokensList = new System.Collections.Generic.List<SavedCampaignTokenData>();
+
+            foreach (var t in placedTokens)
+            {
+                presetTokensList.Add(new SavedCampaignTokenData
+                {
+                    displayName = t.displayName,
+                    characterPath = t.characterPath,
+                    tokenPath = t.tokenPath,
+                    worldPosition = new Vector2(t.transform.position.x, t.transform.position.y),
+                    team = t.team,
+                    visibleToPlayers = t.visibleToPlayers
+                });
+            }
+
+            if (campaignData.maps != null)
+            {
+                foreach (var mapNode in campaignData.maps)
+                {
+                    if (mapNode.id == CampaignEditSession.EditingNodeId)
+                    {
+                        mapNode.presetTokens = presetTokensList.ToArray();
+                        break;
+                    }
+                }
+            }
+
+            UserCampaignStore.SaveCampaign(CampaignEditSession.ActiveCampaignName, campaignData);
+            CampaignEditSession.Clear();
+            SceneManager.LoadScene("CampaignEditor");
+        }
+
+        private void LoadPresetTokensForEditing()
+        {
+            foreach (var t in FindObjectsByType<PlacedMapToken>(FindObjectsInactive.Exclude))
+            {
+                Destroy(t.gameObject);
+            }
+
+            var campaignPath = System.IO.Path.Combine(UserCampaignStore.CampaignsFolder, $"{CampaignEditSession.ActiveCampaignName}.json");
+            var campaignData = UserCampaignStore.LoadCampaign(campaignPath);
+            if (campaignData == null) return;
+
+            SavedCampaignMapNodeData currentNode = null;
+            if (campaignData.maps != null)
+            {
+                foreach (var mapNode in campaignData.maps)
+                {
+                    if (mapNode.id == CampaignEditSession.EditingNodeId)
+                    {
+                        currentNode = mapNode;
+                        break;
+                    }
+                }
+            }
+
+            if (currentNode == null || currentNode.presetTokens == null) return;
+
+            foreach (var preset in currentNode.presetTokens)
+            {
+                var charData = RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(preset.characterPath);
+                if (charData == null) continue;
+
+                var tokenData = RPGTable.TokenEditor.UserTokenStore.LoadToken(preset.tokenPath);
+                int footprint = tokenData != null ? Mathf.Max(1, tokenData.footprintSize) : 1;
+
+                var tokenGo = new GameObject(preset.displayName);
+                var collider = tokenGo.AddComponent<BoxCollider2D>();
+                collider.size = Vector2.one * footprint;
+
+                var pToken = tokenGo.AddComponent<PlacedMapToken>();
+                pToken.Initialize(preset.displayName, preset.characterPath, preset.tokenPath, preset.worldPosition, preset.team, preset.visibleToPlayers, footprint);
+                pToken.SetupVisuals(preset.tokenPath, footprint);
+            }
         }
 
         private void Update()

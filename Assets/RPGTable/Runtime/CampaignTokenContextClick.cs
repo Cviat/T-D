@@ -1,5 +1,6 @@
 using System;
 using RPGTable.GameMaster;
+using RPGTable.Core;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -77,8 +78,6 @@ namespace RPGTable.Runtime
     public sealed class CampaignTokenContextPopup : MonoBehaviour
     {
         private const float Width = 158f;
-        private const float Height = 168f;
-        private const float PlayerTokenHeight = 128f;
 
         private static CampaignTokenContextPopup current;
 
@@ -88,6 +87,9 @@ namespace RPGTable.Runtime
         private CampaignGameLoader loader;
         private CampaignRuntimeToken runtimeToken;
         private int openedFrame = -1;
+
+        private System.Collections.Generic.List<GameObject> mainButtons = new System.Collections.Generic.List<GameObject>();
+        private System.Collections.Generic.List<GameObject> teamButtons = new System.Collections.Generic.List<GameObject>();
 
         public static void Show(Vector2 screenPosition, CampaignGameLoader gameLoader, CampaignRuntimeToken token)
         {
@@ -125,7 +127,6 @@ namespace RPGTable.Runtime
             var popup = popupObject.AddComponent<CampaignTokenContextPopup>();
             popup.canvasRectTransform = canvasObject.GetComponent<RectTransform>();
             popup.rectTransform = popupObject.GetComponent<RectTransform>();
-            popup.rectTransform.sizeDelta = new Vector2(Width, Height);
 
             var background = popupObject.AddComponent<Image>();
             background.color = new Color(0.055f, 0.047f, 0.040f, 0.97f);
@@ -138,10 +139,19 @@ namespace RPGTable.Runtime
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
 
+            // Main menu buttons
             popup.deleteButtonObject = popup.CreateButton("Удалить", new Color(0.34f, 0.075f, 0.06f, 1f), popup.Delete);
-            popup.CreateButton("Посмотреть", new Color(0.13f, 0.10f, 0.075f, 1f), popup.CloseOnly);
-            popup.CreateButton("Показать", new Color(0.13f, 0.10f, 0.075f, 1f), popup.CloseOnly);
-            popup.CreateButton("Убить", new Color(0.18f, 0.055f, 0.045f, 1f), popup.Kill);
+            popup.mainButtons.Add(popup.deleteButtonObject);
+            popup.mainButtons.Add(popup.CreateButton("Посмотреть", new Color(0.13f, 0.10f, 0.075f, 1f), popup.CloseOnly));
+            popup.mainButtons.Add(popup.CreateButton("Показать", new Color(0.13f, 0.10f, 0.075f, 1f), popup.CloseOnly));
+            popup.mainButtons.Add(popup.CreateButton("Убить", new Color(0.18f, 0.055f, 0.045f, 1f), popup.Kill));
+            popup.mainButtons.Add(popup.CreateButton("Команда", new Color(0.13f, 0.10f, 0.075f, 1f), popup.ShowTeamMenu));
+
+            // Team menu buttons
+            popup.teamButtons.Add(popup.CreateButton("Враг (Enemy)", new Color(0.45f, 0.15f, 0.15f, 1f), () => popup.SelectTeam(TokenTeam.Enemy)));
+            popup.teamButtons.Add(popup.CreateButton("Союзник (Ally)", new Color(0.15f, 0.45f, 0.15f, 1f), () => popup.SelectTeam(TokenTeam.Ally)));
+            popup.teamButtons.Add(popup.CreateButton("Нейтральный", new Color(0.45f, 0.38f, 0.15f, 1f), () => popup.SelectTeam(TokenTeam.Neutral)));
+            popup.teamButtons.Add(popup.CreateButton("Назад", new Color(0.25f, 0.25f, 0.25f, 1f), popup.ShowMainMenu));
 
             popupObject.SetActive(false);
             return popup;
@@ -208,19 +218,79 @@ namespace RPGTable.Runtime
 #endif
         }
 
+        private void ShowMainMenu()
+        {
+            var isPlayerToken = !string.IsNullOrWhiteSpace(runtimeToken.PlayerId);
+
+            foreach (var b in mainButtons)
+            {
+                if (b == deleteButtonObject)
+                {
+                    b.SetActive(!isPlayerToken);
+                }
+                else
+                {
+                    b.SetActive(true);
+                }
+            }
+
+            foreach (var b in teamButtons)
+            {
+                b.SetActive(false);
+            }
+
+            int buttonCount = isPlayerToken ? 4 : 5;
+            rectTransform.sizeDelta = new Vector2(Width, 12f + buttonCount * 40f - 4f);
+        }
+
+        private void ShowTeamMenu()
+        {
+            foreach (var b in mainButtons)
+            {
+                b.SetActive(false);
+            }
+
+            foreach (var b in teamButtons)
+            {
+                b.SetActive(true);
+            }
+
+            rectTransform.sizeDelta = new Vector2(Width, 12f + 4 * 40f - 4f);
+        }
+
+        private void SelectTeam(TokenTeam newTeam)
+        {
+            if (runtimeToken != null)
+            {
+                runtimeToken.Team = newTeam;
+
+                var boardToken = runtimeToken.GetComponent<RPGTable.Core.BoardToken>();
+                if (boardToken != null)
+                {
+                    boardToken.team = newTeam;
+                }
+
+                string mapId = loader != null && loader.Context != null && loader.Context.CurrentMapNode != null ? loader.Context.CurrentMapNode.id : "";
+                if (!string.IsNullOrEmpty(mapId))
+                {
+                    CampaignGameSession.UpdateNPCTeam(mapId, runtimeToken.RuntimeId, newTeam);
+                }
+
+                if (loader != null && loader.UI != null)
+                {
+                    loader.UI.RefreshActiveTokensPanel();
+                }
+            }
+            CloseOnly();
+        }
+
         private void ShowInternal(Vector2 screenPosition, CampaignGameLoader gameLoader, CampaignRuntimeToken token)
         {
             loader = gameLoader;
             runtimeToken = token;
-            var isPlayerToken = !string.IsNullOrWhiteSpace(token.PlayerId);
-
-            if (deleteButtonObject != null)
-            {
-                deleteButtonObject.SetActive(!isPlayerToken);
-            }
-
-            rectTransform.sizeDelta = new Vector2(Width, isPlayerToken ? PlayerTokenHeight : Height);
             openedFrame = Time.frameCount;
+
+            ShowMainMenu();
 
             RectTransformUtility.ScreenPointToLocalPointInRectangle(
                 canvasRectTransform,
