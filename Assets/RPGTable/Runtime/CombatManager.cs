@@ -71,7 +71,7 @@ namespace RPGTable.Runtime
             DontDestroyOnLoad(gameObject);
         }
 
-        public void StartCombat()
+        public void StartCombat(string initiatorId = "")
         {
             CampaignGameSession.IsCombatActive = true;
             CurrentTurnNumber = 1;
@@ -119,6 +119,16 @@ namespace RPGTable.Runtime
                         activeWeapon, rerollCoins,
                         statusEffects, dead
                     );
+                }
+            }
+
+            if (!string.IsNullOrEmpty(initiatorId))
+            {
+                int index = Queue.IndexOf(initiatorId);
+                if (index > 0)
+                {
+                    Queue.RemoveAt(index);
+                    Queue.Insert(0, initiatorId);
                 }
             }
 

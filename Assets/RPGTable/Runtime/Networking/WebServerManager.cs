@@ -1108,7 +1108,7 @@ namespace RPGTable.Runtime.Networking
                                         var data = RPGTable.TokenEditor.UserTokenStore.LoadToken(npc.tokenPath);
                                         string pPath = data != null && data.portraitPath != null ? Convert.ToBase64String(Encoding.UTF8.GetBytes(data.portraitPath)) : "";
                                         string url = $"/api/image?path={pPath}";
-                                        enemiesJson.Add($"{{\"id\":\"{npc.runtimeId}\",\"name\":\"{npc.displayName}\",\"portraitUrl\":\"{url}\",\"hp\":{npc.currentHp},\"maxHp\":{npc.maxHp}}}");
+                                        enemiesJson.Add($"{{\"id\":\"{npc.runtimeId}\",\"name\":\"{npc.displayName}\",\"portraitUrl\":\"{url}\",\"hp\":{npc.currentHp},\"maxHp\":{npc.maxHp},\"team\":\"{npc.team.ToString()}\"}}");
                                     }
                                 }
                             }

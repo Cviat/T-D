@@ -90,7 +90,31 @@
     transition: all 0.2s ease;
 }
 
-.target-avatar:hover {
+.target-avatar.team-ally {
+    border-color: var(--ready);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5), 0 0 8px rgba(43, 97, 57, 0.4);
+}
+.target-avatar.team-ally:hover {
+    transform: scale(1.05);
+    border-color: #4ade80;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 14px rgba(74, 222, 128, 0.7);
+}
+
+.target-avatar.team-neutral {
+    border-color: var(--accent);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5), 0 0 8px rgba(212, 175, 55, 0.4);
+}
+.target-avatar.team-neutral:hover {
+    transform: scale(1.05);
+    border-color: #fbbf24;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 14px rgba(251, 191, 36, 0.7);
+}
+
+.target-avatar.team-enemy {
+    border-color: var(--danger);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5), 0 0 8px rgba(156, 42, 42, 0.4);
+}
+.target-avatar.team-enemy:hover {
     transform: scale(1.05);
     border-color: #ff4d4d;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 14px rgba(255, 77, 77, 0.7);

@@ -174,6 +174,11 @@ function renderGameState(state) {
     (state.enemies || []).forEach(enemy => {
         const target = document.createElement('button');
         target.className = 'target-avatar';
+        if (enemy.team) {
+            target.classList.add('team-' + enemy.team.toLowerCase());
+        } else {
+            target.classList.add('team-enemy');
+        }
         target.type = 'button';
         target.title = enemy.name;
         if (enemy.portraitUrl) {

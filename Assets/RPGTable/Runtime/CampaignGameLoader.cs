@@ -474,7 +474,8 @@ namespace RPGTable.Runtime
             {
                 if (RPGTable.Runtime.CombatManager.Instance != null)
                 {
-                    RPGTable.Runtime.CombatManager.Instance.StartCombat();
+                    string initiatorId = string.IsNullOrEmpty(attacker.PlayerId) ? attacker.RuntimeId : attacker.PlayerId;
+                    RPGTable.Runtime.CombatManager.Instance.StartCombat(initiatorId);
                 }
                 attacker.CurrentRolls = attacker.MaxRolls;
             }
