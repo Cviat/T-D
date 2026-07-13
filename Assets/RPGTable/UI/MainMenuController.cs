@@ -24,6 +24,9 @@ namespace RPGTable.UI
             EnsureCharacterButton();
             ShowMainMenu();
 
+            // Initialize SoundManager to start background music
+            var s = RPGTable.Runtime.SoundManager.Instance;
+
             if (FindAnyObjectByType<MainMenuPlayerViewManager>() == null)
             {
                 var go = new GameObject("MainMenuPlayerViewManager");

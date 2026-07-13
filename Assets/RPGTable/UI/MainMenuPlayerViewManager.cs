@@ -226,22 +226,29 @@ namespace RPGTable.UI
             var cardRect = cardGo.GetComponent<RectTransform>();
             cardRect.sizeDelta = new Vector2(200f, 200f);
 
-            var bg = cardGo.AddComponent<Image>();
-            bg.color = new Color(0.1f, 0.1f, 0.15f, 0.85f); // Deep dark blue-gray
+            // 1. Background Image
+            var bgGo = new GameObject("Background", typeof(RectTransform));
+            bgGo.transform.SetParent(cardGo.transform, false);
+            var bgRect = bgGo.GetComponent<RectTransform>();
+            bgRect.anchorMin = Vector2.zero;
+            bgRect.anchorMax = Vector2.one;
+            bgRect.offsetMin = Vector2.zero;
+            bgRect.offsetMax = Vector2.zero;
+            var bg = bgGo.AddComponent<Image>();
+            bg.sprite = Resources.Load<Sprite>("image/Mini_background");
+            bg.color = Color.white;
 
-            // Portrait Mask Container (fills almost the whole card, keeping border)
+            // 2. Portrait Mask Container (placed inside background margins)
             var maskGo = new GameObject("PortraitMask", typeof(RectTransform));
             maskGo.transform.SetParent(cardGo.transform, false);
             var maskRect = maskGo.GetComponent<RectTransform>();
-            maskRect.anchorMin = new Vector2(0f, 0f);
-            maskRect.anchorMax = new Vector2(1f, 1f);
-            maskRect.offsetMin = new Vector2(5f, 5f); 
-            maskRect.offsetMax = new Vector2(-5f, -5f); 
-            
-            // RectMask2D will sharply cut off any part of the image that overflows
+            maskRect.anchorMin = Vector2.zero;
+            maskRect.anchorMax = Vector2.one;
+            maskRect.offsetMin = new Vector2(16f, 16f); 
+            maskRect.offsetMax = new Vector2(-16f, -16f); 
             maskGo.AddComponent<RectMask2D>();
 
-            // Portrait Image
+            // 3. Portrait Image
             var imgGo = new GameObject("Portrait", typeof(RectTransform));
             imgGo.transform.SetParent(maskGo.transform, false);
             var imgRect = imgGo.GetComponent<RectTransform>();
@@ -249,7 +256,6 @@ namespace RPGTable.UI
             imgRect.anchorMax = Vector2.one;
             imgRect.offsetMin = Vector2.zero;
             imgRect.offsetMax = Vector2.zero;
-            
             var img = imgGo.AddComponent<Image>();
             if (portrait != null)
             {
@@ -261,29 +267,37 @@ namespace RPGTable.UI
                 img.color = new Color(0.2f, 0.2f, 0.2f, 1f);
             }
 
-            // Name Background (to make text readable)
+            // 4. Frame Image (Mini_frame0 on top of the portrait)
+            var frameGo = new GameObject("Frame", typeof(RectTransform));
+            frameGo.transform.SetParent(cardGo.transform, false);
+            var frameRect = frameGo.GetComponent<RectTransform>();
+            frameRect.anchorMin = Vector2.zero;
+            frameRect.anchorMax = Vector2.one;
+            frameRect.offsetMin = Vector2.zero;
+            frameRect.offsetMax = Vector2.zero;
+            var frame = frameGo.AddComponent<Image>();
+            frame.sprite = Resources.Load<Sprite>("image/Mini_frame0");
+            frame.color = Color.white;
+
+            // 5. Name Bar (name_bar2 at bottom of the card)
             var nameBgGo = new GameObject("NameBg", typeof(RectTransform));
-            nameBgGo.transform.SetParent(maskGo.transform, false);
+            nameBgGo.transform.SetParent(cardGo.transform, false);
             var nameBgRect = nameBgGo.GetComponent<RectTransform>();
             nameBgRect.anchorMin = new Vector2(0f, 0f);
             nameBgRect.anchorMax = new Vector2(1f, 0f);
             nameBgRect.pivot = new Vector2(0.5f, 0f);
-            nameBgRect.anchoredPosition = Vector2.zero;
-            nameBgRect.sizeDelta = new Vector2(0f, 40f); // 40px tall block at bottom
+            nameBgRect.anchoredPosition = new Vector2(0f, 8f); // Slightly offset from bottom edge to align inside frame
+            nameBgRect.sizeDelta = new Vector2(-12f, 32f); // Width offset by 12px and height is 32px
             var nameBg = nameBgGo.AddComponent<Image>();
-            nameBg.color = new Color(0f, 0f, 0f, 0.8f);
+            nameBg.sprite = Resources.Load<Sprite>("image/name_bar2");
+            nameBg.color = Color.white;
 
-            // Add a golden border around the card
-            var outline = cardGo.AddComponent<Outline>();
-            outline.effectColor = new Color(0.9f, 0.7f, 0.3f, 0.6f);
-            outline.effectDistance = new Vector2(3f, -3f);
-
-            // Name Text
+            // 6. Name Text
             var textGo = new GameObject("Name", typeof(RectTransform));
             textGo.transform.SetParent(nameBgGo.transform, false);
             var textRect = textGo.GetComponent<RectTransform>();
-            textRect.anchorMin = new Vector2(0f, 0f);
-            textRect.anchorMax = new Vector2(1f, 1f); // Fill the nameBg block
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one; // Fill the nameBg block
             textRect.offsetMin = Vector2.zero;
             textRect.offsetMax = Vector2.zero;
             var text = textGo.AddComponent<Text>();
@@ -291,7 +305,7 @@ namespace RPGTable.UI
             text.text = playerName;
             text.alignment = TextAnchor.MiddleCenter;
             text.color = new Color(1f, 0.95f, 0.85f, 1f);
-            text.fontSize = 20;
+            text.fontSize = 16;
             text.fontStyle = FontStyle.Bold;
         }
 

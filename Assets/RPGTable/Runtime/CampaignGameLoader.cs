@@ -686,6 +686,11 @@ namespace RPGTable.Runtime
 
             AnimateTokenAttack(attacker, target);
 
+            if (SoundManager.Instance != null)
+            {
+                SoundManager.Instance.PlayMiss();
+            }
+
             yield return new WaitForSeconds(0.5f);
 
             SelectRuntimeToken(attacker);
@@ -733,6 +738,11 @@ namespace RPGTable.Runtime
 
             AnimateTokenAttack(attacker, target);
             AnimateTokenDamage(target, attacker);
+
+            if (SoundManager.Instance != null)
+            {
+                SoundManager.Instance.PlayHit();
+            }
 
             yield return new WaitForSeconds(0.3f);
 
