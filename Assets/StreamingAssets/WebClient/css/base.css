@@ -118,6 +118,12 @@ input {
     border-color: rgba(255, 255, 255, 0.2);
 }
 
+.button.danger {
+    border-color: #c94d4d;
+    background: linear-gradient(180deg, #9c2a2a 0%, #561515 100%);
+    color: #fff;
+}
+
 .icon-button {
     width: 46px;
     height: 46px;

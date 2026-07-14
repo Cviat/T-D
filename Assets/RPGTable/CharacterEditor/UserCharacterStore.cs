@@ -23,7 +23,10 @@ namespace RPGTable.CharacterEditor
         public int level = 1;
         public int xp = 0;
         public string characterClass = "Воин";
+        public int attributePoints = 0;
         public int skillPoints = 0;
+        public int attackSkillPoints = 0;
+        public int defenseSkillPoints = 0;
         public int rerollCoins = 3;
         public int strength = 10;
         public int agility = 10;

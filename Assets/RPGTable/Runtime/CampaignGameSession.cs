@@ -65,6 +65,7 @@ namespace RPGTable.Runtime
         public static event Action<string> OnTokenFocused;
 
         private static readonly List<CampaignPlayerData> Players = new List<CampaignPlayerData>();
+        private static Dictionary<string, RPGTable.Core.AbilityCard> abilityCardCache;
         private static int nextPlayerIndex = 1;
 
         public static event Action OnPlayersChanged;
@@ -107,6 +108,7 @@ namespace RPGTable.Runtime
             string tokenPath)
         {
             var charData = string.IsNullOrWhiteSpace(characterPath) ? null : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(characterPath);
+            EnsureCharacterProgressInitialized(charData);
             var player = new CampaignPlayerData
             {
                 id = $"player_{nextPlayerIndex++}",
@@ -124,6 +126,59 @@ namespace RPGTable.Runtime
             };
 
             Players.Add(player);
+            OnPlayersChanged?.Invoke();
+            return player;
+        }
+
+        public static CampaignPlayerData CreateCharacterForPlayer(string playerId)
+        {
+            var player = FindPlayer(playerId);
+
+            if (player == null)
+            {
+                return null;
+            }
+
+            if (player.characterRuntimeData == null)
+            {
+                if (string.IsNullOrWhiteSpace(player.tokenPath) && !string.IsNullOrWhiteSpace(player.portraitPath))
+                {
+                    player.tokenPath = RPGTable.TokenEditor.UserTokenStore.SaveToken(
+                        player.name,
+                        new RPGTable.TokenEditor.SavedTokenData
+                        {
+                            name = player.name,
+                            portraitPath = player.portraitPath,
+                            footprintSize = 1
+                        });
+                }
+
+                var data = new RPGTable.CharacterEditor.SavedCharacterData
+                {
+                    name = string.IsNullOrWhiteSpace(player.name) ? "Player" : player.name,
+                    portraitPath = player.portraitPath,
+                    tokenPath = player.tokenPath,
+                    level = 1,
+                    maxHp = 10,
+                    maxArmor = 0
+                };
+                EnsureCharacterProgressInitialized(data);
+
+                player.characterRuntimeData = data;
+                player.characterPath = RPGTable.CharacterEditor.UserCharacterStore.SaveCharacter(data.name, data);
+                player.tokenPath = data.tokenPath;
+                player.maxHp = data.maxHp;
+                player.currentHp = data.maxHp;
+                player.maxArmor = data.maxArmor;
+                player.currentArmor = data.maxArmor;
+                player.rerollCoins = data.rerollCoins;
+                player.isReady = !string.IsNullOrWhiteSpace(player.tokenPath);
+            }
+            else
+            {
+                EnsureCharacterProgressInitialized(player.characterRuntimeData);
+            }
+
             OnPlayersChanged?.Invoke();
             return player;
         }
@@ -164,6 +219,7 @@ namespace RPGTable.Runtime
             }
 
             var charData = string.IsNullOrWhiteSpace(characterPath) ? null : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(characterPath);
+            EnsureCharacterProgressInitialized(charData);
             player.name = string.IsNullOrWhiteSpace(characterName) ? player.name : characterName;
             player.characterPath = characterPath;
             if (!string.IsNullOrWhiteSpace(portraitPath))
@@ -180,6 +236,279 @@ namespace RPGTable.Runtime
             player.characterRuntimeData = charData;
             OnPlayersChanged?.Invoke();
             return true;
+        }
+
+        public static bool IncreaseCharacterAttribute(string playerId, string attribute)
+        {
+            var player = FindPlayer(playerId);
+
+            if (player == null || player.characterRuntimeData == null || player.characterRuntimeData.attributePoints <= 0)
+            {
+                return false;
+            }
+
+            var data = player.characterRuntimeData;
+            switch ((attribute ?? "").Trim().ToUpperInvariant())
+            {
+                case "STR":
+                    data.strength++;
+                    break;
+                case "AGI":
+                    data.agility++;
+                    break;
+                case "INT":
+                    data.intelligence++;
+                    break;
+                case "HOL":
+                    data.holiness++;
+                    break;
+                default:
+                    return false;
+            }
+
+            data.attributePoints--;
+            OnPlayersChanged?.Invoke();
+            return true;
+        }
+
+        public static bool AllocateCharacterSkillPoint(string playerId, string pool)
+        {
+            var player = FindPlayer(playerId);
+
+            if (player == null || player.characterRuntimeData == null || player.characterRuntimeData.skillPoints <= 0)
+            {
+                return false;
+            }
+
+            var data = player.characterRuntimeData;
+            switch ((pool ?? "").Trim().ToLowerInvariant())
+            {
+                case "attack":
+                    data.attackSkillPoints++;
+                    break;
+                case "defense":
+                    data.defenseSkillPoints++;
+                    break;
+                default:
+                    return false;
+            }
+
+            data.skillPoints--;
+            OnPlayersChanged?.Invoke();
+            return true;
+        }
+
+        public static bool GrantCharacterLevel(string playerId, int levelCount = 1)
+        {
+            var player = FindPlayer(playerId);
+
+            if (player == null || player.characterRuntimeData == null)
+            {
+                return false;
+            }
+
+            levelCount = Math.Max(1, levelCount);
+            ApplyPlayerLevelBonus(player, levelCount);
+
+            OnPlayersChanged?.Invoke();
+            return true;
+        }
+
+        public static bool GrantCharacterXp(string playerId, int xpAmount)
+        {
+            var player = FindPlayer(playerId);
+
+            if (player == null || player.characterRuntimeData == null || xpAmount <= 0)
+            {
+                return false;
+            }
+
+            player.characterRuntimeData.xp = Math.Max(0, player.characterRuntimeData.xp + xpAmount);
+            ApplyEligibleXpLevels(player);
+            OnPlayersChanged?.Invoke();
+            return true;
+        }
+
+        public static int GetRequiredXpForLevel(int level)
+        {
+            return Math.Max(2, level) * 100;
+        }
+
+        public static int GetRequiredXpForNextLevel(int currentLevel)
+        {
+            return GetRequiredXpForLevel(Math.Max(1, currentLevel) + 1);
+        }
+
+        private static void ApplyEligibleXpLevels(CampaignPlayerData player)
+        {
+            if (player == null || player.characterRuntimeData == null)
+            {
+                return;
+            }
+
+            var gainedLevels = 0;
+            var level = Math.Max(1, player.characterRuntimeData.level);
+            var xp = Math.Max(0, player.characterRuntimeData.xp);
+
+            while (xp >= GetRequiredXpForNextLevel(level))
+            {
+                gainedLevels++;
+                level++;
+            }
+
+            if (gainedLevels > 0)
+            {
+                ApplyPlayerLevelBonus(player, gainedLevels);
+            }
+        }
+
+        private static void ApplyPlayerLevelBonus(CampaignPlayerData player, int levelCount)
+        {
+            if (player == null || player.characterRuntimeData == null || levelCount <= 0)
+            {
+                return;
+            }
+
+            var hpBonus = levelCount * 5;
+
+            player.characterRuntimeData.level = Math.Max(1, player.characterRuntimeData.level) + levelCount;
+            player.characterRuntimeData.attributePoints += levelCount * 3;
+            player.characterRuntimeData.skillPoints += levelCount;
+            player.characterRuntimeData.maxHp = Math.Max(1, player.characterRuntimeData.maxHp) + hpBonus;
+
+            player.maxHp = Math.Max(1, player.maxHp) + hpBonus;
+            if (!player.isDead)
+            {
+                player.currentHp = Math.Min(player.currentHp + hpBonus, player.maxHp);
+            }
+
+            UpdateTokenCombatStats(
+                player.id,
+                player.currentMapId,
+                player.currentHp,
+                player.maxHp,
+                player.currentArmor,
+                player.maxArmor,
+                player.currentMovementPoints,
+                player.maxMovementPoints,
+                player.currentRolls,
+                player.maxRolls,
+                player.activeWeaponIndex,
+                player.rerollCoins,
+                player.statusEffects,
+                player.isDead);
+        }
+
+        public static void EnsureCharacterProgressInitialized(RPGTable.CharacterEditor.SavedCharacterData data)
+        {
+            if (data == null)
+            {
+                return;
+            }
+
+            data.level = Math.Max(1, data.level);
+
+            var hasAllocatedPools = data.attackSkillPoints > 0 || data.defenseSkillPoints > 0;
+            var hasAbilities = HasAnyFilledSlot(data.attackSlots)
+                || HasAnyFilledSlot(data.attack2Slots)
+                || HasAnyFilledSlot(data.defenseSlots);
+
+            var startingSkillPoints = 10;
+            var totalEarnedSkillPoints = startingSkillPoints + Math.Max(0, data.level - 1);
+
+            if (hasAllocatedPools)
+            {
+                return;
+            }
+
+            if (!hasAbilities)
+            {
+                data.skillPoints = Math.Max(data.skillPoints, totalEarnedSkillPoints);
+                return;
+            }
+
+            var attack1Cost = CalculateAbilitySlotsCost(data.attackSlots, false);
+            var attack2Cost = CalculateAbilitySlotsCost(data.attack2Slots, false);
+            var defenseCost = CalculateAbilitySlotsCost(data.defenseSlots, true);
+
+            data.attackSkillPoints = Math.Max(data.attackSkillPoints, Math.Max(attack1Cost, attack2Cost));
+            data.defenseSkillPoints = Math.Max(data.defenseSkillPoints, defenseCost);
+            data.skillPoints = Math.Max(data.skillPoints, totalEarnedSkillPoints);
+        }
+
+        private static int CalculateAbilitySlotsCost(string[] slots, bool defenseSlots)
+        {
+            if (slots == null)
+            {
+                return 0;
+            }
+
+            var cost = 0;
+            foreach (var abilityName in slots)
+            {
+                if (string.IsNullOrWhiteSpace(abilityName))
+                {
+                    continue;
+                }
+
+                var card = FindAbilityCard(abilityName);
+                if (card == null)
+                {
+                    continue;
+                }
+
+                var isDefenseAbility = card.attackType == RPGTable.Core.AttackType.Defense;
+                if (defenseSlots != isDefenseAbility)
+                {
+                    continue;
+                }
+
+                cost += Math.Max(0, card.cost);
+            }
+
+            return cost;
+        }
+
+        private static RPGTable.Core.AbilityCard FindAbilityCard(string title)
+        {
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                return null;
+            }
+
+            if (abilityCardCache == null)
+            {
+                abilityCardCache = new Dictionary<string, RPGTable.Core.AbilityCard>(StringComparer.OrdinalIgnoreCase);
+                var cards = UnityEngine.Resources.LoadAll<RPGTable.Core.AbilityCard>("AbilityCards");
+                foreach (var card in cards)
+                {
+                    if (card != null && !string.IsNullOrWhiteSpace(card.title))
+                    {
+                        abilityCardCache[card.title] = card;
+                    }
+                }
+            }
+
+            abilityCardCache.TryGetValue(title, out var result);
+            return result;
+        }
+
+        private static bool HasAnyFilledSlot(string[] slots)
+        {
+            if (slots == null)
+            {
+                return false;
+            }
+
+            foreach (var slot in slots)
+            {
+                if (!string.IsNullOrWhiteSpace(slot))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public static void SetPlayerReady(string playerId, bool ready)

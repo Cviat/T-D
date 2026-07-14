@@ -142,7 +142,7 @@ namespace RPGTable.Runtime
             // Main menu buttons
             popup.deleteButtonObject = popup.CreateButton("Удалить", new Color(0.34f, 0.075f, 0.06f, 1f), popup.Delete);
             popup.mainButtons.Add(popup.deleteButtonObject);
-            popup.mainButtons.Add(popup.CreateButton("Посмотреть", new Color(0.13f, 0.10f, 0.075f, 1f), popup.CloseOnly));
+            popup.mainButtons.Add(popup.CreateButton("Посмотреть", new Color(0.13f, 0.10f, 0.075f, 1f), popup.Inspect));
             popup.mainButtons.Add(popup.CreateButton("Показать", new Color(0.13f, 0.10f, 0.075f, 1f), popup.CloseOnly));
             popup.mainButtons.Add(popup.CreateButton("Убить", new Color(0.18f, 0.055f, 0.045f, 1f), popup.Kill));
             popup.mainButtons.Add(popup.CreateButton("Команда", new Color(0.13f, 0.10f, 0.075f, 1f), popup.ShowTeamMenu));
@@ -344,6 +344,14 @@ namespace RPGTable.Runtime
             var token = runtimeToken;
             CloseOnly();
             gameLoader?.KillRuntimeToken(token);
+        }
+
+        private void Inspect()
+        {
+            var gameLoader = loader;
+            var token = runtimeToken;
+            CloseOnly();
+            GMCharacterWindow.Open(token, gameLoader);
         }
 
         private void CloseOnly()

@@ -43,6 +43,7 @@ export function stopGamePolling() {
 
 export function initCombatControls(sessionRef) {
     currentSessionRef = sessionRef;
+    ensureLevelProgressButton();
 
     document.querySelectorAll('[data-move]').forEach(button => {
         let intervalId = null;
@@ -122,12 +123,38 @@ async function endTurn(sessionRef) {
     }
 }
 
+function ensureLevelProgressButton() {
+    if (document.getElementById('level-progress-button')) return;
+
+    const focusButton = document.getElementById('focus-camera-button');
+    if (!focusButton || !focusButton.parentNode) return;
+
+    const button = document.createElement('button');
+    button.id = 'level-progress-button';
+    button.className = 'icon-button level-progress-button hidden';
+    button.type = 'button';
+    button.title = 'Распределить очки';
+    button.textContent = '↑';
+    button.addEventListener('click', () => {
+        window.dispatchEvent(new CustomEvent('route', { detail: 'character-editor' }));
+    });
+
+    focusButton.parentNode.insertBefore(button, focusButton);
+}
+
 function renderGameState(state) {
     console.log("[CombatScreen] renderGameState state:", state);
     document.getElementById('stat-hp').textContent = valuePair(state.hp, state.maxHp);
     document.getElementById('stat-armor').textContent = valuePair(state.armor, state.maxArmor);
     document.getElementById('stat-move').textContent = valuePair(state.movement, state.maxMovement);
     document.getElementById('stat-rolls').textContent = valuePair(state.rolls, state.maxRolls);
+    document.getElementById('game-state').textContent = `Уровень ${state.level || 1}`;
+
+    const levelProgressButton = document.getElementById('level-progress-button');
+    if (levelProgressButton) {
+        levelProgressButton.classList.toggle('hidden', !state.hasUnspentProgress);
+    }
+
     document.getElementById('turn-state').textContent = state.isCombatActive
         ? state.isMyTurn ? 'Ваш ход' : 'Ход другого участника'
         : 'Свободное перемещение';

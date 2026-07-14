@@ -397,25 +397,21 @@ namespace RPGTable.Runtime
         {
             if (player == null) return;
 
-            // Recalculate stats for players
-            var baseData = string.IsNullOrEmpty(player.characterPath) 
-                ? new SavedCharacterData() 
-                : UserCharacterStore.LoadCharacter(player.characterPath);
-
-            int baseHp = baseData != null ? baseData.maxHp : 10;
-            int baseArmor = baseData != null ? baseData.maxArmor : 0;
+            var runtimeData = player.characterRuntimeData;
+            int baseHp = runtimeData != null && runtimeData.maxHp > 0 ? runtimeData.maxHp : 10;
+            int baseArmor = runtimeData != null ? runtimeData.maxArmor : 0;
 
             int extraHp = 0;
             int extraArmor = 0;
 
-            if (player.characterRuntimeData != null)
+            if (runtimeData != null)
             {
                 string[] equipped = {
-                    player.characterRuntimeData.eqHelmet, player.characterRuntimeData.eqArmor,
-                    player.characterRuntimeData.eqWeapon, player.characterRuntimeData.eqWeapon2,
-                    player.characterRuntimeData.eqShield, player.characterRuntimeData.eqBoots,
-                    player.characterRuntimeData.eqAmulet, player.characterRuntimeData.eqRing,
-                    player.characterRuntimeData.eqArtifact, player.characterRuntimeData.eqBelt
+                    runtimeData.eqHelmet, runtimeData.eqArmor,
+                    runtimeData.eqWeapon, runtimeData.eqWeapon2,
+                    runtimeData.eqShield, runtimeData.eqBoots,
+                    runtimeData.eqAmulet, runtimeData.eqRing,
+                    runtimeData.eqArtifact, runtimeData.eqBelt
                 };
 
                 foreach (var itemName in equipped)

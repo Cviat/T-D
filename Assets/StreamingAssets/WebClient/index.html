@@ -90,15 +90,16 @@
             <div class="panel">
                 <div class="panel-title">Атрибуты</div>
                 <div class="attributes-grid">
-                    <div class="attr-box"><span>STR</span><strong id="char-str">-</strong></div>
-                    <div class="attr-box"><span>AGI</span><strong id="char-agi">-</strong></div>
-                    <div class="attr-box"><span>INT</span><strong id="char-int">-</strong></div>
-                    <div class="attr-box"><span>HOL</span><strong id="char-hol">-</strong></div>
+                    <div class="attr-box" data-attr="STR"><button class="attr-increase hidden" type="button">↑</button><span>STR</span><strong id="char-str">-</strong></div>
+                    <div class="attr-box" data-attr="AGI"><button class="attr-increase hidden" type="button">↑</button><span>AGI</span><strong id="char-agi">-</strong></div>
+                    <div class="attr-box" data-attr="INT"><button class="attr-increase hidden" type="button">↑</button><span>INT</span><strong id="char-int">-</strong></div>
+                    <div class="attr-box" data-attr="HOL"><button class="attr-increase hidden" type="button">↑</button><span>HOL</span><strong id="char-hol">-</strong></div>
                 </div>
             </div>
 
             <div class="panel">
                 <div class="panel-title">Слоты способностей</div>
+                <div id="skill-points-panel" class="skill-points-panel"></div>
                 <div class="tabs" style="display: flex; gap: 8px; margin-bottom: 12px;">
                     <button id="skills-tab-1" class="button secondary active" style="flex: 1; min-height: 38px; font-size: 11px;" type="button">Оружие 1</button>
                     <button id="skills-tab-2" class="button secondary" style="flex: 1; min-height: 38px; font-size: 11px;" type="button">Оружие 2</button>
