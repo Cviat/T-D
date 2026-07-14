@@ -303,7 +303,6 @@ namespace RPGTable.MapEditor
 
         private RectTransform rectTransform;
         private RectTransform canvasRectTransform;
-        private Action deleteAction;
 
         public static void Show(Vector2 screenPosition, string label, Action onDelete)
         {
@@ -312,7 +311,17 @@ namespace RPGTable.MapEditor
                 current = Create();
             }
 
-            current.ShowInternal(screenPosition, label, onDelete);
+            current.ShowMenuInternal(screenPosition, new[] { new MenuAction(label, onDelete) });
+        }
+
+        public static void ShowMenu(Vector2 screenPosition, params MenuAction[] actions)
+        {
+            if (current == null)
+            {
+                current = Create();
+            }
+
+            current.ShowMenuInternal(screenPosition, actions);
         }
 
         private static MapEditorDeletePopup Create()
@@ -341,25 +350,13 @@ namespace RPGTable.MapEditor
             var background = popupObject.AddComponent<Image>();
             background.color = new Color(0.18f, 0.055f, 0.045f, 0.96f);
 
-            var button = popupObject.AddComponent<Button>();
-            button.targetGraphic = background;
-            button.onClick.AddListener(popup.Delete);
-
-            var textObject = new GameObject("Label", typeof(RectTransform));
-            textObject.transform.SetParent(popupObject.transform, false);
-            var textRect = textObject.GetComponent<RectTransform>();
-            textRect.anchorMin = Vector2.zero;
-            textRect.anchorMax = Vector2.one;
-            textRect.offsetMin = Vector2.zero;
-            textRect.offsetMax = Vector2.zero;
-
-            var text = textObject.AddComponent<Text>();
-            text.alignment = TextAnchor.MiddleCenter;
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            text.fontStyle = FontStyle.Bold;
-            text.fontSize = 18;
-            text.color = Color.white;
-            text.raycastTarget = false;
+            var layout = popupObject.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(4, 4, 4, 4);
+            layout.spacing = 4f;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = true;
 
             popupObject.SetActive(false);
             return popup;
@@ -381,10 +378,22 @@ namespace RPGTable.MapEditor
 #endif
         }
 
-        private void ShowInternal(Vector2 screenPosition, string label, Action onDelete)
+        private void ShowMenuInternal(Vector2 screenPosition, MenuAction[] actions)
         {
-            deleteAction = onDelete;
-            GetComponentInChildren<Text>().text = label;
+            ClearChildren(transform);
+
+            if (actions == null || actions.Length == 0)
+            {
+                gameObject.SetActive(false);
+                return;
+            }
+
+            rectTransform.sizeDelta = new Vector2(actions.Length > 1 ? 210f : Width, 8f + Height * actions.Length);
+
+            foreach (var action in actions)
+            {
+                CreateButton(action.Label, action.Action);
+            }
 
             RectTransformUtility.ScreenPointToLocalPointInRectangle(
                 canvasRectTransform,
@@ -394,6 +403,40 @@ namespace RPGTable.MapEditor
 
             rectTransform.anchoredPosition = ClampToCanvas(localPosition + new Vector2(72f, -18f));
             gameObject.SetActive(true);
+        }
+
+        private void CreateButton(string label, Action action)
+        {
+            var buttonObject = new GameObject(label, typeof(RectTransform));
+            buttonObject.transform.SetParent(transform, false);
+
+            var background = buttonObject.AddComponent<Image>();
+            background.color = new Color(0.18f, 0.055f, 0.045f, 0.96f);
+
+            var button = buttonObject.AddComponent<Button>();
+            button.targetGraphic = background;
+            button.onClick.AddListener(() =>
+            {
+                gameObject.SetActive(false);
+                action?.Invoke();
+            });
+
+            var textObject = new GameObject("Label", typeof(RectTransform));
+            textObject.transform.SetParent(buttonObject.transform, false);
+            var textRect = textObject.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+
+            var text = textObject.AddComponent<Text>();
+            text.text = label;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontStyle = FontStyle.Bold;
+            text.fontSize = 17;
+            text.color = Color.white;
+            text.raycastTarget = false;
         }
 
         private Vector2 ClampToCanvas(Vector2 position)
@@ -416,11 +459,12 @@ namespace RPGTable.MapEditor
             gameObject.SetActive(false);
         }
 
-        private void Delete()
+        private static void ClearChildren(Transform root)
         {
-            var action = deleteAction;
-            gameObject.SetActive(false);
-            action?.Invoke();
+            for (var i = root.childCount - 1; i >= 0; i--)
+            {
+                Destroy(root.GetChild(i).gameObject);
+            }
         }
 
         private static bool EscapePressed()
@@ -431,6 +475,18 @@ namespace RPGTable.MapEditor
 #else
             return UnityEngine.Input.GetKeyDown(KeyCode.Escape);
 #endif
+        }
+
+        public readonly struct MenuAction
+        {
+            public readonly string Label;
+            public readonly Action Action;
+
+            public MenuAction(string label, Action action)
+            {
+                Label = label;
+                Action = action;
+            }
         }
     }
 

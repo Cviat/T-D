@@ -65,6 +65,7 @@ namespace RPGTable.Runtime
         public static event Action<string> OnTokenFocused;
 
         private static readonly List<CampaignPlayerData> Players = new List<CampaignPlayerData>();
+        private static readonly HashSet<string> PlayedCutsceneMapIds = new HashSet<string>();
         private static Dictionary<string, RPGTable.Core.AbilityCard> abilityCardCache;
         private static int nextPlayerIndex = 1;
 
@@ -73,6 +74,21 @@ namespace RPGTable.Runtime
         public static void TriggerPlayersChanged()
         {
             OnPlayersChanged?.Invoke();
+        }
+
+        public static void ResetPlayedCutscenes()
+        {
+            PlayedCutsceneMapIds.Clear();
+        }
+
+        public static bool MarkCutscenePlayed(string mapId)
+        {
+            return !string.IsNullOrWhiteSpace(mapId) && PlayedCutsceneMapIds.Add(mapId);
+        }
+
+        public static bool HasCutscenePlayed(string mapId)
+        {
+            return !string.IsNullOrWhiteSpace(mapId) && PlayedCutsceneMapIds.Contains(mapId);
         }
 
         public static string SelectedCampaignPath { get; set; }

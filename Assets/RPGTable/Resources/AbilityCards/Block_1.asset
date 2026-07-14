@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RPGTable.Core.AbilityCard
   icon: {fileID: 21300000, guid: 04f5897dc41fbce4eb4bbe94e9edaff2, type: 3}
   title: "\u0417\u0430\u0449\u0438\u0442\u0430"
-  description: "\u041F\u0440\u043E\u0441\u0442\u043E\u0439 \u0431\u043B\u043E\u043A
-    \u0449\u0438\u0442\u043E\u043C "
+  description: "\u041F\u0440\u043E\u0441\u0442\u043E\u0439 \u0431\u043B\u043E\u043A  "
   cost: 1
   range: 2
   effectType: 0

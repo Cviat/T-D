@@ -524,6 +524,8 @@ namespace RPGTable.MapEditor
         public string id;
         public string mapPath;
         public Vector2 boardPosition;
+        public string cutscenePath;
+        public string cutsceneType;
         public SavedCampaignTokenData[] presetTokens;
     }
 
@@ -541,6 +543,7 @@ namespace RPGTable.MapEditor
         private const string Extension = ".json";
         private const string CampaignsFolderName = "Campaigns";
         private const string CampaignCoversFolderName = "CampaignCovers";
+        private const string CutscenesFolderName = "Cutscenes";
 
         public static string CampaignsFolder
         {
@@ -557,6 +560,16 @@ namespace RPGTable.MapEditor
             get
             {
                 var path = Path.Combine(UserTokenStore.RootFolder, CampaignCoversFolderName);
+                Directory.CreateDirectory(path);
+                return path;
+            }
+        }
+
+        public static string CutscenesFolder
+        {
+            get
+            {
+                var path = Path.Combine(UserTokenStore.RootFolder, CutscenesFolderName);
                 Directory.CreateDirectory(path);
                 return path;
             }
@@ -625,6 +638,46 @@ namespace RPGTable.MapEditor
             return UserTokenStore.ToPortablePath(targetPath);
         }
 
+        public static string ImportCutsceneWithDialog()
+        {
+#if UNITY_EDITOR
+            var sourcePath = EditorUtility.OpenFilePanel("Import cutscene", "", "png,jpg,jpeg,mp4,mov,webm");
+
+            if (string.IsNullOrWhiteSpace(sourcePath))
+            {
+                return null;
+            }
+
+            return ImportCutscene(sourcePath);
+#else
+            Debug.LogWarning("Runtime file picker is not implemented yet.");
+            return null;
+#endif
+        }
+
+        public static string ImportCutscene(string sourcePath)
+        {
+            if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath) || !IsSupportedCutscene(sourcePath))
+            {
+                return null;
+            }
+
+            var targetPath = UniquePath(Path.Combine(CutscenesFolder, Path.GetFileName(sourcePath)));
+            File.Copy(sourcePath, targetPath);
+            return UserTokenStore.ToPortablePath(targetPath);
+        }
+
+        public static string ResolveCutscenePath(string path)
+        {
+            return UserTokenStore.ResolveUserDataPath(path, CutscenesFolderName);
+        }
+
+        public static string GetCutsceneType(string path)
+        {
+            var extension = Path.GetExtension(path ?? string.Empty).ToLowerInvariant();
+            return extension == ".png" || extension == ".jpg" || extension == ".jpeg" ? "image" : "video";
+        }
+
         public static Sprite LoadCoverSprite(string path)
         {
             return UserElementAssetStore.LoadSprite(path);
@@ -681,6 +734,7 @@ namespace RPGTable.MapEditor
                 }
 
                 map.mapPath = UserTokenStore.ToPortableUserDataPath(map.mapPath, "Maps");
+                map.cutscenePath = UserTokenStore.ToPortableUserDataPath(map.cutscenePath, CutscenesFolderName);
 
                 if (map.presetTokens == null)
                 {
@@ -698,6 +752,17 @@ namespace RPGTable.MapEditor
                     presetToken.tokenPath = UserTokenStore.ToPortableUserDataPath(presetToken.tokenPath, "Tokens");
                 }
             }
+        }
+
+        private static bool IsSupportedCutscene(string path)
+        {
+            var extension = Path.GetExtension(path);
+            return string.Equals(extension, ".png", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(extension, ".jpg", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(extension, ".jpeg", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(extension, ".mp4", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(extension, ".mov", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(extension, ".webm", StringComparison.OrdinalIgnoreCase);
         }
 
         private static string UniquePath(string path)

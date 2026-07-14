@@ -11,23 +11,38 @@ namespace RPGTable.MapEditor
         private CampaignEditorController controller;
         private RectTransform rectTransform;
         private Text startText;
+        private Text cutsceneText;
 
         public readonly List<SavedCampaignTokenData> presetTokens = new List<SavedCampaignTokenData>();
 
         public string Id { get; private set; }
         public string MapPath { get; private set; }
+        public string CutscenePath { get; private set; }
+        public string CutsceneType { get; private set; }
         public RectTransform RectTransform => rectTransform;
 
-        public void Initialize(CampaignEditorController campaignController, string nodeId, string mapPath, string displayName, SavedMapExitPointData[] exitPoints, bool isStart)
+        public void Initialize(
+            CampaignEditorController campaignController,
+            string nodeId,
+            string mapPath,
+            string displayName,
+            SavedMapExitPointData[] exitPoints,
+            bool isStart,
+            string cutscenePath = null,
+            string cutsceneType = null)
         {
             controller = campaignController;
             Id = nodeId;
             MapPath = mapPath;
+            CutscenePath = cutscenePath;
+            CutsceneType = cutsceneType;
             rectTransform = GetComponent<RectTransform>();
             CreatePreview();
             CreateLabel(displayName);
             CreateStartButton();
+            CreateCutsceneBadge();
             SetStart(isStart);
+            RefreshCutsceneBadge();
 
             if (exitPoints == null)
             {
@@ -58,7 +73,17 @@ namespace RPGTable.MapEditor
                 return;
             }
 
-            MapEditorDeletePopup.Show(eventData.position, "Удалить", () => controller.RemoveMapNode(this));
+            MapEditorDeletePopup.ShowMenu(
+                eventData.position,
+                new MapEditorDeletePopup.MenuAction("Добавить кат-сцену", () => controller.AddCutsceneToMap(this)),
+                new MapEditorDeletePopup.MenuAction("Удалить", () => controller.RemoveMapNode(this)));
+        }
+
+        public void SetCutscene(string path, string type)
+        {
+            CutscenePath = path;
+            CutsceneType = type;
+            RefreshCutsceneBadge();
         }
 
         public CampaignExitPin FindPin(string exitId)
@@ -152,6 +177,49 @@ namespace RPGTable.MapEditor
             startText.fontStyle = FontStyle.Bold;
             startText.fontSize = 13;
             startText.raycastTarget = false;
+        }
+
+        private void CreateCutsceneBadge()
+        {
+            var badgeObject = new GameObject("Cutscene Badge", typeof(RectTransform));
+            badgeObject.transform.SetParent(transform, false);
+            var rect = badgeObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(1f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 1f);
+            rect.anchoredPosition = new Vector2(-10f, -10f);
+            rect.sizeDelta = new Vector2(104f, 28f);
+
+            var image = badgeObject.AddComponent<Image>();
+            image.color = new Color(0.08f, 0.18f, 0.28f, 0.94f);
+            image.raycastTarget = false;
+
+            var textObject = new GameObject("Label", typeof(RectTransform));
+            textObject.transform.SetParent(badgeObject.transform, false);
+            var textRect = textObject.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+
+            cutsceneText = textObject.AddComponent<Text>();
+            cutsceneText.alignment = TextAnchor.MiddleCenter;
+            cutsceneText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            cutsceneText.fontStyle = FontStyle.Bold;
+            cutsceneText.fontSize = 13;
+            cutsceneText.color = new Color(0.8f, 0.92f, 1f, 1f);
+            cutsceneText.raycastTarget = false;
+        }
+
+        private void RefreshCutsceneBadge()
+        {
+            if (cutsceneText == null)
+            {
+                return;
+            }
+
+            cutsceneText.transform.parent.gameObject.SetActive(!string.IsNullOrWhiteSpace(CutscenePath));
+            cutsceneText.text = CutsceneType == "video" ? "CUT VIDEO" : "CUT IMAGE";
         }
 
         private void CreatePin(SavedMapExitPointData exitPoint)

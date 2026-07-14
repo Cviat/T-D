@@ -5,6 +5,7 @@ using RPGTable.Core;
 using RPGTable.MapEditor;
 using RPGTable.TokenEditor;
 using UnityEngine;
+using UnityEngine.Video;
 using UnityEngine.UI;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -48,6 +49,9 @@ namespace RPGTable.Runtime
         private bool playerViewDragging;
         private string playerViewStateKey;
         private string playerViewMapId;
+        private GameObject cutsceneOverlay;
+        private VideoPlayer cutsceneVideoPlayer;
+        private RenderTexture cutsceneRenderTexture;
 
         public static bool PlayerViewCameraControlActive { get; private set; }
         public string PlayerViewMapId => playerViewMapId;
@@ -132,6 +136,147 @@ namespace RPGTable.Runtime
         }
 
         // в”Ђв”Ђ Toggle / Control в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+
+        public bool IsCutscenePlaying => cutsceneOverlay != null;
+
+        public bool PlayCutscene(SavedCampaignMapNodeData node)
+        {
+            if (node == null || playerViewInterface == null || string.IsNullOrWhiteSpace(node.cutscenePath))
+            {
+                return false;
+            }
+
+            var resolvedPath = UserCampaignStore.ResolveCutscenePath(node.cutscenePath);
+            if (string.IsNullOrWhiteSpace(resolvedPath) || !System.IO.File.Exists(resolvedPath))
+            {
+                Debug.LogWarning($"Cutscene file not found: {node.cutscenePath}");
+                return false;
+            }
+
+            StopCutscene();
+
+            cutsceneOverlay = CampaignGameUI.CreatePanel("Player View Cutscene", playerViewInterface.transform, Color.black);
+            var overlayRect = cutsceneOverlay.GetComponent<RectTransform>();
+            overlayRect.anchorMin = Vector2.zero;
+            overlayRect.anchorMax = Vector2.one;
+            overlayRect.offsetMin = Vector2.zero;
+            overlayRect.offsetMax = Vector2.zero;
+            cutsceneOverlay.transform.SetAsLastSibling();
+
+            var type = string.IsNullOrWhiteSpace(node.cutsceneType)
+                ? UserCampaignStore.GetCutsceneType(node.cutscenePath)
+                : node.cutsceneType;
+
+            if (type == "video")
+            {
+                PlayVideoCutscene(resolvedPath);
+            }
+            else
+            {
+                PlayImageCutscene(node.cutscenePath);
+            }
+
+            return true;
+        }
+
+        public void StopCutscene()
+        {
+            if (cutsceneVideoPlayer != null)
+            {
+                cutsceneVideoPlayer.Stop();
+                cutsceneVideoPlayer.loopPointReached -= HandleCutsceneVideoEnded;
+                cutsceneVideoPlayer.prepareCompleted -= HandleCutsceneVideoPrepared;
+                cutsceneVideoPlayer = null;
+            }
+
+            if (cutsceneRenderTexture != null)
+            {
+                cutsceneRenderTexture.Release();
+                UnityEngine.Object.Destroy(cutsceneRenderTexture);
+                cutsceneRenderTexture = null;
+            }
+
+            if (cutsceneOverlay != null)
+            {
+                UnityEngine.Object.Destroy(cutsceneOverlay);
+                cutsceneOverlay = null;
+            }
+        }
+
+        private void PlayImageCutscene(string path)
+        {
+            var sprite = UserElementAssetStore.LoadSprite(path);
+            if (sprite == null)
+            {
+                StopCutscene();
+                return;
+            }
+
+            var imageObject = new GameObject("Cutscene Image", typeof(RectTransform));
+            imageObject.transform.SetParent(cutsceneOverlay.transform, false);
+            var imageRect = imageObject.GetComponent<RectTransform>();
+            imageRect.anchorMin = Vector2.zero;
+            imageRect.anchorMax = Vector2.one;
+            imageRect.offsetMin = Vector2.zero;
+            imageRect.offsetMax = Vector2.zero;
+
+            var image = imageObject.AddComponent<Image>();
+            image.sprite = sprite;
+            image.color = Color.white;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+        }
+
+        private void PlayVideoCutscene(string resolvedPath)
+        {
+            cutsceneRenderTexture = new RenderTexture(1920, 1080, 0, RenderTextureFormat.ARGB32);
+            cutsceneRenderTexture.Create();
+
+            var videoObject = new GameObject("Cutscene Video", typeof(RectTransform));
+            videoObject.transform.SetParent(cutsceneOverlay.transform, false);
+            var videoRect = videoObject.GetComponent<RectTransform>();
+            videoRect.anchorMin = Vector2.zero;
+            videoRect.anchorMax = Vector2.one;
+            videoRect.offsetMin = Vector2.zero;
+            videoRect.offsetMax = Vector2.zero;
+
+            var rawImage = videoObject.AddComponent<RawImage>();
+            rawImage.texture = cutsceneRenderTexture;
+            rawImage.color = Color.white;
+            rawImage.raycastTarget = false;
+
+            var fitter = videoObject.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            fitter.aspectRatio = 16f / 9f;
+
+            cutsceneVideoPlayer = videoObject.AddComponent<VideoPlayer>();
+            cutsceneVideoPlayer.playOnAwake = false;
+            cutsceneVideoPlayer.renderMode = VideoRenderMode.RenderTexture;
+            cutsceneVideoPlayer.targetTexture = cutsceneRenderTexture;
+            cutsceneVideoPlayer.source = VideoSource.Url;
+            cutsceneVideoPlayer.url = resolvedPath;
+            cutsceneVideoPlayer.isLooping = false;
+            cutsceneVideoPlayer.audioOutputMode = VideoAudioOutputMode.Direct;
+            cutsceneVideoPlayer.loopPointReached += HandleCutsceneVideoEnded;
+            cutsceneVideoPlayer.prepareCompleted += HandleCutsceneVideoPrepared;
+            cutsceneVideoPlayer.Prepare();
+        }
+
+        private void HandleCutsceneVideoPrepared(VideoPlayer player)
+        {
+            var fitter = player.GetComponent<AspectRatioFitter>();
+            if (fitter != null && player.width > 0 && player.height > 0)
+            {
+                fitter.aspectRatio = (float)player.width / player.height;
+            }
+
+            player.Play();
+        }
+
+        private void HandleCutsceneVideoEnded(VideoPlayer player)
+        {
+            StopCutscene();
+        }
 
         public void TogglePlayerViewCameraControl()
         {

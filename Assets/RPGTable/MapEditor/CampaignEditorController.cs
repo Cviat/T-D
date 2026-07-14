@@ -143,7 +143,13 @@ namespace RPGTable.MapEditor
             }
         }
 
-        private void AddMapNode(string mapPath, Vector2 boardPosition, string existingId, SavedCampaignTokenData[] presetTokens = null)
+        private void AddMapNode(
+            string mapPath,
+            Vector2 boardPosition,
+            string existingId,
+            SavedCampaignTokenData[] presetTokens = null,
+            string cutscenePath = null,
+            string cutsceneType = null)
         {
             var mapData = UserMapStore.LoadMap(mapPath);
 
@@ -177,7 +183,9 @@ namespace RPGTable.MapEditor
                 mapPath,
                 mapData.name,
                 mapData.exitPoints,
-                startMapId == nodeId);
+                startMapId == nodeId,
+                cutscenePath,
+                cutsceneType);
 
             if (presetTokens != null)
             {
@@ -222,6 +230,22 @@ namespace RPGTable.MapEditor
             }
 
             Destroy(node.gameObject);
+        }
+
+        public void AddCutsceneToMap(CampaignMapNode node)
+        {
+            if (node == null)
+            {
+                return;
+            }
+
+            var path = UserCampaignStore.ImportCutsceneWithDialog();
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return;
+            }
+
+            node.SetCutscene(path, UserCampaignStore.GetCutsceneType(path));
         }
 
         public void SetStartMap(CampaignMapNode node)
@@ -288,6 +312,8 @@ namespace RPGTable.MapEditor
                     id = node.Id,
                     mapPath = node.MapPath,
                     boardPosition = node.RectTransform.anchoredPosition,
+                    cutscenePath = node.CutscenePath,
+                    cutsceneType = node.CutsceneType,
                     presetTokens = node.presetTokens.ToArray()
                 };
             }
@@ -327,7 +353,7 @@ namespace RPGTable.MapEditor
             {
                 foreach (var map in data.maps)
                 {
-                    AddMapNode(map.mapPath, map.boardPosition, map.id, map.presetTokens);
+                    AddMapNode(map.mapPath, map.boardPosition, map.id, map.presetTokens, map.cutscenePath, map.cutsceneType);
                 }
             }
 

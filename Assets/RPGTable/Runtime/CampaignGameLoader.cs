@@ -31,6 +31,7 @@ namespace RPGTable.Runtime
         private CampaignTransitionController transitionController;
         private CampaignGameUI ui;
         internal CampaignGameUI UI => ui;
+        private int cutsceneStartedFrame = -1;
 
         // в”Ђв”Ђ Lifecycle в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
@@ -65,6 +66,16 @@ namespace RPGTable.Runtime
 
         private void Update()
         {
+            if (pvManager != null && pvManager.IsCutscenePlaying)
+            {
+                if (Time.frameCount > cutsceneStartedFrame && AnyGmInputPressed())
+                {
+                    pvManager.StopCutscene();
+                }
+
+                return;
+            }
+
             spawner.HandleBankPlacement();
             transitionController.SyncRuntimePlayerPositions();
             transitionController.CheckPlayerTransitions();
@@ -79,6 +90,7 @@ namespace RPGTable.Runtime
 
         private void LoadSelectedCampaign()
         {
+            CampaignGameSession.ResetPlayedCutscenes();
             context.Campaign = UserCampaignStore.LoadCampaign(CampaignGameSession.SelectedCampaignPath);
 
             if (context.Campaign == null || context.Campaign.maps == null || context.Campaign.maps.Length == 0)
@@ -149,6 +161,7 @@ namespace RPGTable.Runtime
             RefreshMapPanel();
             RefreshPlayerPanel();
             pvManager.RefreshPlayerView(true);
+            TryPlayCutsceneForCurrentMap();
         }
 
         private void SwitchMap(string mapId)
@@ -156,6 +169,26 @@ namespace RPGTable.Runtime
             if (context.MapNodes.TryGetValue(mapId, out var node))
             {
                 LoadMap(node);
+            }
+        }
+
+        private void TryPlayCutsceneForCurrentMap()
+        {
+            var node = context.CurrentMapNode;
+            if (node == null || string.IsNullOrWhiteSpace(node.cutscenePath))
+            {
+                return;
+            }
+
+            if (CampaignGameSession.HasCutscenePlayed(node.id))
+            {
+                return;
+            }
+
+            if (pvManager.PlayCutscene(node))
+            {
+                CampaignGameSession.MarkCutscenePlayed(node.id);
+                cutsceneStartedFrame = Time.frameCount;
             }
         }
 
@@ -390,6 +423,20 @@ namespace RPGTable.Runtime
             return Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
 #else
             return UnityEngine.Input.GetMouseButtonDown(0);
+#endif
+        }
+
+        private bool AnyGmInputPressed()
+        {
+#if ENABLE_INPUT_SYSTEM
+            var keyboardPressed = Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame;
+            var mousePressed = Mouse.current != null
+                && (Mouse.current.leftButton.wasPressedThisFrame
+                    || Mouse.current.rightButton.wasPressedThisFrame
+                    || Mouse.current.middleButton.wasPressedThisFrame);
+            return keyboardPressed || mousePressed;
+#else
+            return UnityEngine.Input.anyKeyDown;
 #endif
         }
 
