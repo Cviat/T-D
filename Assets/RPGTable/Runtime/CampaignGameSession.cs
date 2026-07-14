@@ -271,6 +271,36 @@ namespace RPGTable.Runtime
             return true;
         }
 
+        public static bool IncreaseCharacterAttributes(string playerId, int strength, int agility, int intelligence, int holiness)
+        {
+            var player = FindPlayer(playerId);
+
+            if (player == null || player.characterRuntimeData == null)
+            {
+                return false;
+            }
+
+            strength = Math.Max(0, strength);
+            agility = Math.Max(0, agility);
+            intelligence = Math.Max(0, intelligence);
+            holiness = Math.Max(0, holiness);
+
+            var total = strength + agility + intelligence + holiness;
+            if (total <= 0 || player.characterRuntimeData.attributePoints < total)
+            {
+                return false;
+            }
+
+            var data = player.characterRuntimeData;
+            data.strength += strength;
+            data.agility += agility;
+            data.intelligence += intelligence;
+            data.holiness += holiness;
+            data.attributePoints -= total;
+            OnPlayersChanged?.Invoke();
+            return true;
+        }
+
         public static bool AllocateCharacterSkillPoint(string playerId, string pool)
         {
             var player = FindPlayer(playerId);
@@ -294,6 +324,32 @@ namespace RPGTable.Runtime
             }
 
             data.skillPoints--;
+            OnPlayersChanged?.Invoke();
+            return true;
+        }
+
+        public static bool AllocateCharacterSkillPoints(string playerId, int attack, int defense)
+        {
+            var player = FindPlayer(playerId);
+
+            if (player == null || player.characterRuntimeData == null)
+            {
+                return false;
+            }
+
+            attack = Math.Max(0, attack);
+            defense = Math.Max(0, defense);
+            var total = attack + defense;
+
+            if (total <= 0 || player.characterRuntimeData.skillPoints < total)
+            {
+                return false;
+            }
+
+            var data = player.characterRuntimeData;
+            data.attackSkillPoints += attack;
+            data.defenseSkillPoints += defense;
+            data.skillPoints -= total;
             OnPlayersChanged?.Invoke();
             return true;
         }
@@ -660,6 +716,27 @@ namespace RPGTable.Runtime
 
             UpdateNPCState(mapId, id, hp, armor, dead);
             OnTokenChanged(id, mapId, hp, armor, dead);
+        }
+
+        public static bool RestoreTokenArmor(string id, string mapId)
+        {
+            var player = FindPlayer(id);
+            if (player != null)
+            {
+                player.currentArmor = Math.Max(0, player.maxArmor);
+                OnTokenDataChanged?.Invoke(id, mapId, player.currentHp, player.currentArmor, player.isDead);
+                return true;
+            }
+
+            var npc = FindNPCState(mapId, id);
+            if (npc != null)
+            {
+                npc.currentArmor = Math.Max(0, npc.maxArmor);
+                OnTokenChanged(id, mapId, npc.currentHp, npc.currentArmor, npc.isDead);
+                return true;
+            }
+
+            return false;
         }
 
         private static void OnTokenChanged(string id, string mapId, int hp, int armor, bool dead)

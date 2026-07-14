@@ -150,10 +150,28 @@ namespace RPGTable.Runtime.Networking
         }
 
         [Serializable]
+        public class UpdateAttributesPayload
+        {
+            public string playerId;
+            public int strength;
+            public int agility;
+            public int intelligence;
+            public int holiness;
+        }
+
+        [Serializable]
         public class AllocateSkillPointPayload
         {
             public string playerId;
             public string pool;
+        }
+
+        [Serializable]
+        public class UpdateSkillPoolsPayload
+        {
+            public string playerId;
+            public int attack;
+            public int defense;
         }
 
         [Serializable]
@@ -1662,6 +1680,36 @@ namespace RPGTable.Runtime.Networking
                 return;
             }
 
+            if (method == "POST" && url == "/api/character/update-attributes")
+            {
+                try
+                {
+                    var payload = JsonUtility.FromJson<UpdateAttributesPayload>(requestStr);
+                    bool success = false;
+                    if (payload != null && !string.IsNullOrWhiteSpace(payload.playerId))
+                    {
+                        ExecuteOnMainThreadBlocking(() =>
+                        {
+                            success = RPGTable.Runtime.CampaignGameSession.IncreaseCharacterAttributes(
+                                payload.playerId,
+                                payload.strength,
+                                payload.agility,
+                                payload.intelligence,
+                                payload.holiness);
+                        });
+                    }
+
+                    string resp = success ? "{\"status\":\"success\"}" : "{\"status\":\"failed\"}";
+                    SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(resp));
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[WebServerManager] update attributes error: {ex}");
+                    SendResponse(stream, 500, "Internal Server Error", "text/plain", Encoding.UTF8.GetBytes(ex.Message));
+                }
+                return;
+            }
+
             if (method == "POST" && url == "/api/character/allocate-skill-point")
             {
                 try
@@ -1768,6 +1816,34 @@ namespace RPGTable.Runtime.Networking
                 catch (Exception ex)
                 {
                     Debug.LogError($"[WebServerManager] update-skills error: {ex}");
+                    SendResponse(stream, 500, "Internal Server Error", "text/plain", Encoding.UTF8.GetBytes(ex.Message));
+                }
+                return;
+            }
+
+            if (method == "POST" && url == "/api/character/update-skill-pools")
+            {
+                try
+                {
+                    var payload = JsonUtility.FromJson<UpdateSkillPoolsPayload>(requestStr);
+                    bool success = false;
+                    if (payload != null && !string.IsNullOrWhiteSpace(payload.playerId))
+                    {
+                        ExecuteOnMainThreadBlocking(() =>
+                        {
+                            success = RPGTable.Runtime.CampaignGameSession.AllocateCharacterSkillPoints(
+                                payload.playerId,
+                                payload.attack,
+                                payload.defense);
+                        });
+                    }
+
+                    string resp = success ? "{\"status\":\"success\"}" : "{\"status\":\"failed\"}";
+                    SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(resp));
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[WebServerManager] update skill pools error: {ex}");
                     SendResponse(stream, 500, "Internal Server Error", "text/plain", Encoding.UTF8.GetBytes(ex.Message));
                 }
                 return;

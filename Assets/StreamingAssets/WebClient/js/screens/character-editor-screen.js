@@ -6,15 +6,25 @@ let characterData = null;
 let activeTab = 1; // 1 = weapon 1, 2 = weapon 2, 3 = defense
 let selectedSlotIndex = null;
 let selectedAbilityName = null;
+let pendingAttributeDeltas = null;
+let pendingAttributeTimer = null;
+let pendingAttributeRequest = null;
+let pendingSkillPoolDeltas = null;
+let pendingSkillPoolTimer = null;
+let pendingSkillPoolRequest = null;
+let lifecycleFlushRegistered = false;
 
 export async function initCharacterEditorScreen(session) {
     currentSession = session;
     selectedSlotIndex = null;
     selectedAbilityName = null;
+    clearPendingAttributeChanges();
+    clearPendingSkillPoolChanges();
     hideDetails();
     setupTabListeners();
     setupAttributeListeners();
     setupBackRoute();
+    setupLifecycleFlush();
     await ensureCharacter();
     await refreshCharacterDetails();
 }
@@ -76,9 +86,9 @@ function setupAttributeListeners() {
     document.querySelectorAll('.attr-box[data-attr]').forEach(box => {
         const button = box.querySelector('.attr-increase');
         if (!button) return;
-        button.onclick = async event => {
+        button.onclick = event => {
             event.stopPropagation();
-            await increaseAttribute(box.dataset.attr);
+            increaseAttribute(box.dataset.attr);
         };
     });
 }
@@ -88,6 +98,23 @@ function setupBackRoute() {
     if (backButton) {
         backButton.dataset.route = currentSession?.gameStarted ? 'game' : 'lobby';
     }
+}
+
+function setupLifecycleFlush() {
+    if (lifecycleFlushRegistered) return;
+    lifecycleFlushRegistered = true;
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            flushAttributeChanges().catch(console.error);
+            flushSkillPoolChanges().catch(console.error);
+        }
+    });
+
+    window.addEventListener('beforeunload', () => {
+        flushAttributeChanges().catch(() => {});
+        flushSkillPoolChanges().catch(() => {});
+    });
 }
 
 function getActiveWeaponAttackType() {
@@ -371,33 +398,165 @@ function hideDetails() {
     if (detailsPanel) detailsPanel.style.display = 'none';
 }
 
-async function increaseAttribute(attribute) {
-    if (!currentSession?.playerId || !attribute) return;
-    const response = await apiPost('/api/character/increase-attribute', {
-        playerId: currentSession.playerId,
-        attribute
-    });
+function increaseAttribute(attribute) {
+    if (!currentSession?.playerId || !attribute || !characterData) return;
+    if ((Number(characterData.attributePoints) || 0) <= 0) return;
 
-    if (response.status === 'success') {
-        await refreshCharacterDetails();
+    const key = attributeToDataKey(attribute);
+    if (!key) return;
+
+    characterData[key] = (Number(characterData[key]) || 0) + 1;
+    characterData.attributePoints = Math.max(0, (Number(characterData.attributePoints) || 0) - 1);
+
+    if (!pendingAttributeDeltas) {
+        pendingAttributeDeltas = { strength: 0, agility: 0, intelligence: 0, holiness: 0 };
+    }
+    pendingAttributeDeltas[key]++;
+
+    renderCharacterDetails();
+    scheduleAttributeFlush();
+}
+
+function attributeToDataKey(attribute) {
+    switch ((attribute || '').toUpperCase()) {
+        case 'STR': return 'strength';
+        case 'AGI': return 'agility';
+        case 'INT': return 'intelligence';
+        case 'HOL': return 'holiness';
+        default: return '';
     }
 }
 
-async function allocateSkillPoint(pool) {
-    if (!currentSession?.playerId || !pool) return;
-    const response = await apiPost('/api/character/allocate-skill-point', {
+function scheduleAttributeFlush() {
+    if (pendingAttributeTimer) {
+        clearTimeout(pendingAttributeTimer);
+    }
+
+    pendingAttributeTimer = setTimeout(() => {
+        flushAttributeChanges().catch(console.error);
+    }, 350);
+}
+
+async function flushAttributeChanges() {
+    if (pendingAttributeRequest) {
+        await pendingAttributeRequest;
+        return;
+    }
+    if (!currentSession?.playerId || !pendingAttributeDeltas) return;
+    if (pendingAttributeTimer) {
+        clearTimeout(pendingAttributeTimer);
+    }
+
+    const deltas = pendingAttributeDeltas;
+    pendingAttributeDeltas = null;
+    pendingAttributeTimer = null;
+
+    pendingAttributeRequest = apiPost('/api/character/update-attributes', {
         playerId: currentSession.playerId,
-        pool
+        ...deltas
     });
 
-    if (response.status === 'success') {
-        await refreshCharacterDetails();
+    try {
+        const response = await pendingAttributeRequest;
+        if (response.status !== 'success') {
+            await refreshCharacterDetails();
+        }
+    } finally {
+        pendingAttributeRequest = null;
+        if (pendingAttributeDeltas) {
+            scheduleAttributeFlush();
+        }
     }
+}
+
+function clearPendingAttributeChanges() {
+    if (pendingAttributeTimer) {
+        clearTimeout(pendingAttributeTimer);
+    }
+    pendingAttributeDeltas = null;
+    pendingAttributeTimer = null;
+    pendingAttributeRequest = null;
+}
+
+function allocateSkillPoint(pool) {
+    if (!currentSession?.playerId || !pool || !characterData) return;
+    if ((Number(characterData.skillPoints) || 0) <= 0) return;
+
+    if (pool === 'attack') {
+        characterData.attackSkillPoints = (Number(characterData.attackSkillPoints) || 0) + 1;
+    } else if (pool === 'defense') {
+        characterData.defenseSkillPoints = (Number(characterData.defenseSkillPoints) || 0) + 1;
+    } else {
+        return;
+    }
+
+    characterData.skillPoints = Math.max(0, (Number(characterData.skillPoints) || 0) - 1);
+
+    if (!pendingSkillPoolDeltas) {
+        pendingSkillPoolDeltas = { attack: 0, defense: 0 };
+    }
+    pendingSkillPoolDeltas[pool]++;
+
+    renderCharacterDetails();
+    scheduleSkillPoolFlush();
+}
+
+function scheduleSkillPoolFlush() {
+    if (pendingSkillPoolTimer) {
+        clearTimeout(pendingSkillPoolTimer);
+    }
+
+    pendingSkillPoolTimer = setTimeout(() => {
+        flushSkillPoolChanges().catch(console.error);
+    }, 350);
+}
+
+async function flushSkillPoolChanges() {
+    if (pendingSkillPoolRequest) {
+        await pendingSkillPoolRequest;
+        return;
+    }
+    if (!currentSession?.playerId || !pendingSkillPoolDeltas) return;
+    if (pendingSkillPoolTimer) {
+        clearTimeout(pendingSkillPoolTimer);
+    }
+
+    const deltas = pendingSkillPoolDeltas;
+    pendingSkillPoolDeltas = null;
+    pendingSkillPoolTimer = null;
+
+    pendingSkillPoolRequest = apiPost('/api/character/update-skill-pools', {
+        playerId: currentSession.playerId,
+        ...deltas
+    });
+
+    try {
+        const response = await pendingSkillPoolRequest;
+        if (response.status !== 'success') {
+            await refreshCharacterDetails();
+        }
+    } finally {
+        pendingSkillPoolRequest = null;
+        if (pendingSkillPoolDeltas) {
+            scheduleSkillPoolFlush();
+        }
+    }
+}
+
+function clearPendingSkillPoolChanges() {
+    if (pendingSkillPoolTimer) {
+        clearTimeout(pendingSkillPoolTimer);
+    }
+    pendingSkillPoolDeltas = null;
+    pendingSkillPoolTimer = null;
+    pendingSkillPoolRequest = null;
 }
 
 async function assignAbility(abilityName) {
     if (selectedSlotIndex === null) return;
     if (abilityName && !canAssignAbility(abilityName)) return;
+
+    await flushSkillPoolChanges();
 
     const attackSlots = normalizeSlots(characterData.attackSlots);
     const attack2Slots = normalizeSlots(characterData.attack2Slots);
