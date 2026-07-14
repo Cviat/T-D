@@ -24,15 +24,28 @@ namespace RPGTable.TokenEditor
     public static class UserTokenStore
     {
         private const string Extension = ".json";
+        private const string RootFolderName = "RPGTable";
+        private const string TokensFolderName = "Tokens";
+        private const string TokenImagesFolderName = "TokenImages";
 
         private static readonly Dictionary<string, SavedTokenData> tokenCache = new Dictionary<string, SavedTokenData>();
         private static readonly Dictionary<string, Sprite> spriteCache = new Dictionary<string, Sprite>();
+
+        public static string RootFolder
+        {
+            get
+            {
+                var path = Path.Combine(Application.persistentDataPath, RootFolderName);
+                Directory.CreateDirectory(path);
+                return path;
+            }
+        }
 
         public static string TokensFolder
         {
             get
             {
-                var path = Path.Combine(Application.persistentDataPath, "RPGTable", "Tokens");
+                var path = Path.Combine(RootFolder, TokensFolderName);
                 Directory.CreateDirectory(path);
                 return path;
             }
@@ -42,7 +55,7 @@ namespace RPGTable.TokenEditor
         {
             get
             {
-                var path = Path.Combine(Application.persistentDataPath, "RPGTable", "TokenImages");
+                var path = Path.Combine(RootFolder, TokenImagesFolderName);
                 Directory.CreateDirectory(path);
                 return path;
             }
@@ -66,28 +79,32 @@ namespace RPGTable.TokenEditor
             }
 
             data.name = safeName;
+            data.framePath = ToPortableUserDataPath(data.framePath, TokenImagesFolderName);
+            data.portraitPath = ToPortableUserDataPath(data.portraitPath, TokenImagesFolderName);
             var path = Path.Combine(TokensFolder, $"{safeName}{Extension}");
             File.WriteAllText(path, JsonUtility.ToJson(data, true));
-            tokenCache[path] = data;
-            return path;
+            var portablePath = ToPortablePath(path);
+            tokenCache[ResolveUserDataPath(portablePath, TokensFolderName)] = data;
+            return portablePath;
         }
 
         public static SavedTokenData LoadToken(string path)
         {
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            var resolvedPath = ResolveUserDataPath(path, TokensFolderName);
+            if (string.IsNullOrWhiteSpace(resolvedPath) || !File.Exists(resolvedPath))
             {
                 return null;
             }
 
-            if (tokenCache.TryGetValue(path, out var cached))
+            if (tokenCache.TryGetValue(resolvedPath, out var cached))
             {
                 return cached;
             }
 
-            var data = JsonUtility.FromJson<SavedTokenData>(File.ReadAllText(path));
+            var data = JsonUtility.FromJson<SavedTokenData>(File.ReadAllText(resolvedPath));
             if (data != null)
             {
-                tokenCache[path] = data;
+                tokenCache[resolvedPath] = data;
             }
             return data;
         }
@@ -126,32 +143,91 @@ namespace RPGTable.TokenEditor
 
             var targetPath = UniquePath(Path.Combine(TokenImagesFolder, Path.GetFileName(sourcePath)));
             File.Copy(sourcePath, targetPath);
-            return targetPath;
+            return ToPortablePath(targetPath);
         }
 
-        /// <summary>
-        /// Resolves an "Assets/…" relative path (used for built-in frame sprites) to an
-        /// absolute disk path so that File.Exists / File.ReadAllBytes work at runtime.
-        /// </summary>
-        private static string ResolveAbsolutePath(string path)
+        public static string ToPortablePath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) ||
+                path.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("Assets\\", StringComparison.OrdinalIgnoreCase))
+            {
+                return path;
+            }
+
+            try
+            {
+                var fullPath = Path.GetFullPath(path);
+                var root = Path.GetFullPath(RootFolder).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+                if (fullPath.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
+                    fullPath.StartsWith(root + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                {
+                    return fullPath.Substring(root.Length)
+                        .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                        .Replace(Path.DirectorySeparatorChar, '/')
+                        .Replace(Path.AltDirectorySeparatorChar, '/');
+                }
+            }
+            catch (Exception)
+            {
+                return path;
+            }
+
+            return path;
+        }
+
+        public static string ResolveUserDataPath(string path, string fallbackFolderName)
         {
             if (string.IsNullOrWhiteSpace(path))
                 return path;
 
-            // Already absolute (user-imported images stored in persistentDataPath)
-            if (Path.IsPathRooted(path))
-                return path;
-
-            // Asset-relative path like "Assets/RPGTable/Art/TokenFrames/Frame_01.png"
-            if (path.StartsWith("Assets/", System.StringComparison.OrdinalIgnoreCase) ||
-                path.StartsWith("Assets\\", System.StringComparison.OrdinalIgnoreCase))
+            if (path.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("Assets\\", StringComparison.OrdinalIgnoreCase))
             {
-                // Application.dataPath ends with "/Assets", so strip the leading "Assets" part
                 var relativePart = path.Substring("Assets".Length).TrimStart('/', '\\');
                 return Path.Combine(Application.dataPath, relativePart);
             }
 
-            return path;
+            if (!Path.IsPathRooted(path))
+            {
+                return Path.Combine(RootFolder, path);
+            }
+
+            if (File.Exists(path) || string.IsNullOrWhiteSpace(fallbackFolderName))
+            {
+                return path;
+            }
+
+            var migratedPath = Path.Combine(RootFolder, fallbackFolderName, Path.GetFileName(path));
+            return File.Exists(migratedPath) ? migratedPath : path;
+        }
+
+        public static string ToPortableUserDataPath(string path, string fallbackFolderName)
+        {
+            if (string.IsNullOrWhiteSpace(path) ||
+                path.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("Assets\\", StringComparison.OrdinalIgnoreCase))
+            {
+                return path;
+            }
+
+            return ToPortablePath(ResolveUserDataPath(path, fallbackFolderName));
+        }
+
+        /// <summary>
+        /// Resolves a built-in asset path, portable RPGTable path, or legacy absolute path
+        /// to a disk path so that File.Exists / File.ReadAllBytes work at runtime.
+        /// </summary>
+        private static string ResolveAbsolutePath(string path)
+        {
+            var resolvedPath = ResolveUserDataPath(path, TokenImagesFolderName);
+            if (!string.IsNullOrWhiteSpace(resolvedPath) && File.Exists(resolvedPath))
+            {
+                return resolvedPath;
+            }
+
+            return ResolveUserDataPath(path, null);
         }
 
         public static Sprite LoadSprite(string path)

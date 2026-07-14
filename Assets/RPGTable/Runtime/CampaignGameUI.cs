@@ -36,6 +36,12 @@ namespace RPGTable.Runtime
 
         private enum LeftTab { ActiveTokens, TokenBank }
         private LeftTab currentLeftTab = LeftTab.ActiveTokens;
+        private bool hasInspectorLayout;
+        private Vector2 savedInspectorAnchorMin;
+        private Vector2 savedInspectorAnchorMax;
+        private Vector2 savedInspectorPivot;
+        private Vector2 savedInspectorSizeDelta;
+        private Vector2 savedInspectorAnchoredPosition;
 
         private Action<string> onSwitchMapCallback;
         private Action<CampaignPlayerData> onSelectPlayerCallback;
@@ -390,6 +396,7 @@ namespace RPGTable.Runtime
             }
 
             rightInspectorRoot.gameObject.SetActive(true);
+            CaptureInspectorLayout();
             ClearChildren(rightInspectorRoot);
 
             var inspectorPrefab = uiManager != null && uiManager.InspectorContentPrefab != null
@@ -399,6 +406,7 @@ namespace RPGTable.Runtime
             if (inspectorPrefab != null)
             {
                 var inspectorGo = UnityEngine.Object.Instantiate(inspectorPrefab, rightInspectorRoot);
+                ApplyInspectorLayout(inspectorGo);
                 if (inspectorGo.GetComponent<UIDragHandler>() == null)
                 {
                     inspectorGo.AddComponent<UIDragHandler>();
@@ -421,6 +429,47 @@ namespace RPGTable.Runtime
                         heal => ApplyHeal(token, heal));
                 }
             }
+        }
+
+        private void CaptureInspectorLayout()
+        {
+            if (rightInspectorRoot == null || rightInspectorRoot.childCount == 0)
+            {
+                return;
+            }
+
+            var rect = rightInspectorRoot.GetChild(0) as RectTransform;
+            if (rect == null)
+            {
+                return;
+            }
+
+            savedInspectorAnchorMin = rect.anchorMin;
+            savedInspectorAnchorMax = rect.anchorMax;
+            savedInspectorPivot = rect.pivot;
+            savedInspectorSizeDelta = rect.sizeDelta;
+            savedInspectorAnchoredPosition = rect.anchoredPosition;
+            hasInspectorLayout = true;
+        }
+
+        private void ApplyInspectorLayout(GameObject inspectorGo)
+        {
+            if (!hasInspectorLayout || inspectorGo == null)
+            {
+                return;
+            }
+
+            var rect = inspectorGo.GetComponent<RectTransform>();
+            if (rect == null)
+            {
+                return;
+            }
+
+            rect.anchorMin = savedInspectorAnchorMin;
+            rect.anchorMax = savedInspectorAnchorMax;
+            rect.pivot = savedInspectorPivot;
+            rect.sizeDelta = savedInspectorSizeDelta;
+            rect.anchoredPosition = savedInspectorAnchoredPosition;
         }
 
         private void ApplyDamage(CampaignRuntimeToken token, int amount)

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using RPGTable.TokenEditor;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -11,6 +12,8 @@ namespace RPGTable.MapEditor
 {
     public static class UserElementAssetStore
     {
+        private const string UserElementsFolderName = "UserElements";
+        private static readonly string[] ImageFallbackFolders = { UserElementsFolderName, "Maps", "CampaignCovers", "TokenImages" };
         private static readonly string[] SupportedExtensions = { ".png", ".jpg", ".jpeg" };
         private static readonly Dictionary<string, Sprite> spriteCache = new Dictionary<string, Sprite>();
 
@@ -18,7 +21,7 @@ namespace RPGTable.MapEditor
         {
             get
             {
-                var path = Path.Combine(Application.persistentDataPath, "RPGTable", "UserElements");
+                var path = Path.Combine(UserTokenStore.RootFolder, UserElementsFolderName);
                 Directory.CreateDirectory(path);
                 return path;
             }
@@ -69,22 +72,23 @@ namespace RPGTable.MapEditor
             var fileName = Path.GetFileName(sourcePath);
             var targetPath = UniquePath(Path.Combine(ElementsFolder, fileName));
             File.Copy(sourcePath, targetPath);
-            return targetPath;
+            return UserTokenStore.ToPortablePath(targetPath);
         }
 
         public static Sprite LoadSprite(string path)
         {
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            var resolvedPath = ResolveImagePath(path);
+            if (string.IsNullOrWhiteSpace(resolvedPath) || !File.Exists(resolvedPath))
             {
                 return null;
             }
 
-            if (spriteCache.TryGetValue(path, out var cached) && cached != null)
+            if (spriteCache.TryGetValue(resolvedPath, out var cached) && cached != null)
             {
                 return cached;
             }
 
-            var bytes = File.ReadAllBytes(path);
+            var bytes = File.ReadAllBytes(resolvedPath);
             var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
 
             if (!texture.LoadImage(bytes))
@@ -93,23 +97,60 @@ namespace RPGTable.MapEditor
                 return null;
             }
 
-            texture.name = Path.GetFileNameWithoutExtension(path);
+            texture.name = Path.GetFileNameWithoutExtension(resolvedPath);
             texture.filterMode = FilterMode.Bilinear;
             var sprite = Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f);
-            spriteCache[path] = sprite;
+            spriteCache[resolvedPath] = sprite;
             return sprite;
         }
 
         public static bool DeleteImage(string path)
         {
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path) || !IsSupportedImage(path))
+            var resolvedPath = ResolveImagePath(path);
+            if (string.IsNullOrWhiteSpace(resolvedPath) || !File.Exists(resolvedPath) || !IsSupportedImage(resolvedPath))
             {
                 return false;
             }
 
-            File.Delete(path);
-            spriteCache.Remove(path);
+            File.Delete(resolvedPath);
+            spriteCache.Remove(resolvedPath);
             return true;
+        }
+
+        public static string ToPortableImagePath(string path)
+        {
+            return UserTokenStore.ToPortableUserDataPath(path, UserElementsFolderName);
+        }
+
+        private static string ResolveImagePath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return path;
+            }
+
+            var resolvedPath = UserTokenStore.ResolveUserDataPath(path, UserElementsFolderName);
+
+            if (!string.IsNullOrWhiteSpace(resolvedPath) && File.Exists(resolvedPath))
+            {
+                return resolvedPath;
+            }
+
+            if (!Path.IsPathRooted(path))
+            {
+                return resolvedPath;
+            }
+
+            foreach (var folder in ImageFallbackFolders)
+            {
+                resolvedPath = UserTokenStore.ResolveUserDataPath(path, folder);
+                if (!string.IsNullOrWhiteSpace(resolvedPath) && File.Exists(resolvedPath))
+                {
+                    return resolvedPath;
+                }
+            }
+
+            return resolvedPath;
         }
 
         private static bool IsSupportedImage(string path)
@@ -192,12 +233,13 @@ namespace RPGTable.MapEditor
     public static class UserMapStore
     {
         private const string Extension = ".json";
+        private const string MapsFolderName = "Maps";
 
         public static string MapsFolder
         {
             get
             {
-                var path = Path.Combine(Application.persistentDataPath, "RPGTable", "Maps");
+                var path = Path.Combine(UserTokenStore.RootFolder, MapsFolderName);
                 Directory.CreateDirectory(path);
                 return path;
             }
@@ -238,7 +280,7 @@ namespace RPGTable.MapEditor
                 var element = elements[i];
                 data.elements[i] = new SavedMapElementData
                 {
-                    imagePath = element.SourceImagePath,
+                    imagePath = UserElementAssetStore.ToPortableImagePath(element.SourceImagePath),
                     position = element.transform.position,
                     scale = element.transform.localScale
                 };
@@ -270,17 +312,18 @@ namespace RPGTable.MapEditor
 
             var path = Path.Combine(MapsFolder, $"{safeName}{Extension}");
             File.WriteAllText(path, JsonUtility.ToJson(data, true));
-            return path;
+            return UserTokenStore.ToPortablePath(path);
         }
 
         public static SavedMapData LoadMap(string path)
         {
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            var resolvedPath = UserTokenStore.ResolveUserDataPath(path, MapsFolderName);
+            if (string.IsNullOrWhiteSpace(resolvedPath) || !File.Exists(resolvedPath))
             {
                 return null;
             }
 
-            return JsonUtility.FromJson<SavedMapData>(File.ReadAllText(path));
+            return JsonUtility.FromJson<SavedMapData>(File.ReadAllText(resolvedPath));
         }
 
         public static string GetDisplayName(string path)
@@ -349,7 +392,7 @@ namespace RPGTable.MapEditor
             var path = Path.Combine(MapsFolder, $"{safeName}.png");
             File.WriteAllBytes(path, texture.EncodeToPNG());
             UnityEngine.Object.Destroy(texture);
-            return path;
+            return UserTokenStore.ToPortablePath(path);
         }
 
         private static bool TryGetMapBounds(IReadOnlyList<PlacedMapElement> elements, out Bounds bounds)
@@ -496,12 +539,14 @@ namespace RPGTable.MapEditor
     public static class UserCampaignStore
     {
         private const string Extension = ".json";
+        private const string CampaignsFolderName = "Campaigns";
+        private const string CampaignCoversFolderName = "CampaignCovers";
 
         public static string CampaignsFolder
         {
             get
             {
-                var path = Path.Combine(Application.persistentDataPath, "RPGTable", "Campaigns");
+                var path = Path.Combine(UserTokenStore.RootFolder, CampaignsFolderName);
                 Directory.CreateDirectory(path);
                 return path;
             }
@@ -511,7 +556,7 @@ namespace RPGTable.MapEditor
         {
             get
             {
-                var path = Path.Combine(Application.persistentDataPath, "RPGTable", "CampaignCovers");
+                var path = Path.Combine(UserTokenStore.RootFolder, CampaignCoversFolderName);
                 Directory.CreateDirectory(path);
                 return path;
             }
@@ -535,9 +580,11 @@ namespace RPGTable.MapEditor
             }
 
             data.name = safeName;
+            data.coverImagePath = UserTokenStore.ToPortableUserDataPath(data.coverImagePath, CampaignCoversFolderName);
+            NormalizeCampaignMapPaths(data);
             var path = Path.Combine(CampaignsFolder, $"{safeName}{Extension}");
             File.WriteAllText(path, JsonUtility.ToJson(data, true));
-            return path;
+            return UserTokenStore.ToPortablePath(path);
         }
 
         public static string ImportCoverImageWithDialog()
@@ -575,7 +622,7 @@ namespace RPGTable.MapEditor
 
             var targetPath = UniquePath(Path.Combine(CampaignCoversFolder, Path.GetFileName(sourcePath)));
             File.Copy(sourcePath, targetPath);
-            return targetPath;
+            return UserTokenStore.ToPortablePath(targetPath);
         }
 
         public static Sprite LoadCoverSprite(string path)
@@ -585,12 +632,13 @@ namespace RPGTable.MapEditor
 
         public static SavedCampaignData LoadCampaign(string path)
         {
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            var resolvedPath = UserTokenStore.ResolveUserDataPath(path, CampaignsFolderName);
+            if (string.IsNullOrWhiteSpace(resolvedPath) || !File.Exists(resolvedPath))
             {
                 return null;
             }
 
-            return JsonUtility.FromJson<SavedCampaignData>(File.ReadAllText(path));
+            return JsonUtility.FromJson<SavedCampaignData>(File.ReadAllText(resolvedPath));
         }
 
         public static string GetDisplayName(string path)
@@ -616,6 +664,40 @@ namespace RPGTable.MapEditor
             }
 
             return result;
+        }
+
+        private static void NormalizeCampaignMapPaths(SavedCampaignData data)
+        {
+            if (data?.maps == null)
+            {
+                return;
+            }
+
+            foreach (var map in data.maps)
+            {
+                if (map == null)
+                {
+                    continue;
+                }
+
+                map.mapPath = UserTokenStore.ToPortableUserDataPath(map.mapPath, "Maps");
+
+                if (map.presetTokens == null)
+                {
+                    continue;
+                }
+
+                foreach (var presetToken in map.presetTokens)
+                {
+                    if (presetToken == null)
+                    {
+                        continue;
+                    }
+
+                    presetToken.characterPath = UserTokenStore.ToPortableUserDataPath(presetToken.characterPath, "Characters");
+                    presetToken.tokenPath = UserTokenStore.ToPortableUserDataPath(presetToken.tokenPath, "Tokens");
+                }
+            }
         }
 
         private static string UniquePath(string path)

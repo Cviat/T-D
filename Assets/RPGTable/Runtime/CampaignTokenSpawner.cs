@@ -209,7 +209,7 @@ namespace RPGTable.Runtime
             {
                 states = new List<RuntimeMapTokenState>();
                 string campaignPath = CampaignGameSession.SelectedCampaignPath;
-                if (!string.IsNullOrEmpty(campaignPath) && System.IO.File.Exists(campaignPath))
+                if (!string.IsNullOrEmpty(campaignPath))
                 {
                     var campaignData = UserCampaignStore.LoadCampaign(campaignPath);
                     if (campaignData != null && campaignData.maps != null)

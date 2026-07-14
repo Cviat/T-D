@@ -52,12 +52,13 @@ namespace RPGTable.CharacterEditor
     public static class UserCharacterStore
     {
         private const string Extension = ".json";
+        private const string CharactersFolderName = "Characters";
 
         public static string CharactersFolder
         {
             get
             {
-                var path = Path.Combine(Application.persistentDataPath, "RPGTable", "Characters");
+                var path = Path.Combine(UserTokenStore.RootFolder, CharactersFolderName);
                 Directory.CreateDirectory(path);
                 return path;
             }
@@ -81,19 +82,22 @@ namespace RPGTable.CharacterEditor
             }
 
             data.name = safeName;
+            data.portraitPath = UserTokenStore.ToPortableUserDataPath(data.portraitPath, "TokenImages");
+            data.tokenPath = UserTokenStore.ToPortableUserDataPath(data.tokenPath, "Tokens");
             var path = Path.Combine(CharactersFolder, $"{safeName}{Extension}");
             File.WriteAllText(path, JsonUtility.ToJson(data, true));
-            return path;
+            return UserTokenStore.ToPortablePath(path);
         }
 
         public static SavedCharacterData LoadCharacter(string path)
         {
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            var resolvedPath = UserTokenStore.ResolveUserDataPath(path, CharactersFolderName);
+            if (string.IsNullOrWhiteSpace(resolvedPath) || !File.Exists(resolvedPath))
             {
                 return null;
             }
 
-            return JsonUtility.FromJson<SavedCharacterData>(File.ReadAllText(path));
+            return JsonUtility.FromJson<SavedCharacterData>(File.ReadAllText(resolvedPath));
         }
 
         public static string GetDisplayName(string path)
