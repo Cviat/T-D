@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using RPGTable.Runtime;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -129,8 +130,14 @@ namespace RPGTable.TokenEditor
 
             return ImportImage(sourcePath);
 #else
-            Debug.LogWarning("Runtime file picker is not implemented yet.");
-            return null;
+            var sourcePath = StandaloneFileDialog.OpenFilePanel(title, "png,jpg,jpeg");
+
+            if (string.IsNullOrWhiteSpace(sourcePath))
+            {
+                return null;
+            }
+
+            return ImportImage(sourcePath);
 #endif
         }
 

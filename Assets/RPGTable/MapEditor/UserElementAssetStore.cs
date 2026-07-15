@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using RPGTable.Runtime;
 using RPGTable.TokenEditor;
 using UnityEngine;
 
@@ -56,8 +57,14 @@ namespace RPGTable.MapEditor
 
             return ImportImage(sourcePath);
 #else
-            Debug.LogWarning("Runtime file picker is not implemented yet. Add a standalone file browser plugin for builds.");
-            return null;
+            var sourcePath = StandaloneFileDialog.OpenFilePanel("Import element image", "png,jpg,jpeg");
+
+            if (string.IsNullOrWhiteSpace(sourcePath))
+            {
+                return null;
+            }
+
+            return ImportImage(sourcePath);
 #endif
         }
 
@@ -612,8 +619,14 @@ namespace RPGTable.MapEditor
 
             return ImportCoverImage(sourcePath);
 #else
-            Debug.LogWarning("Runtime file picker is not implemented yet.");
-            return null;
+            var sourcePath = StandaloneFileDialog.OpenFilePanel("Import campaign cover", "png,jpg,jpeg");
+
+            if (string.IsNullOrWhiteSpace(sourcePath))
+            {
+                return null;
+            }
+
+            return ImportCoverImage(sourcePath);
 #endif
         }
 
@@ -650,8 +663,14 @@ namespace RPGTable.MapEditor
 
             return ImportCutscene(sourcePath);
 #else
-            Debug.LogWarning("Runtime file picker is not implemented yet.");
-            return null;
+            var sourcePath = StandaloneFileDialog.OpenFilePanel("Import cutscene", "png,jpg,jpeg,mp4,mov,webm");
+
+            if (string.IsNullOrWhiteSpace(sourcePath))
+            {
+                return null;
+            }
+
+            return ImportCutscene(sourcePath);
 #endif
         }
 
