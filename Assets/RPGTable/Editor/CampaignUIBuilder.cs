@@ -113,13 +113,42 @@ namespace RPGTable.Editor
             titleTxt.alignment = TextAnchor.MiddleLeft;
             titleTxt.color = Color.white;
             
-            GameObject listRootGo = CreatePanel("List Content", contentArea.transform);
+            // Create Scroll View
+            GameObject scrollViewGo = new GameObject("Scroll View", typeof(RectTransform));
+            scrollViewGo.transform.SetParent(contentArea.transform, false);
+            RectTransform scrollRt = scrollViewGo.GetComponent<RectTransform>();
+            scrollRt.anchorMin = new Vector2(0, 0);
+            scrollRt.anchorMax = new Vector2(1, 1);
+            scrollRt.offsetMin = new Vector2(5, 5);
+            scrollRt.offsetMax = new Vector2(-5, -45);
+
+            ScrollRect scrollRect = scrollViewGo.AddComponent<ScrollRect>();
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+
+            // Create Viewport
+            GameObject viewportGo = new GameObject("Viewport", typeof(RectTransform));
+            viewportGo.transform.SetParent(scrollViewGo.transform, false);
+            RectTransform viewportRt = viewportGo.GetComponent<RectTransform>();
+            viewportRt.anchorMin = Vector2.zero;
+            viewportRt.anchorMax = Vector2.one;
+            viewportRt.sizeDelta = Vector2.zero;
+            viewportGo.AddComponent<RectMask2D>();
+
+            // Create Content
+            GameObject listRootGo = new GameObject("List Content", typeof(RectTransform));
+            listRootGo.transform.SetParent(viewportGo.transform, false);
             RectTransform listRoot = listRootGo.GetComponent<RectTransform>();
-            listRoot.anchorMin = new Vector2(0, 0);
+            listRoot.anchorMin = new Vector2(0, 1);
             listRoot.anchorMax = new Vector2(1, 1);
-            listRoot.offsetMin = new Vector2(5, 5);
-            listRoot.offsetMax = new Vector2(-5, -45);
-            
+            listRoot.pivot = new Vector2(0.5f, 1);
+            listRoot.sizeDelta = new Vector2(0, 0);
+
+            // Connect ScrollRect
+            scrollRect.viewport = viewportRt;
+            scrollRect.content = listRoot;
+
             VerticalLayoutGroup leftLayout = listRootGo.AddComponent<VerticalLayoutGroup>();
             leftLayout.childAlignment = TextAnchor.UpperCenter;
             leftLayout.childControlHeight = false;
@@ -128,6 +157,9 @@ namespace RPGTable.Editor
             leftLayout.childForceExpandWidth = true;
             leftLayout.spacing = 10;
             leftLayout.padding = new RectOffset(5, 5, 5, 5);
+
+            ContentSizeFitter fitter = listRootGo.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
             // Create Bottom Panel (Tools/Camera)
             GameObject bottomPanel = CreatePanel("BottomPanel_Tools", canvasGo.transform);
