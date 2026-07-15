@@ -162,8 +162,14 @@ namespace RPGTable.MapEditor
             MapEditorMapController mapController,
             MapEditorMapButtonAction action)
         {
-            if (transform.Find(buttonName) != null)
+            var existing = transform.Find(buttonName);
+            if (existing != null)
             {
+                var existingBinder = existing.GetComponent<MapEditorMapButton>();
+                if (existingBinder != null)
+                {
+                    existingBinder.Initialize(mapController, action);
+                }
                 return;
             }
 
