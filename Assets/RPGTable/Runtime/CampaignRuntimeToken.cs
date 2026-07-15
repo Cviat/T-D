@@ -21,6 +21,16 @@ namespace RPGTable.Runtime
         private Vector3 targetWorldPosition;
         private bool hasTargetPosition = false;
 
+        /// <summary>
+        /// Directly sets the world-space target that Update() will Lerp towards.
+        /// Used by CampaignPlayerViewManager to drive smooth clone movement.
+        /// </summary>
+        public void SetTargetWorldPosition(Vector3 position)
+        {
+            targetWorldPosition = position;
+            hasTargetPosition = true;
+        }
+
         private void Start()
         {
             isInitializing = false;

@@ -314,19 +314,29 @@ namespace RPGTable.Runtime
             var charData = RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(characterPath);
             var footprint = GetFootprint(tokenData);
             var sortingBase = AllocateSortingOrder();
-            var tokenObject = new GameObject(string.IsNullOrWhiteSpace(displayName) ? "Token" : displayName);
+
+            var prefab = Resources.Load<GameObject>("Prefabs/MapToken");
+            var tokenObject = prefab != null 
+                ? Object.Instantiate(prefab) 
+                : new GameObject(string.IsNullOrWhiteSpace(displayName) ? "Token" : displayName);
+
+            tokenObject.name = string.IsNullOrWhiteSpace(displayName) ? "Token" : displayName;
             tokenObject.transform.SetParent(context.TokenRoot, false);
             tokenObject.transform.position = TokenWorldPosition(cell, footprint);
+            tokenObject.transform.localScale = new Vector3(footprint, footprint, 1f);
 
-            var renderer = tokenObject.AddComponent<SpriteRenderer>();
+            var renderer = tokenObject.GetComponent<SpriteRenderer>();
+            if (renderer == null) renderer = tokenObject.AddComponent<SpriteRenderer>();
             renderer.sprite = RuntimeSpriteFactory.Square;
             renderer.sortingOrder = sortingBase;
             renderer.color = new Color(1f, 1f, 1f, 0f);
 
-            var collider = tokenObject.AddComponent<BoxCollider2D>();
-            collider.size = Vector2.one * footprint;
+            var collider = tokenObject.GetComponent<BoxCollider2D>();
+            if (collider == null) collider = tokenObject.AddComponent<BoxCollider2D>();
+            collider.size = Vector2.one;
 
-            var token = tokenObject.AddComponent<BoardToken>();
+            var token = tokenObject.GetComponent<BoardToken>();
+            if (token == null) token = tokenObject.AddComponent<BoardToken>();
             token.displayName = displayName;
             token.team = team;
             token.visibleToPlayers = visibleToPlayers;
@@ -335,7 +345,8 @@ namespace RPGTable.Runtime
 
             CreateTokenVisual(tokenObject.transform, tokenData, footprint, team, sortingBase);
 
-            var runtime = tokenObject.AddComponent<CampaignRuntimeToken>();
+            var runtime = tokenObject.GetComponent<CampaignRuntimeToken>();
+            if (runtime == null) runtime = tokenObject.AddComponent<CampaignRuntimeToken>();
             runtime.PlayerId = playerId;
             runtime.RuntimeId = string.IsNullOrWhiteSpace(playerId) ? NewRuntimeTokenId() : playerId;
             runtime.TokenPath = tokenPath;
@@ -358,9 +369,16 @@ namespace RPGTable.Runtime
                 runtime.RerollCoins = charData != null ? charData.rerollCoins : 3;
             }
 
-            tokenObject.AddComponent<TokenDragController>();
-            tokenObject.AddComponent<TokenHealthArmorBars>();
-            tokenObject.AddComponent<CampaignTokenContextClick>().Initialize(loader, runtime);
+            var drag = tokenObject.GetComponent<TokenDragController>();
+            if (drag == null) drag = tokenObject.AddComponent<TokenDragController>();
+
+            var bars = tokenObject.GetComponent<TokenHealthArmorBars>();
+            if (bars == null) bars = tokenObject.AddComponent<TokenHealthArmorBars>();
+
+            var click = tokenObject.GetComponent<CampaignTokenContextClick>();
+            if (click == null) click = tokenObject.AddComponent<CampaignTokenContextClick>();
+            click.Initialize(loader, runtime);
+
             return runtime;
         }
 
@@ -368,32 +386,78 @@ namespace RPGTable.Runtime
 
         internal void CreateTokenVisual(Transform parent, SavedTokenData tokenData, int footprint, TokenTeam team, int sortingBase)
         {
-            var targetSize = Mathf.Max(0.1f, footprint * CellSize);
+            var maskTrans = parent.Find("Portrait Mask");
+            var portraitTrans = parent.Find("Portrait");
+            var frameTrans = parent.Find("Frame");
+            var deadTrans = parent.Find("Dead Token");
+
+            if (deadTrans != null) deadTrans.gameObject.SetActive(false);
+            if (maskTrans != null) maskTrans.gameObject.SetActive(true);
+            if (portraitTrans != null) portraitTrans.gameObject.SetActive(true);
+            if (frameTrans != null) frameTrans.gameObject.SetActive(true);
+
+            var targetSize = 1f; // footprint scaling handled by parent scale
             var maskLayout = ResolveMaskLayout(tokenData, targetSize);
             var portraitSprite = UserTokenStore.LoadSprite(tokenData?.portraitPath);
             var frameSprite = UserTokenStore.LoadSprite(tokenData?.framePath);
 
             if (portraitSprite == null && frameSprite == null)
             {
-                var fallback = CreateSpriteLayer("Fallback", parent, RuntimeSpriteFactory.Circle, sortingBase + 2,
-                    team == TokenTeam.Player ? Color.white : new Color(1f, 0.82f, 0.65f, 1f));
-                FitSprite(fallback.transform, RuntimeSpriteFactory.Circle, targetSize);
+                if (portraitTrans != null)
+                {
+                    portraitTrans.gameObject.SetActive(true);
+                    var sr = portraitTrans.GetComponent<SpriteRenderer>();
+                    sr.sprite = RuntimeSpriteFactory.Circle;
+                    sr.color = team == TokenTeam.Player ? Color.white : new Color(1f, 0.82f, 0.65f, 1f);
+                    sr.maskInteraction = SpriteMaskInteraction.None;
+                    sr.sortingOrder = sortingBase + 2;
+                    FitSprite(portraitTrans, RuntimeSpriteFactory.Circle, targetSize);
+                }
+                if (maskTrans != null) maskTrans.gameObject.SetActive(false);
+                if (frameTrans != null) frameTrans.gameObject.SetActive(false);
                 return;
             }
 
-            if (portraitSprite != null)
+            if (maskTrans != null)
             {
-                CreatePortraitMask(parent, maskLayout.position, maskLayout.size, sortingBase + 1, sortingBase + 3);
-                var portrait = CreateSpriteLayer("Portrait", parent, portraitSprite, sortingBase + 2, Color.white);
-                portrait.transform.localPosition = maskLayout.position;
-                portrait.GetComponent<SpriteRenderer>().maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
-                FitSpriteCover(portrait.transform, portraitSprite, maskLayout.size);
+                var mask = maskTrans.GetComponent<SpriteMask>();
+                mask.sprite = RuntimeSpriteFactory.Circle;
+                mask.isCustomRangeActive = true;
+                mask.backSortingOrder = sortingBase + 1;
+                mask.frontSortingOrder = sortingBase + 3;
+                maskTrans.localPosition = maskLayout.position;
+                FitSprite(maskTrans, RuntimeSpriteFactory.Circle, maskLayout.size);
             }
 
-            if (frameSprite != null)
+            if (portraitTrans != null)
             {
-                var frame = CreateSpriteLayer("Frame", parent, frameSprite, sortingBase + 4, Color.white);
-                FitSprite(frame.transform, frameSprite, targetSize);
+                var sr = portraitTrans.GetComponent<SpriteRenderer>();
+                sr.sprite = portraitSprite;
+                sr.color = Color.white;
+                sr.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
+                sr.sortingOrder = sortingBase + 2;
+                portraitTrans.localPosition = maskLayout.position;
+                if (portraitSprite != null)
+                {
+                    FitSpriteCover(portraitTrans, portraitSprite, maskLayout.size);
+                }
+            }
+
+            if (frameTrans != null)
+            {
+                if (frameSprite != null)
+                {
+                    frameTrans.gameObject.SetActive(true);
+                    var sr = frameTrans.GetComponent<SpriteRenderer>();
+                    sr.sprite = frameSprite;
+                    sr.color = Color.white;
+                    sr.sortingOrder = sortingBase + 4;
+                    FitSprite(frameTrans, frameSprite, targetSize);
+                }
+                else
+                {
+                    frameTrans.gameObject.SetActive(false);
+                }
             }
         }
 
@@ -417,10 +481,7 @@ namespace RPGTable.Runtime
                 return;
             }
 
-            // Set the dead flag on the token backing field directly (no event loop) then sync through session
-            // so that OnTokenDataChanged fires and Player View clones update their visuals reactively.
             runtimeToken.IsDead = true;  // this calls SyncToSession → UpdateTokenData → OnTokenDataChanged
-
             ApplyDeadVisual(runtimeToken);
         }
 
@@ -442,11 +503,6 @@ namespace RPGTable.Runtime
                 }
             }
 
-            for (var i = runtimeToken.transform.childCount - 1; i >= 0; i--)
-            {
-                Object.Destroy(runtimeToken.transform.GetChild(i).gameObject);
-            }
-
             var tokenData = UserTokenStore.LoadToken(runtimeToken.TokenPath);
             var boardToken = runtimeToken.GetComponent<BoardToken>();
             var footprint = boardToken != null ? boardToken.footprintSize : 1;
@@ -461,25 +517,29 @@ namespace RPGTable.Runtime
                 return;
             }
 
-            for (var i = runtimeToken.transform.childCount - 1; i >= 0; i--)
-            {
-                Object.Destroy(runtimeToken.transform.GetChild(i).gameObject);
-            }
+            var maskTrans = runtimeToken.transform.Find("Portrait Mask");
+            var portraitTrans = runtimeToken.transform.Find("Portrait");
+            var frameTrans = runtimeToken.transform.Find("Frame");
+            var deadTrans = runtimeToken.transform.Find("Dead Token");
 
-            var boardToken = runtimeToken.GetComponent<BoardToken>();
-            if (footprint <= 0)
-            {
-                footprint = boardToken == null ? 1 : boardToken.footprintSize;
-            }
-            footprint = Mathf.Max(1, footprint);
-            var targetSize = Mathf.Max(0.1f, footprint * CellSize);
-            var rootRenderer = runtimeToken.GetComponent<SpriteRenderer>();
-            var sortingOrder = rootRenderer == null ? nextTokenSortingOrder : rootRenderer.sortingOrder + 5;
-            var deadSprite = LoadDeadTokenSprite();
+            if (maskTrans != null) maskTrans.gameObject.SetActive(false);
+            if (portraitTrans != null) portraitTrans.gameObject.SetActive(false);
+            if (frameTrans != null) frameTrans.gameObject.SetActive(false);
 
-            var layer = CreateSpriteLayer("Dead Token", runtimeToken.transform, deadSprite, sortingOrder, Color.white);
-            // Use FitSpriteCover to ensure the dead token fills the footprint area correctly on all views
-            FitSpriteCover(layer.transform, deadSprite, new Vector2(targetSize, targetSize));
+            if (deadTrans != null)
+            {
+                deadTrans.gameObject.SetActive(true);
+                var rootRenderer = runtimeToken.GetComponent<SpriteRenderer>();
+                var sortingOrder = rootRenderer == null ? nextTokenSortingOrder : rootRenderer.sortingOrder + 5;
+                var deadSprite = LoadDeadTokenSprite();
+
+                var sr = deadTrans.GetComponent<SpriteRenderer>();
+                sr.sprite = deadSprite;
+                sr.sortingOrder = sortingOrder;
+                sr.color = Color.white;
+
+                FitSprite(deadTrans, deadSprite, 1.0f); // scaled relative to footprint parent
+            }
         }
 
         // ── Utility ──────────────────────────────────────────────────────

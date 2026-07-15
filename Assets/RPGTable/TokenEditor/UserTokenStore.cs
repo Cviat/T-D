@@ -148,6 +148,14 @@ namespace RPGTable.TokenEditor
                 return null;
             }
 
+            // If the source image is already inside the TokenImages folder, just return it directly!
+            var fullSource = Path.GetFullPath(sourcePath);
+            var fullTokenImages = Path.GetFullPath(TokenImagesFolder);
+            if (fullSource.StartsWith(fullTokenImages, StringComparison.OrdinalIgnoreCase))
+            {
+                return ToPortablePath(sourcePath);
+            }
+
             var targetPath = UniquePath(Path.Combine(TokenImagesFolder, Path.GetFileName(sourcePath)));
             File.Copy(sourcePath, targetPath);
             return ToPortablePath(targetPath);
@@ -239,9 +247,35 @@ namespace RPGTable.TokenEditor
 
         public static Sprite LoadSprite(string path)
         {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return null;
+            }
+
+#if UNITY_EDITOR
+            if (path.StartsWith("Assets/", System.StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("Assets\\", System.StringComparison.OrdinalIgnoreCase))
+            {
+                var editorSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(path);
+                if (editorSprite != null)
+                {
+                    return editorSprite;
+                }
+            }
+#endif
+
             var resolvedPath = ResolveAbsolutePath(path);
             if (string.IsNullOrWhiteSpace(resolvedPath) || !File.Exists(resolvedPath))
             {
+                // Fallback: If it's a built-in asset path (starting with Assets/) or does not exist on disk,
+                // try to load it from Resources/image/ using the filename.
+                var filename = Path.GetFileNameWithoutExtension(path);
+                var sprites = Resources.LoadAll<Sprite>("image/" + filename);
+                if (sprites != null && sprites.Length > 0)
+                {
+                    return sprites[0];
+                }
+
                 return null;
             }
             // Normalise the cache key to the original path so callers don't need to care

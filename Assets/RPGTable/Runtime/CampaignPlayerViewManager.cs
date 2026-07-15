@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using RPGTable.Board;
 using RPGTable.Core;
+using RPGTable.Input;
 using RPGTable.MapEditor;
 using RPGTable.TokenEditor;
 using UnityEngine;
@@ -539,6 +540,48 @@ namespace RPGTable.Runtime
                 }
             }
 
+            // --- Spawn Table Background behind the map ---
+            Sprite tableBgSprite = null;
+            var sprites = Resources.LoadAll<Sprite>("image/a5ba2c8a-d20b-4021-9baf-3f45ea61fa8d (2)");
+            if (sprites != null && sprites.Length > 0)
+            {
+                tableBgSprite = sprites[0];
+            }
+
+            if (tableBgSprite != null)
+            {
+                var tableGo = new GameObject("Table Background");
+                tableGo.transform.SetParent(root, false);
+
+                var renderer = tableGo.AddComponent<SpriteRenderer>();
+                renderer.sprite = tableBgSprite;
+                renderer.sortingOrder = -25; // Render behind map elements
+                renderer.drawMode = SpriteDrawMode.Sliced;
+
+                // Get sprite borders (in pixels)
+                Vector4 border = tableBgSprite.border; // left, bottom, right, top
+                float ppu = tableBgSprite.pixelsPerUnit;
+                if (ppu <= 0f) ppu = 100f;
+
+                float left = border.x / ppu;
+                float bottom = border.y / ppu;
+                float right = border.z / ppu;
+                float top = border.w / ppu;
+
+                float mapWidth = bounds.size.x;
+                float mapHeight = bounds.size.y;
+
+                float totalWidth = mapWidth + left + right;
+                float totalHeight = mapHeight + bottom + top;
+
+                renderer.size = new Vector2(totalWidth, totalHeight);
+
+                float offsetX = (left - right) / 2f;
+                float offsetY = (bottom - top) / 2f;
+
+                tableGo.transform.position = new Vector3(bounds.center.x - offsetX, bounds.center.y - offsetY, 0.5f);
+            }
+
             return bounds;
         }
 
@@ -573,8 +616,13 @@ namespace RPGTable.Runtime
 
                 var tokenData = UserTokenStore.LoadToken(player.tokenPath);
                 var footprint = CampaignTokenSpawner.GetFootprint(tokenData);
-                var tokenObject = new GameObject(string.IsNullOrWhiteSpace(player.name) ? "Player Token" : player.name);
+                var prefab = Resources.Load<GameObject>("Prefabs/MapToken");
+                var tokenObject = prefab != null 
+                    ? Object.Instantiate(prefab) 
+                    : new GameObject(string.IsNullOrWhiteSpace(player.name) ? "Player Token" : player.name);
+                tokenObject.name = string.IsNullOrWhiteSpace(player.name) ? "Player Token" : player.name;
                 tokenObject.transform.SetParent(root, false);
+                tokenObject.transform.localScale = new Vector3(footprint, footprint, 1f);
                 var targetPosition = PlayerViewTokenWorldPosition(new Vector2Int(player.gridX, player.gridY), footprint);
                 PlacePlayerViewToken(tokenObject.transform, PlayerViewTokenKey("player", mapId, player.id), targetPosition, activeTokenKeys);
 
@@ -622,8 +670,13 @@ namespace RPGTable.Runtime
 
                 var tokenData = UserTokenStore.LoadToken(state.tokenPath);
                 var footprint = CampaignTokenSpawner.GetFootprint(tokenData);
-                var tokenObject = new GameObject(string.IsNullOrWhiteSpace(state.displayName) ? "Visible Token" : state.displayName);
+                var prefab = Resources.Load<GameObject>("Prefabs/MapToken");
+                var tokenObject = prefab != null 
+                    ? Object.Instantiate(prefab) 
+                    : new GameObject(string.IsNullOrWhiteSpace(state.displayName) ? "Visible Token" : state.displayName);
+                tokenObject.name = string.IsNullOrWhiteSpace(state.displayName) ? "Visible Token" : state.displayName;
                 tokenObject.transform.SetParent(root, false);
+                tokenObject.transform.localScale = new Vector3(footprint, footprint, 1f);
                 var targetPosition = PlayerViewTokenWorldPosition(state.gridPosition, footprint);
                 PlacePlayerViewToken(tokenObject.transform,
                     PlayerViewTokenKey("stored", mapId, string.IsNullOrWhiteSpace(state.runtimeId) ? i.ToString() : state.runtimeId),
@@ -672,8 +725,13 @@ namespace RPGTable.Runtime
 
                 var tokenData = UserTokenStore.LoadToken(runtimeToken.TokenPath);
                 var footprint = CampaignTokenSpawner.GetFootprint(tokenData);
-                var tokenObject = new GameObject(string.IsNullOrWhiteSpace(runtimeToken.DisplayName) ? "Visible Token" : runtimeToken.DisplayName);
+                var prefab = Resources.Load<GameObject>("Prefabs/MapToken");
+                var tokenObject = prefab != null 
+                    ? Object.Instantiate(prefab) 
+                    : new GameObject(string.IsNullOrWhiteSpace(runtimeToken.DisplayName) ? "Visible Token" : runtimeToken.DisplayName);
+                tokenObject.name = string.IsNullOrWhiteSpace(runtimeToken.DisplayName) ? "Visible Token" : runtimeToken.DisplayName;
                 tokenObject.transform.SetParent(root, false);
+                tokenObject.transform.localScale = new Vector3(footprint, footprint, 1f);
                 var targetPosition = PlayerViewTokenWorldPosition(boardToken.gridPosition, footprint);
                 PlacePlayerViewToken(tokenObject.transform,
                     PlayerViewTokenKey("runtime", mapId, CampaignTokenSpawner.EnsureRuntimeTokenId(runtimeToken)),
@@ -730,7 +788,8 @@ namespace RPGTable.Runtime
                     return false;
                 }
 
-                var isGraveInPV = tokenTransform.Find("Dead Token") != null;
+                var deadChild = tokenTransform.Find("Dead Token");
+                var isGraveInPV = deadChild != null && deadChild.gameObject.activeSelf;
                 if (player.isDead != isGraveInPV)
                 {
                     return false;
@@ -838,7 +897,8 @@ namespace RPGTable.Runtime
                     return false;
                 }
 
-                var isGraveInPV = tokenTransform.Find("Dead Token") != null;
+                var deadChild = tokenTransform.Find("Dead Token");
+                var isGraveInPV = deadChild != null && deadChild.gameObject.activeSelf;
                 if (runtimeToken.IsDead != isGraveInPV)
                 {
                     return false;
@@ -875,7 +935,21 @@ namespace RPGTable.Runtime
         private bool MoveExistingPlayerViewToken(string key, Vector3 targetPosition, HashSet<string> activeTokenKeys)
         {
             activeTokenKeys.Add(key);
-            return playerViewTokenTransforms.ContainsKey(key) && playerViewTokenTransforms[key] != null;
+            if (!playerViewTokenTransforms.ContainsKey(key) || playerViewTokenTransforms[key] == null)
+            {
+                return false;
+            }
+
+            playerViewTokenPositions[key] = targetPosition;
+
+            // Directly tell the clone where to Lerp to
+            var runtimeToken = playerViewTokenTransforms[key].GetComponent<CampaignRuntimeToken>();
+            if (runtimeToken != null)
+            {
+                runtimeToken.SetTargetWorldPosition(targetPosition);
+            }
+
+            return true;
         }
 
         // ── Helpers ──────────────────────────────────────────────────────────
@@ -983,22 +1057,34 @@ namespace RPGTable.Runtime
 
         private static void RemovePlayerViewCombatComponents(GameObject tokenObject)
         {
+            var drag = tokenObject.GetComponent<TokenDragController>();
+            if (drag != null)
+            {
+                Object.DestroyImmediate(drag);
+            }
+
+            var click = tokenObject.GetComponent<CampaignTokenContextClick>();
+            if (click != null)
+            {
+                Object.DestroyImmediate(click);
+            }
+
             var boardToken = tokenObject.GetComponent<BoardToken>();
             if (boardToken != null)
             {
-                Object.Destroy(boardToken);
+                Object.DestroyImmediate(boardToken);
             }
 
             var collider = tokenObject.GetComponent<Collider2D>();
             if (collider != null)
             {
-                Object.Destroy(collider);
+                Object.DestroyImmediate(collider);
             }
 
             var rootRenderer = tokenObject.GetComponent<SpriteRenderer>();
             if (rootRenderer != null)
             {
-                Object.Destroy(rootRenderer);
+                Object.DestroyImmediate(rootRenderer);
             }
         }
 
@@ -1196,6 +1282,7 @@ namespace RPGTable.Runtime
                     var btn = cardGo.GetComponent<Button>();
                     if (btn != null)
                     {
+                        btn.transition = Selectable.Transition.None;
                         btn.interactable = false;
                     }
                 }

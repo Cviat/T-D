@@ -167,20 +167,17 @@ namespace RPGTable.Editor
             descriptionRect.anchoredPosition = new Vector2(0f, -370f);
             descriptionRect.sizeDelta = new Vector2(280f, 112f);
 
-            var listRoot = new GameObject("Map List Content", typeof(RectTransform));
-            listRoot.transform.SetParent(leftPanel.transform, false);
-            var listRect = listRoot.GetComponent<RectTransform>();
-            listRect.anchorMin = new Vector2(0f, 0f);
-            listRect.anchorMax = new Vector2(1f, 1f);
-            listRect.offsetMin = new Vector2(20f, 24f);
-            listRect.offsetMax = new Vector2(-20f, -506f);
+            var listRect = CreateScrollView("Map List Scroll View", leftPanel.transform, new Vector2(20f, 24f), new Vector2(-20f, -506f));
 
-            var layout = listRoot.AddComponent<VerticalLayoutGroup>();
+            var layout = listRect.gameObject.AddComponent<VerticalLayoutGroup>();
             layout.spacing = 10f;
             layout.childAlignment = TextAnchor.UpperCenter;
             layout.childControlWidth = true;
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
+
+            var fitter = listRect.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
             var controller = canvasObject.AddComponent<CampaignEditorController>();
             controller.Initialize(listRect, boardContentRect, descriptionInput, coverImage);
@@ -266,18 +263,15 @@ namespace RPGTable.Editor
             importRect.pivot = new Vector2(0.5f, 1f);
             importRect.anchoredPosition = new Vector2(0f, -308f);
 
-            var content = new GameObject("Element Content", typeof(RectTransform));
-            content.transform.SetParent(leftPanel.transform, false);
-            var contentRect = content.GetComponent<RectTransform>();
-            contentRect.anchorMin = new Vector2(0f, 0f);
-            contentRect.anchorMax = new Vector2(1f, 1f);
-            contentRect.offsetMin = new Vector2(18f, 90f);
-            contentRect.offsetMax = new Vector2(-18f, -374f);
+            var contentRect = CreateScrollView("Element Scroll View", leftPanel.transform, new Vector2(18f, 90f), new Vector2(-18f, -374f));
 
-            var grid = content.AddComponent<GridLayoutGroup>();
+            var grid = contentRect.gameObject.AddComponent<GridLayoutGroup>();
             grid.cellSize = new Vector2(96f, 96f);
             grid.spacing = new Vector2(12f, 12f);
             grid.childAlignment = TextAnchor.UpperLeft;
+
+            var fitter = contentRect.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
             var palette = leftPanel.AddComponent<MapEditorElementPalette>();
             var serializedPalette = new SerializedObject(palette);
@@ -421,6 +415,49 @@ namespace RPGTable.Editor
 #else
             eventSystem.AddComponent<StandaloneInputModule>();
 #endif
+        }
+
+        private static RectTransform CreateScrollView(string name, Transform parent, Vector2 offsetMin, Vector2 offsetMax)
+        {
+            var scrollObject = new GameObject(name, typeof(RectTransform));
+            scrollObject.transform.SetParent(parent, false);
+            var scrollRt = scrollObject.GetComponent<RectTransform>();
+            scrollRt.anchorMin = Vector2.zero;
+            scrollRt.anchorMax = Vector2.one;
+            scrollRt.offsetMin = offsetMin;
+            scrollRt.offsetMax = offsetMax;
+
+            var scrollRect = scrollObject.AddComponent<ScrollRect>();
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.scrollSensitivity = 25f;
+
+            // Viewport
+            var viewport = new GameObject("Viewport", typeof(RectTransform));
+            viewport.transform.SetParent(scrollObject.transform, false);
+            var viewRt = viewport.GetComponent<RectTransform>();
+            viewRt.anchorMin = Vector2.zero;
+            viewRt.anchorMax = Vector2.one;
+            viewRt.sizeDelta = Vector2.zero;
+            
+            viewport.AddComponent<Image>().color = new Color(0, 0, 0, 0.01f);
+            var mask = viewport.AddComponent<Mask>();
+            mask.showMaskGraphic = false;
+
+            // Content
+            var content = new GameObject("Content", typeof(RectTransform));
+            content.transform.SetParent(viewport.transform, false);
+            var contentRt = content.GetComponent<RectTransform>();
+            contentRt.anchorMin = new Vector2(0f, 1f);
+            contentRt.anchorMax = new Vector2(1f, 1f);
+            contentRt.pivot = new Vector2(0.5f, 1f);
+            contentRt.sizeDelta = new Vector2(0f, 0f);
+            contentRt.anchoredPosition = Vector2.zero;
+
+            scrollRect.viewport = viewRt;
+            scrollRect.content = contentRt;
+
+            return contentRt;
         }
     }
 }

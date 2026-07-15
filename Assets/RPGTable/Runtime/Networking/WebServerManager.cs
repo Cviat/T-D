@@ -423,7 +423,7 @@ namespace RPGTable.Runtime.Networking
 
             byte[] photoBytes = Convert.FromBase64String(photoBase64);
             string safeName = string.Join("_", (playerName ?? "player").Split(System.IO.Path.GetInvalidFileNameChars()));
-            string photoPath = System.IO.Path.Combine(cachedTokenImagesFolder, $"player_photo_{safeName}_{playerId}.jpg");
+            string photoPath = System.IO.Path.Combine(cachedTokenImagesFolder, $"player_photo_{safeName}.png");
             System.IO.File.WriteAllBytes(photoPath, photoBytes);
             return photoPath;
         }
@@ -1054,7 +1054,7 @@ namespace RPGTable.Runtime.Networking
 
                     string playerId = Guid.NewGuid().ToString();
                     string safeName = string.Join("_", payload.name.Split(System.IO.Path.GetInvalidFileNameChars()));
-                    string photoPath = System.IO.Path.Combine(cachedTokenImagesFolder, $"player_photo_{safeName}_{playerId}.png");
+                    string photoPath = System.IO.Path.Combine(cachedTokenImagesFolder, $"player_photo_{safeName}.png");
 
                     System.IO.File.WriteAllBytes(photoPath, photoBytes);
 

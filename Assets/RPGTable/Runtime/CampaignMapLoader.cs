@@ -86,6 +86,48 @@ namespace RPGTable.Runtime
                 }
             }
 
+            // --- Spawn Table Background behind the map ---
+            Sprite tableBgSprite = null;
+            var sprites = Resources.LoadAll<Sprite>("image/a5ba2c8a-d20b-4021-9baf-3f45ea61fa8d (2)");
+            if (sprites != null && sprites.Length > 0)
+            {
+                tableBgSprite = sprites[0];
+            }
+
+            if (tableBgSprite != null)
+            {
+                var tableGo = new GameObject("Table Background");
+                tableGo.transform.SetParent(mapRoot, false);
+
+                var renderer = tableGo.AddComponent<SpriteRenderer>();
+                renderer.sprite = tableBgSprite;
+                renderer.sortingOrder = -25; // Render behind map elements
+                renderer.drawMode = SpriteDrawMode.Sliced;
+
+                // Get sprite borders (in pixels)
+                Vector4 border = tableBgSprite.border; // left, bottom, right, top
+                float ppu = tableBgSprite.pixelsPerUnit;
+                if (ppu <= 0f) ppu = 100f;
+
+                float left = border.x / ppu;
+                float bottom = border.y / ppu;
+                float right = border.z / ppu;
+                float top = border.w / ppu;
+
+                float mapWidth = bounds.size.x;
+                float mapHeight = bounds.size.y;
+
+                float totalWidth = mapWidth + left + right;
+                float totalHeight = mapHeight + bottom + top;
+
+                renderer.size = new Vector2(totalWidth, totalHeight);
+
+                float offsetX = (left - right) / 2f;
+                float offsetY = (bottom - top) / 2f;
+
+                tableGo.transform.position = new Vector3(bounds.center.x - offsetX, bounds.center.y - offsetY, 0.5f);
+            }
+
             return bounds;
         }
 
