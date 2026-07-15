@@ -56,6 +56,8 @@ namespace RPGTable.Board
             }
         }
 
+        private static Material sharedLineMaterial;
+
         private void CreateLine(Vector3 start, Vector3 end)
         {
             var lineObject = new GameObject("Grid Line");
@@ -68,7 +70,20 @@ namespace RPGTable.Board
             line.SetPosition(1, end);
             line.startWidth = lineWidth;
             line.endWidth = lineWidth;
-            line.material = new Material(Shader.Find("Sprites/Default"));
+
+            if (sharedLineMaterial == null)
+            {
+                var shader = Shader.Find("Sprites/Default") ?? Shader.Find("Universal Render Pipeline/2D/Sprite-Lit-Default") ?? Shader.Find("Hidden/InternalErrorShader");
+                if (shader != null)
+                {
+                    sharedLineMaterial = new Material(shader);
+                }
+            }
+            if (sharedLineMaterial != null)
+            {
+                line.sharedMaterial = sharedLineMaterial;
+            }
+
             line.startColor = lineColor;
             line.endColor = lineColor;
             line.sortingOrder = -10;
