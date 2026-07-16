@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0effc282f1594bd43b89f2e352655850, type: 3}
+  m_Name: cloth chest
+  m_EditorClassIdentifier: Assembly-CSharp::RPGTable.Core.ItemCard
+  title: magik chest
+  description: "\u041C\u0430\u043D\u0442\u0438\u044F \u0447\u0430\u0440\u043E\u0434\u0435\u044F "
+  icon: {fileID: 21300000, guid: 1db2aafa220bdac428f29f48a82e2b50, type: 3}
+  itemType: 1
+  scaleStat1: None
+  coef1: 0
+  scaleStat2: None
+  coef2: 0
+  armorPoints: 2
+  bonusHp: 0
+  bonusStr: 0
+  bonusAgi: 0
+  bonusInt: 2
+  bonusHol: 0
+  attributes: []
+  attackType: 0
