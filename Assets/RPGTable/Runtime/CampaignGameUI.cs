@@ -91,6 +91,29 @@ namespace RPGTable.Runtime
                 if (uiManager.ActiveTabBtn != null) uiManager.ActiveTabBtn.onClick.AddListener(() => SwitchLeftTab(LeftTab.ActiveTokens));
                 if (uiManager.BankTabBtn != null) uiManager.BankTabBtn.onClick.AddListener(() => SwitchLeftTab(LeftTab.TokenBank));
                 
+                if (uiManager.ToggleMapsBtn != null && uiManager.CampaignGraphWindow != null)
+                {
+                    uiManager.ToggleMapsBtn.onClick.RemoveAllListeners();
+                    uiManager.ToggleMapsBtn.onClick.AddListener(() => {
+                        var windowGo = uiManager.CampaignGraphWindow.gameObject;
+                        windowGo.SetActive(!windowGo.activeSelf);
+                    });
+                }
+                
+                if (uiManager.ToggleInspectorBtn != null && rightInspectorRoot != null)
+                {
+                    uiManager.ToggleInspectorBtn.onClick.RemoveAllListeners();
+                    uiManager.ToggleInspectorBtn.onClick.AddListener(() => {
+                        var panelGo = rightInspectorRoot.gameObject;
+                        bool targetActive = !panelGo.activeSelf;
+                        panelGo.SetActive(targetActive);
+                        if (targetActive && selectedToken != null)
+                        {
+                            RefreshEntityInspector(selectedToken);
+                        }
+                    });
+                }
+                
                 RefreshLeftPanel();
             }
             else
@@ -342,15 +365,20 @@ namespace RPGTable.Runtime
             Func<string, SavedMapData> getMap,
             Action<string> onSwitch)
         {
+            onSwitchMapCallback = onSwitch;
+
+            if (uiManager != null && uiManager.CampaignGraphWindow != null)
+            {
+                uiManager.CampaignGraphWindow.Populate(campaign, currentMapNodeId, getMap, onSwitch);
+                return;
+            }
+
             if (topMapsRoot == null || campaign?.maps == null)
             {
                 return;
             }
 
-            onSwitchMapCallback = onSwitch;
             ClearChildren(topMapsRoot);
-
-            var mapCardPrefab = Resources.Load<GameObject>("Prefabs/MapCard");
 
             foreach (var node in campaign.maps)
             {
@@ -395,7 +423,11 @@ namespace RPGTable.Runtime
                 return;
             }
 
-            rightInspectorRoot.gameObject.SetActive(true);
+            if (!rightInspectorRoot.gameObject.activeSelf)
+            {
+                return;
+            }
+
             CaptureInspectorLayout();
             ClearChildren(rightInspectorRoot);
 

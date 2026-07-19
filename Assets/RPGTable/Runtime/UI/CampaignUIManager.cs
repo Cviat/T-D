@@ -15,6 +15,9 @@ namespace RPGTable.Runtime
         [SerializeField] private RectTransform rightInspectorRoot;
         [SerializeField] private RectTransform initiativeScrollContent;
 
+        [Header("Campaign Graph Floating Window")]
+        [SerializeField] private CampaignGraphWindow campaignGraphWindow;
+
         [Header("Prefabs")]
         [SerializeField] private GameObject tokenCardPrefab;
         [SerializeField] private GameObject mapCardPrefab;
@@ -28,6 +31,7 @@ namespace RPGTable.Runtime
         public RectTransform RightScenarioRoot => rightScenarioRoot;
         public RectTransform RightInspectorRoot => rightInspectorRoot;
         public RectTransform InitiativeScrollContent => initiativeScrollContent;
+        public CampaignGraphWindow CampaignGraphWindow => campaignGraphWindow;
 
         public GameObject TokenCardPrefab => tokenCardPrefab;
         public GameObject MapCardPrefab => mapCardPrefab;
@@ -39,6 +43,13 @@ namespace RPGTable.Runtime
         [SerializeField] private UnityEngine.UI.Button activeTabBtn;
         [SerializeField] private UnityEngine.UI.Button bankTabBtn;
         [SerializeField] private UnityEngine.UI.Text tabTitleLabel;
+
+        [Header("GM Tool Toggle Buttons")]
+        [SerializeField] private UnityEngine.UI.Button toggleMapsBtn;
+        [SerializeField] private UnityEngine.UI.Button toggleInspectorBtn;
+
+        public UnityEngine.UI.Button ToggleMapsBtn => toggleMapsBtn;
+        public UnityEngine.UI.Button ToggleInspectorBtn => toggleInspectorBtn;
 
         public UnityEngine.UI.Button ActiveTabBtn => activeTabBtn;
         public UnityEngine.UI.Button BankTabBtn => bankTabBtn;

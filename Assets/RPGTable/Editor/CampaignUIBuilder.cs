@@ -27,24 +27,136 @@ namespace RPGTable.Editor
             
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            // Create Top Panel (Map Tabs)
-            GameObject topPanel = CreatePanel("TopPanel_Maps", canvasGo.transform);
-            RectTransform topRt = topPanel.GetComponent<RectTransform>();
-            topRt.anchorMin = new Vector2(0, 1);
-            topRt.anchorMax = new Vector2(1, 1);
-            topRt.pivot = new Vector2(0.5f, 1);
-            topRt.sizeDelta = new Vector2(0, 80); // 80 height, stretches width
-            topRt.anchoredPosition = Vector2.zero;
-            
-            HorizontalLayoutGroup topLayout = topPanel.AddComponent<HorizontalLayoutGroup>();
-            topLayout.childAlignment = TextAnchor.MiddleLeft;
-            topLayout.childControlHeight = true;
-            topLayout.childControlWidth = false;
-            topLayout.childForceExpandHeight = true;
-            topLayout.childForceExpandWidth = false;
-            topLayout.spacing = 10;
-            topLayout.padding = new RectOffset(10, 10, 10, 10);
-            topPanel.AddComponent<Image>().color = new Color(0.1f, 0.1f, 0.1f, 0.8f);
+            // Create Floating Graph Window
+            GameObject graphWindowGo = CreatePanel("CampaignGraphWindow", canvasGo.transform);
+            RectTransform graphWindowRt = graphWindowGo.GetComponent<RectTransform>();
+            graphWindowRt.anchorMin = new Vector2(0.5f, 0.5f);
+            graphWindowRt.anchorMax = new Vector2(0.5f, 0.5f);
+            graphWindowRt.pivot = new Vector2(0.5f, 0.5f);
+            graphWindowRt.sizeDelta = new Vector2(400f, 300f);
+            graphWindowRt.anchoredPosition = new Vector2(100f, 150f);
+            graphWindowGo.AddComponent<Image>().color = new Color(0.08f, 0.08f, 0.08f, 0.95f);
+
+            // Title Bar
+            GameObject titleBarGo = CreatePanel("TitleBar", graphWindowGo.transform);
+            RectTransform titleBarRt = titleBarGo.GetComponent<RectTransform>();
+            titleBarRt.anchorMin = new Vector2(0, 1);
+            titleBarRt.anchorMax = new Vector2(1, 1);
+            titleBarRt.pivot = new Vector2(0.5f, 1);
+            titleBarRt.sizeDelta = new Vector2(0, 40f);
+            titleBarRt.anchoredPosition = Vector2.zero;
+            titleBarGo.AddComponent<Image>().color = new Color(0.18f, 0.12f, 0.065f, 1f);
+
+            GameObject titleTextGo = new GameObject("Text");
+            titleTextGo.transform.SetParent(titleBarGo.transform, false);
+            RectTransform titleTextRt = titleTextGo.AddComponent<RectTransform>();
+            titleTextRt.anchorMin = Vector2.zero;
+            titleTextRt.anchorMax = Vector2.one;
+            titleTextRt.offsetMin = new Vector2(12f, 0f);
+            titleTextRt.offsetMax = new Vector2(-50f, 0f);
+            Text titleText = titleTextGo.AddComponent<Text>();
+            titleText.text = "Карта кампании";
+            titleText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            titleText.fontSize = 16;
+            titleText.fontStyle = FontStyle.Bold;
+            titleText.alignment = TextAnchor.MiddleLeft;
+            titleText.color = Color.white;
+
+            // Minimize Button
+            GameObject minBtnGo = new GameObject("MinimizeBtn", typeof(RectTransform), typeof(Image), typeof(Button));
+            minBtnGo.transform.SetParent(titleBarGo.transform, false);
+            RectTransform minBtnRt = minBtnGo.GetComponent<RectTransform>();
+            minBtnRt.anchorMin = new Vector2(1, 0.5f);
+            minBtnRt.anchorMax = new Vector2(1, 0.5f);
+            minBtnRt.pivot = new Vector2(1, 0.5f);
+            minBtnRt.sizeDelta = new Vector2(28f, 28f);
+            minBtnRt.anchoredPosition = new Vector2(-6f, 0f);
+            minBtnGo.GetComponent<Image>().color = new Color(0.1f, 0.1f, 0.1f, 0.5f);
+            Button minBtn = minBtnGo.GetComponent<Button>();
+
+            GameObject minBtnTextGo = new GameObject("Text");
+            minBtnTextGo.transform.SetParent(minBtnGo.transform, false);
+            RectTransform minBtnTextRt = minBtnTextGo.AddComponent<RectTransform>();
+            minBtnTextRt.anchorMin = Vector2.zero;
+            minBtnTextRt.anchorMax = Vector2.one;
+            minBtnTextRt.sizeDelta = Vector2.zero;
+            Text minBtnText = minBtnTextGo.AddComponent<Text>();
+            minBtnText.text = "[-]";
+            minBtnText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            minBtnText.fontSize = 14;
+            minBtnText.alignment = TextAnchor.MiddleCenter;
+            minBtnText.color = Color.white;
+
+            // Content Parent (collapsible area)
+            GameObject contentParentGo = CreatePanel("ContentParent", graphWindowGo.transform);
+            RectTransform contentParentRt = contentParentGo.GetComponent<RectTransform>();
+            contentParentRt.anchorMin = Vector2.zero;
+            contentParentRt.anchorMax = Vector2.one;
+            contentParentRt.offsetMin = Vector2.zero;
+            contentParentRt.offsetMax = new Vector2(0f, -40f);
+
+            // Scroll View
+            GameObject graphScrollViewGo = new GameObject("Scroll View", typeof(RectTransform), typeof(ScrollRect));
+            graphScrollViewGo.transform.SetParent(contentParentGo.transform, false);
+            RectTransform graphScrollRt = graphScrollViewGo.GetComponent<RectTransform>();
+            graphScrollRt.anchorMin = Vector2.zero;
+            graphScrollRt.anchorMax = Vector2.one;
+            graphScrollRt.offsetMin = new Vector2(4f, 4f);
+            graphScrollRt.offsetMax = new Vector2(-4f, -4f);
+            ScrollRect graphScrollRect = graphScrollViewGo.GetComponent<ScrollRect>();
+            graphScrollRect.horizontal = true;
+            graphScrollRect.vertical = true;
+            graphScrollRect.movementType = ScrollRect.MovementType.Clamped;
+
+            // Viewport
+            GameObject graphViewportGo = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D), typeof(Image));
+            graphViewportGo.transform.SetParent(graphScrollViewGo.transform, false);
+            RectTransform graphViewportRt = graphViewportGo.GetComponent<RectTransform>();
+            graphViewportRt.anchorMin = Vector2.zero;
+            graphViewportRt.anchorMax = Vector2.one;
+            graphViewportRt.sizeDelta = Vector2.zero;
+            var vpImg = graphViewportGo.GetComponent<Image>();
+            vpImg.color = new Color(0f, 0f, 0f, 0f);
+            vpImg.raycastTarget = true;
+
+            // Content
+            GameObject graphContentGo = new GameObject("GraphContent", typeof(RectTransform));
+            graphContentGo.transform.SetParent(graphViewportGo.transform, false);
+            RectTransform graphContentRt = graphContentGo.GetComponent<RectTransform>();
+            graphContentRt.anchorMin = new Vector2(0f, 1f);
+            graphContentRt.anchorMax = new Vector2(0f, 1f);
+            graphContentRt.pivot = new Vector2(0f, 1f);
+            graphContentRt.sizeDelta = new Vector2(1000f, 1000f);
+
+            graphScrollRect.viewport = graphViewportRt;
+            graphScrollRect.content = graphContentRt;
+
+            // Resize Handle
+            GameObject resizeHandleGo = CreatePanel("ResizeHandle", graphWindowGo.transform);
+            RectTransform resizeHandleRt = resizeHandleGo.GetComponent<RectTransform>();
+            resizeHandleRt.anchorMin = new Vector2(1, 0);
+            resizeHandleRt.anchorMax = new Vector2(1, 0);
+            resizeHandleRt.pivot = new Vector2(1, 0);
+            resizeHandleRt.sizeDelta = new Vector2(16f, 16f);
+            resizeHandleRt.anchoredPosition = Vector2.zero;
+            resizeHandleGo.AddComponent<Image>().color = new Color(0.4f, 0.4f, 0.4f, 0.6f);
+
+            // Add Components
+            UIFloatingWindow uiFloating = graphWindowGo.AddComponent<UIFloatingWindow>();
+            var serializedFloat = new UnityEditor.SerializedObject(uiFloating);
+            serializedFloat.FindProperty("windowRect").objectReferenceValue = graphWindowRt;
+            serializedFloat.FindProperty("titleBar").objectReferenceValue = titleBarRt;
+            serializedFloat.FindProperty("resizeHandle").objectReferenceValue = resizeHandleRt;
+            serializedFloat.FindProperty("contentParent").objectReferenceValue = contentParentGo;
+            serializedFloat.FindProperty("minimizeButton").objectReferenceValue = minBtn;
+            serializedFloat.FindProperty("minimizeButtonText").objectReferenceValue = minBtnText;
+            serializedFloat.ApplyModifiedPropertiesWithoutUndo();
+
+            CampaignGraphWindow graphWindow = graphWindowGo.AddComponent<CampaignGraphWindow>();
+            var serializedGraph = new UnityEditor.SerializedObject(graphWindow);
+            serializedGraph.FindProperty("contentContainer").objectReferenceValue = graphContentRt;
+            serializedGraph.FindProperty("scrollRect").objectReferenceValue = graphScrollRect;
+            serializedGraph.ApplyModifiedPropertiesWithoutUndo();
 
             // Create Left Panel (Tokens)
             GameObject leftPanel = CreatePanel("LeftPanel_Tokens", canvasGo.transform);
@@ -207,6 +319,73 @@ namespace RPGTable.Editor
 
             bottomToolsView.playerViewCameraButton = camBtn;
 
+            // Load sprite for toggle buttons
+            Sprite toggleBtnSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/GUI_Parts/Gui_parts/button_ready_on.png");
+
+            // Toggle Maps Button
+            GameObject toggleMapsGo = new GameObject("ToggleMapsBtn");
+            toggleMapsGo.transform.SetParent(bottomPanel.transform, false);
+            var toggleMapsRt = toggleMapsGo.AddComponent<RectTransform>();
+            var toggleMapsLayout = toggleMapsGo.AddComponent<LayoutElement>();
+            toggleMapsLayout.preferredWidth = 140f;
+            toggleMapsLayout.preferredHeight = 60f;
+            var toggleMapsImg = toggleMapsGo.AddComponent<Image>();
+            if (toggleBtnSprite != null)
+            {
+                toggleMapsImg.sprite = toggleBtnSprite;
+                toggleMapsImg.type = Image.Type.Simple;
+            }
+            else
+            {
+                toggleMapsImg.color = new Color(0.25f, 0.2f, 0.15f, 1f);
+            }
+            var mapsBtn = toggleMapsGo.AddComponent<Button>();
+
+            GameObject mapsBtnTextGo = new GameObject("Text");
+            mapsBtnTextGo.transform.SetParent(toggleMapsGo.transform, false);
+            RectTransform mapsBtnTextRt = mapsBtnTextGo.AddComponent<RectTransform>();
+            mapsBtnTextRt.anchorMin = Vector2.zero;
+            mapsBtnTextRt.anchorMax = Vector2.one;
+            mapsBtnTextRt.sizeDelta = Vector2.zero;
+            Text mapsBtnText = mapsBtnTextGo.AddComponent<Text>();
+            mapsBtnText.text = "Карта";
+            mapsBtnText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            mapsBtnText.fontSize = 18;
+            mapsBtnText.alignment = TextAnchor.MiddleCenter;
+            mapsBtnText.color = Color.white;
+
+            // Toggle Inspector Button
+            GameObject toggleInspectorGo = new GameObject("ToggleInspectorBtn");
+            toggleInspectorGo.transform.SetParent(bottomPanel.transform, false);
+            var toggleInspectorRt = toggleInspectorGo.AddComponent<RectTransform>();
+            var toggleInspectorLayout = toggleInspectorGo.AddComponent<LayoutElement>();
+            toggleInspectorLayout.preferredWidth = 140f;
+            toggleInspectorLayout.preferredHeight = 60f;
+            var toggleInspectorImg = toggleInspectorGo.AddComponent<Image>();
+            if (toggleBtnSprite != null)
+            {
+                toggleInspectorImg.sprite = toggleBtnSprite;
+                toggleInspectorImg.type = Image.Type.Simple;
+            }
+            else
+            {
+                toggleInspectorImg.color = new Color(0.25f, 0.2f, 0.15f, 1f);
+            }
+            var inspectorBtn = toggleInspectorGo.AddComponent<Button>();
+
+            GameObject inspectorBtnTextGo = new GameObject("Text");
+            inspectorBtnTextGo.transform.SetParent(toggleInspectorGo.transform, false);
+            RectTransform inspectorBtnTextRt = inspectorBtnTextGo.AddComponent<RectTransform>();
+            inspectorBtnTextRt.anchorMin = Vector2.zero;
+            inspectorBtnTextRt.anchorMax = Vector2.one;
+            inspectorBtnTextRt.sizeDelta = Vector2.zero;
+            Text inspectorBtnText = inspectorBtnTextGo.AddComponent<Text>();
+            inspectorBtnText.text = "Инспектор";
+            inspectorBtnText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            inspectorBtnText.fontSize = 18;
+            inspectorBtnText.alignment = TextAnchor.MiddleCenter;
+            inspectorBtnText.color = Color.white;
+
             // Create EventSystem if it doesn't exist
             if (Object.FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>() == null)
             {
@@ -218,12 +397,15 @@ namespace RPGTable.Editor
             // Attach Manager
             CampaignUIManager manager = canvasGo.AddComponent<CampaignUIManager>();
             var so = new SerializedObject(manager);
-            so.FindProperty("topMapsRoot").objectReferenceValue = topRt;
+            so.FindProperty("topMapsRoot").objectReferenceValue = null;
+            so.FindProperty("campaignGraphWindow").objectReferenceValue = graphWindow;
             so.FindProperty("leftPanelRoot").objectReferenceValue = listRoot;
             so.FindProperty("bottomToolsetRoot").objectReferenceValue = bottomRt;
             so.FindProperty("activeTabBtn").objectReferenceValue = activeBtn;
             so.FindProperty("bankTabBtn").objectReferenceValue = bankBtn;
             so.FindProperty("tabTitleLabel").objectReferenceValue = titleTxt;
+            so.FindProperty("toggleMapsBtn").objectReferenceValue = mapsBtn;
+            so.FindProperty("toggleInspectorBtn").objectReferenceValue = inspectorBtn;
             
             // Assign Prefabs
             GameObject tokenCardPrefab = Resources.Load<GameObject>("Prefabs/TokenCard");
@@ -234,6 +416,10 @@ namespace RPGTable.Editor
             so.FindProperty("mapCardPrefab").objectReferenceValue = mapCardPrefab;
             
             so.ApplyModifiedProperties();
+
+            var soGraph = new SerializedObject(graphWindow);
+            soGraph.FindProperty("nodePrefab").objectReferenceValue = mapCardPrefab;
+            soGraph.ApplyModifiedProperties();
 
             Undo.RegisterCreatedObjectUndo(canvasGo, "Create Campaign UI");
             Selection.activeGameObject = canvasGo;
