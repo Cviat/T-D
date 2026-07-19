@@ -441,7 +441,7 @@ namespace RPGTable.Runtime
                 return;
             }
 
-            var hpBonus = levelCount * 5;
+            var hpBonus = levelCount * 10;
 
             player.characterRuntimeData.level = Math.Max(1, player.characterRuntimeData.level) + levelCount;
             player.characterRuntimeData.attributePoints += levelCount * 3;

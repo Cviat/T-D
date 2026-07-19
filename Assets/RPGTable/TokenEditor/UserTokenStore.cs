@@ -270,10 +270,10 @@ namespace RPGTable.TokenEditor
                 // Fallback: If it's a built-in asset path (starting with Assets/) or does not exist on disk,
                 // try to load it from Resources/image/ using the filename.
                 var filename = Path.GetFileNameWithoutExtension(path);
-                var sprites = Resources.LoadAll<Sprite>("image/" + filename);
-                if (sprites != null && sprites.Length > 0)
+                var fallbackSprite = Resources.Load<Sprite>("image/" + filename);
+                if (fallbackSprite != null)
                 {
-                    return sprites[0];
+                    return fallbackSprite;
                 }
 
                 return null;

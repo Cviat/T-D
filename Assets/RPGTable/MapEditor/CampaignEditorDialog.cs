@@ -21,28 +21,65 @@ namespace RPGTable.MapEditor
             panelRect.anchorMin = new Vector2(0.5f, 0.5f);
             panelRect.anchorMax = new Vector2(0.5f, 0.5f);
             panelRect.pivot = new Vector2(0.5f, 0.5f);
-            panelRect.sizeDelta = new Vector2(520f, 420f);
+            panelRect.sizeDelta = new Vector2(560f, 480f);
             panel.AddComponent<Image>().color = new Color(0.075f, 0.065f, 0.055f, 0.98f);
 
-            var layout = panel.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(24, 24, 24, 24);
+            var scrollView = new GameObject("ScrollView", typeof(RectTransform));
+            scrollView.transform.SetParent(panel.transform, false);
+            var scrollRect = scrollView.AddComponent<ScrollRect>();
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+            var scrollRectTransform = scrollView.GetComponent<RectTransform>();
+            scrollRectTransform.anchorMin = Vector2.zero;
+            scrollRectTransform.anchorMax = Vector2.one;
+            scrollRectTransform.offsetMin = new Vector2(24f, 24f);
+            scrollRectTransform.offsetMax = new Vector2(-24f, -24f);
+
+            var viewport = new GameObject("Viewport", typeof(RectTransform));
+            viewport.transform.SetParent(scrollView.transform, false);
+            var viewportRect = viewport.GetComponent<RectTransform>();
+            viewportRect.anchorMin = Vector2.zero;
+            viewportRect.anchorMax = Vector2.one;
+            viewportRect.offsetMin = Vector2.zero;
+            viewportRect.offsetMax = Vector2.zero;
+            viewport.AddComponent<RectMask2D>();
+            scrollRect.viewport = viewportRect;
+
+            var content = new GameObject("Content", typeof(RectTransform));
+            content.transform.SetParent(viewport.transform, false);
+            var contentRect = content.GetComponent<RectTransform>();
+            contentRect.anchorMin = new Vector2(0f, 1f);
+            contentRect.anchorMax = new Vector2(1f, 1f);
+            contentRect.pivot = new Vector2(0.5f, 1f);
+            contentRect.offsetMin = new Vector2(0f, 0f);
+            contentRect.offsetMax = new Vector2(0f, 0f);
+
+            var layout = content.AddComponent<VerticalLayoutGroup>();
             layout.spacing = 14f;
+            layout.childAlignment = TextAnchor.UpperCenter;
             layout.childControlWidth = true;
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
 
-            CreateDialogLabel(panel.transform, "Import Campaign");
+            var fitter = content.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+
+            scrollRect.content = contentRect;
+
+            CreateDialogLabel(content.transform, "Import Campaign");
 
             if (campaignPaths.Count == 0)
             {
-                CreateDialogLabel(panel.transform, "No saved campaigns");
+                CreateDialogLabel(content.transform, "No saved campaigns");
             }
             else
             {
                 foreach (var path in campaignPaths)
                 {
                     var captured = path;
-                    CreateDialogButton(panel.transform, UserCampaignStore.GetDisplayName(path), () =>
+                    CreateDialogButton(content.transform, UserCampaignStore.GetDisplayName(path), () =>
                     {
                         Destroy(canvasObject);
                         onOpen?.Invoke(captured);
@@ -50,7 +87,7 @@ namespace RPGTable.MapEditor
                 }
             }
 
-            CreateDialogButton(panel.transform, "Cancel", () => Destroy(canvasObject));
+            CreateDialogButton(content.transform, "Cancel", () => Destroy(canvasObject));
         }
 
         private static void CreateDialogLabel(Transform parent, string label)

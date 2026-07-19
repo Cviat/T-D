@@ -87,12 +87,7 @@ namespace RPGTable.Runtime
             }
 
             // --- Spawn Table Background behind the map ---
-            Sprite tableBgSprite = null;
-            var sprites = Resources.LoadAll<Sprite>("image/a5ba2c8a-d20b-4021-9baf-3f45ea61fa8d (2)");
-            if (sprites != null && sprites.Length > 0)
-            {
-                tableBgSprite = sprites[0];
-            }
+            Sprite tableBgSprite = Resources.Load<Sprite>("image/a5ba2c8a-d20b-4021-9baf-3f45ea61fa8d (2)");
 
             if (tableBgSprite != null)
             {
