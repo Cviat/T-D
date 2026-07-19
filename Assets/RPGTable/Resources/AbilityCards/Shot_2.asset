@@ -23,3 +23,4 @@ MonoBehaviour:
   attributes: []
   attackType: 1
   animationEffect: {fileID: 11400000, guid: d062799958262104182ee3c0f2d7e1fd, type: 2}
+  soundEffect: {fileID: 8300000, guid: 74801147e9084f648a7e2724ba25aa61, type: 3}

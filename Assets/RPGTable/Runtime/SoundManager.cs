@@ -140,6 +140,28 @@ namespace RPGTable.Runtime
             PlayRandomSFX(missSounds);
         }
 
+        /// <summary>Воспроизвести конкретный клип. Если null — сыграть дефолтный хит.</summary>
+        public void PlayAbilitySound(AudioClip clip, bool fallbackToHit = true)
+        {
+            if (clip != null)
+            {
+                sfxSource.PlayOneShot(clip);
+            }
+            else if (fallbackToHit)
+            {
+                PlayRandomSFX(hitSounds);
+            }
+        }
+
+        /// <summary>Воспроизвести дефолтный звук промаха, или конкретный клип если задан.</summary>
+        public void PlayMissSound(AudioClip clip = null)
+        {
+            if (clip != null)
+                sfxSource.PlayOneShot(clip);
+            else
+                PlayRandomSFX(missSounds);
+        }
+
         private void PlayRandomSFX(AudioClip[] clips)
         {
             if (clips == null || clips.Length == 0) return;

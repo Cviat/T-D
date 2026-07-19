@@ -35,5 +35,8 @@ namespace RPGTable.Core
 
         [Header("Combat Animations")]
         public RPGTable.Runtime.CombatAnimationEffect animationEffect;
+
+        [Header("Combat Sound")]
+        public AudioClip soundEffect;
     }
 }

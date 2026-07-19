@@ -100,10 +100,11 @@ namespace RPGTable.Board
 
             // Draw action range first (underneath), then movement range on top
             foreach (var cell in ActionCells)
-                SpawnHighlight(cell, actionRangeColor, -6, -0.04f);
+                SpawnHighlight(cell, actionRangeColor, -6, -0.04f, 1);
 
-            foreach (var cell in MoveCells)
-                SpawnHighlight(cell, moveRangeColor, -5, -0.05f);
+            // For movement: draw one fp×fp block per reachable position (not 1×1 per cell)
+            foreach (var pos in MovePositions)
+                SpawnHighlight(pos, moveRangeColor, -5, -0.05f, fp);
 
             // Spawn reticle on targetable enemies in action range
             var allTokens = GameObject.FindObjectsByType<RPGTable.Runtime.CampaignRuntimeToken>(FindObjectsInactive.Exclude);
@@ -155,12 +156,17 @@ namespace RPGTable.Board
             activeHighlights.Add(reticleGo);
         }
 
-        private void SpawnHighlight(Vector2Int cell, Color color, int sortingOrder, float zOffset)
+        private void SpawnHighlight(Vector2Int cell, Color color, int sortingOrder, float zOffset, int fpSize = 1)
         {
             var highlightGo = new GameObject("GridHighlight");
             highlightGo.transform.SetParent(transform, false);
-            highlightGo.transform.position = grid.CellToWorld(cell) + new Vector3(0f, 0f, zOffset);
-            highlightGo.transform.localScale = new Vector3(grid.cellSize * 0.95f, grid.cellSize * 0.95f, 1f);
+
+            // For blocks larger than 1×1, position at the CENTER of the fp×fp block
+            float blockWorldSize = grid.cellSize * fpSize;
+            Vector3 topLeftWorld = grid.CellToWorld(cell);
+            float centerOffset = (fpSize - 1) * grid.cellSize * 0.5f;
+            highlightGo.transform.position = topLeftWorld + new Vector3(centerOffset, centerOffset, zOffset);
+            highlightGo.transform.localScale = new Vector3(blockWorldSize * 0.97f, blockWorldSize * 0.97f, 1f);
 
             var renderer = highlightGo.AddComponent<SpriteRenderer>();
             renderer.sprite = RuntimeSpriteFactory.Square;

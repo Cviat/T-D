@@ -16,7 +16,7 @@ MonoBehaviour:
   title: "\u041F\u0430\u0440\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 + \u043A\u043E\u043D\u0442\u0440\u0430\u0442\u0430\u043A\u0430 "
   description: "\u0417\u0430\u0449\u0438\u0442\u0430 \u043E\u0440\u0443\u0436\u0438\u0435\u043C
     \u0431\u043B\u0438\u0436\u043D\u0435\u0433\u043E \u0431\u043E\u044F "
-  cost: 3
+  cost: 2
   range: 2
   effectType: 0
   multiplier: 1.5
@@ -24,4 +24,5 @@ MonoBehaviour:
   attributes:
   - {fileID: 11400000, guid: 2bcf31f4df7935a4380316f11271970c, type: 2}
   attackType: 3
-  animationEffect: {fileID: 11400000, guid: a1f6ae9f62d33b644b3bdc5b958339a4, type: 2}
+  animationEffect: {fileID: 11400000, guid: a81b261f53831bb4c8f7336340d545b1, type: 2}
+  soundEffect: {fileID: 0}

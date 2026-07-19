@@ -398,27 +398,38 @@ namespace RPGTable.Runtime
                 }
 
                 // 2. Check if clicked a highlighted green cell to move
-                // Distance is measured in footprint-steps, not individual cells
+                // Find the MovePosition whose fp×fp block contains the clicked cell
                 int fp = Mathf.Max(1, btActive != null ? btActive.footprintSize : 1);
-                int cellDist = Mathf.Max(Mathf.Abs(clickedCell.x - startCell.x), Mathf.Abs(clickedCell.y - startCell.y));
-                int moveSteps = Mathf.CeilToInt((float)cellDist / fp);
-                // Snap the destination to a footprint-aligned position
-                int destX = startCell.x + Mathf.RoundToInt((float)(clickedCell.x - startCell.x) / fp) * fp;
-                int destY = startCell.y + Mathf.RoundToInt((float)(clickedCell.y - startCell.y) / fp) * fp;
-                Vector2Int dest = new Vector2Int(destX, destY);
-                if (moveSteps > 0 && moveSteps <= activeToken.CurrentMovementPoints)
+                var highlighter = RPGTable.Board.GridHighlighter.Instance;
+                Vector2Int dest = new Vector2Int(-1, -1);
+                int destSteps = int.MaxValue;
+                if (highlighter != null)
                 {
-                    if (RPGTable.Board.GridHighlighter.Instance != null &&
-                        RPGTable.Board.GridHighlighter.Instance.MovePositions.Contains(dest))
+                    foreach (var pos in highlighter.MovePositions)
                     {
-                        activeToken.CurrentMovementPoints -= moveSteps;
-                        CampaignGameSession.MoveToken(
-                            string.IsNullOrEmpty(activeToken.PlayerId) ? activeToken.RuntimeId : activeToken.PlayerId,
-                            context.CurrentMapNode.id,
-                            dest
-                        );
-                        SelectRuntimeToken(activeToken);
+                        // Check if clickedCell is inside this fp×fp block
+                        if (clickedCell.x >= pos.x && clickedCell.x < pos.x + fp &&
+                            clickedCell.y >= pos.y && clickedCell.y < pos.y + fp)
+                        {
+                            int cellDist = Mathf.Max(Mathf.Abs(pos.x - startCell.x), Mathf.Abs(pos.y - startCell.y));
+                            int steps = Mathf.CeilToInt((float)cellDist / fp);
+                            if (steps < destSteps)
+                            {
+                                destSteps = steps;
+                                dest = pos;
+                            }
+                        }
                     }
+                }
+                if (dest.x >= 0 && destSteps > 0 && destSteps <= activeToken.CurrentMovementPoints)
+                {
+                    activeToken.CurrentMovementPoints -= destSteps;
+                    CampaignGameSession.MoveToken(
+                        string.IsNullOrEmpty(activeToken.PlayerId) ? activeToken.RuntimeId : activeToken.PlayerId,
+                        context.CurrentMapNode.id,
+                        dest
+                    );
+                    SelectRuntimeToken(activeToken);
                 }
             }
         }
@@ -808,7 +819,7 @@ namespace RPGTable.Runtime
 
             if (SoundManager.Instance != null)
             {
-                SoundManager.Instance.PlayMiss();
+                SoundManager.Instance.PlayMissSound(ability?.soundEffect);
             }
 
             yield return new WaitForSeconds(0.5f);
@@ -893,7 +904,7 @@ namespace RPGTable.Runtime
 
             if (SoundManager.Instance != null)
             {
-                SoundManager.Instance.PlayHit();
+                SoundManager.Instance.PlayAbilitySound(attackAbility?.soundEffect);
             }
 
             yield return new WaitForSeconds(0.3f);

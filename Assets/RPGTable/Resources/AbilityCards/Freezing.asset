@@ -17,7 +17,7 @@ MonoBehaviour:
   description: "\u0417\u0430\u043C\u043E\u0440\u0430\u0436\u0438\u0432\u0430\u0435\u0442
     \u043F\u0440\u043E\u0442\u0438\u0432\u043D\u0438\u043A\u0430\u043D\u0430  "
   cost: 2
-  range: 6
+  range: 8
   effectType: 0
   multiplier: 0.5
   defenseValue: 0
@@ -25,3 +25,4 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 3b780ee3bff6d2f45905b80c6394dcd8, type: 2}
   attackType: 2
   animationEffect: {fileID: 11400000, guid: 9aca366fdfba512468753826589704ac, type: 2}
+  soundEffect: {fileID: 8300000, guid: a66f4baf9e1766343973b6cefcd42d17, type: 3}
