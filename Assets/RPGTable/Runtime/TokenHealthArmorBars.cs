@@ -46,13 +46,20 @@ namespace RPGTable.Runtime
         {
             var boardToken = GetComponent<RPGTable.Core.BoardToken>();
             int footprint = boardToken != null ? boardToken.footprintSize : Mathf.Max(1, token.FootprintSize);
-            float desiredWidth = footprint * 0.9f;
-            float baseOffset = footprint * 0.5f;
+
+            // В локальном пространстве фишки (которая масштабируется родителем до footprint):
+            // Верхняя граница фишки всегда находится по Y = 0.5f.
+            // Мы хотим расположить бар прямо над фишкой с небольшим зазором.
+            // Чтобы зазор был постоянным в мировых координатах, делим его на footprint.
+            float localY = 0.6f + (0.05f / footprint);
 
             if (barsRect != null)
             {
-                barsView.transform.localPosition = new Vector3(0f, baseOffset + 0.35f, -0.1f);
-                float scale = desiredWidth / 120f;
+                barsView.transform.localPosition = new Vector3(0f, localY, -0.1f / footprint);
+                
+                // Чтобы ширина бара всегда составляла ровно 70% от ширины фишки в мировых координатах,
+                // локальный масштаб не должен зависеть от footprint (так как родитель уже масштабирует до footprint).
+                float scale = 0.90f / 120f;
                 barsView.transform.localScale = new Vector3(scale, scale, scale);
             }
         }

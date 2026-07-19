@@ -17,10 +17,9 @@ MonoBehaviour:
   description: "\u041E\u0431\u044B\u0447\u043D\u044B\u0439 \u0432\u044B\u0441\u0442\u0440\u0435\u043B"
   cost: 2
   range: 8
-  targetType: 2
   effectType: 0
-  effectValue: 1
   multiplier: 0.5
+  defenseValue: 0
   attributes: []
   attackType: 1
-  hiddenNotes: 
+  animationEffect: {fileID: 11400000, guid: d062799958262104182ee3c0f2d7e1fd, type: 2}

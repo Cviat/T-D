@@ -20,6 +20,12 @@ namespace RPGTable.Runtime
     {
         [SerializeField] private Camera worldCamera;
 
+        [Header("Default Combat Animations")]
+        [SerializeField] private CombatAnimationEffect defaultMeleeAnimation;
+        [SerializeField] private CombatAnimationEffect defaultRangedAnimation;
+        [SerializeField] private CombatAnimationEffect defaultMagicAnimation;
+        [SerializeField] private CombatAnimationEffect defaultDefenseAnimation;
+
         private CampaignGameContext context;
         internal CampaignGameContext Context => context;
 
@@ -668,14 +674,14 @@ namespace RPGTable.Runtime
 
             if (string.IsNullOrEmpty(abilityName))
             {
-                StartCoroutine(ExecuteMissRoutine(attacker, target));
+                StartCoroutine(ExecuteMissRoutine(attacker, target, null));
                 return;
             }
 
             AbilityCard ability = FindAbilityCard(abilityName);
             if (ability == null)
             {
-                StartCoroutine(ExecuteMissRoutine(attacker, target));
+                StartCoroutine(ExecuteMissRoutine(attacker, target, null));
                 return;
             }
 
@@ -727,11 +733,78 @@ namespace RPGTable.Runtime
             }
         }
 
-        private IEnumerator ExecuteMissRoutine(CampaignRuntimeToken attacker, CampaignRuntimeToken target)
+        private CombatAnimationEffect ResolveAnimationEffect(AbilityCard ability, CampaignRuntimeToken attacker)
+        {
+            if (ability != null && ability.animationEffect != null)
+            {
+                return ability.animationEffect;
+            }
+
+            // Fallback based on active weapon or ability type
+            var charData = string.IsNullOrEmpty(attacker.CharacterPath)
+                ? null
+                : RPGTable.CharacterEditor.UserCharacterStore.LoadCharacter(attacker.CharacterPath);
+
+            RPGTable.Core.AttackType attackType = RPGTable.Core.AttackType.Melee;
+            if (charData != null)
+            {
+                string weaponName = (attacker.ActiveWeaponIndex == 0) ? charData.eqWeapon : charData.eqWeapon2;
+                RPGTable.Core.ItemCard weapon = FindItemCard(weaponName);
+                if (weapon != null)
+                {
+                    attackType = weapon.attackType;
+                }
+                else if (ability != null)
+                {
+                    attackType = ability.attackType;
+                }
+            }
+            else if (ability != null)
+            {
+                attackType = ability.attackType;
+            }
+
+            switch (attackType)
+            {
+                case RPGTable.Core.AttackType.Melee:
+                    return defaultMeleeAnimation != null ? defaultMeleeAnimation : GetDefaultMeleeBump();
+                case RPGTable.Core.AttackType.Ranged:
+                    return defaultRangedAnimation != null ? defaultRangedAnimation : GetDefaultMeleeBump();
+                case RPGTable.Core.AttackType.Magic:
+                    return defaultMagicAnimation != null ? defaultMagicAnimation : GetDefaultMeleeBump();
+                case RPGTable.Core.AttackType.Defense:
+                    return defaultDefenseAnimation != null ? defaultDefenseAnimation : null;
+                default:
+                    return GetDefaultMeleeBump();
+            }
+        }
+
+        private CombatAnimationEffect GetDefaultMeleeBump()
+        {
+            var anim = ScriptableObject.CreateInstance<MeleeBumpAnimation>();
+            anim.speed = 15f;
+            anim.distanceFraction = 0.5f;
+            return anim;
+        }
+
+        private IEnumerator ExecuteMissRoutine(CampaignRuntimeToken attacker, CampaignRuntimeToken target, AbilityCard ability)
         {
             SpawnCombatText(target, "ПРОМАХ", Color.gray, 32f);
 
-            AnimateTokenAttack(attacker, target);
+            var effect = ResolveAnimationEffect(ability, attacker);
+            if (effect != null)
+            {
+                StartCoroutine(effect.PlayRoutine(attacker.transform, target.transform, null));
+                if (pvManager != null)
+                {
+                    var pvAttacker = pvManager.GetPlayerViewTokenTransform(attacker);
+                    var pvTarget = pvManager.GetPlayerViewTokenTransform(target);
+                    if (pvAttacker != null && pvTarget != null)
+                    {
+                        StartCoroutine(effect.PlayRoutine(pvAttacker, pvTarget, null));
+                    }
+                }
+            }
 
             if (SoundManager.Instance != null)
             {
@@ -783,8 +856,40 @@ namespace RPGTable.Runtime
                 SpawnCombatText(target, defenseAbility.title, Color.cyan, 28f);
             }
 
-            AnimateTokenAttack(attacker, target);
-            AnimateTokenDamage(target, attacker);
+            // Play attacker's animation
+            var attackEffect = ResolveAnimationEffect(attackAbility, attacker);
+            if (attackEffect != null)
+            {
+                StartCoroutine(attackEffect.PlayRoutine(attacker.transform, target.transform, null));
+                if (pvManager != null)
+                {
+                    var pvAttacker = pvManager.GetPlayerViewTokenTransform(attacker);
+                    var pvTarget = pvManager.GetPlayerViewTokenTransform(target);
+                    if (pvAttacker != null && pvTarget != null)
+                    {
+                        StartCoroutine(attackEffect.PlayRoutine(pvAttacker, pvTarget, null));
+                    }
+                }
+            }
+
+            // Play defender's defense animation or fallback damage animation
+            if (defenseAbility != null && defenseAbility.animationEffect != null)
+            {
+                StartCoroutine(defenseAbility.animationEffect.PlayRoutine(attacker.transform, target.transform, null));
+                if (pvManager != null)
+                {
+                    var pvAttacker = pvManager.GetPlayerViewTokenTransform(attacker);
+                    var pvTarget = pvManager.GetPlayerViewTokenTransform(target);
+                    if (pvTarget != null)
+                    {
+                        StartCoroutine(defenseAbility.animationEffect.PlayRoutine(pvAttacker, pvTarget, null));
+                    }
+                }
+            }
+            else
+            {
+                AnimateTokenDamage(target, attacker);
+            }
 
             if (SoundManager.Instance != null)
             {
@@ -1114,19 +1219,18 @@ namespace RPGTable.Runtime
 
         private void AnimateTokenAttack(CampaignRuntimeToken attacker, CampaignRuntimeToken target)
         {
-            var anim = attacker.gameObject.GetComponent<TokenAttackAnimator>();
-            if (anim == null) anim = attacker.gameObject.AddComponent<TokenAttackAnimator>();
-            anim.AnimateAttack(target.transform.position);
-
-            if (pvManager != null)
+            var effect = ResolveAnimationEffect(null, attacker);
+            if (effect != null)
             {
-                var pvAttacker = pvManager.GetPlayerViewTokenTransform(attacker);
-                var pvTarget = pvManager.GetPlayerViewTokenTransform(target);
-                if (pvAttacker != null && pvTarget != null)
+                StartCoroutine(effect.PlayRoutine(attacker.transform, target.transform, null));
+                if (pvManager != null)
                 {
-                    var pvAnim = pvAttacker.gameObject.GetComponent<TokenAttackAnimator>();
-                    if (pvAnim == null) pvAnim = pvAttacker.gameObject.AddComponent<TokenAttackAnimator>();
-                    pvAnim.AnimateAttack(pvTarget.position);
+                    var pvAttacker = pvManager.GetPlayerViewTokenTransform(attacker);
+                    var pvTarget = pvManager.GetPlayerViewTokenTransform(target);
+                    if (pvAttacker != null && pvTarget != null)
+                    {
+                        StartCoroutine(effect.PlayRoutine(pvAttacker, pvTarget, null));
+                    }
                 }
             }
         }

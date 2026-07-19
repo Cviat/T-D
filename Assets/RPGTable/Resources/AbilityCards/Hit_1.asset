@@ -19,10 +19,9 @@ MonoBehaviour:
     \u0431\u043B\u0438\u0436\u043D\u0435\u0433\u043E \u0431\u043E\u044F  "
   cost: 1
   range: 2
-  targetType: 2
   effectType: 0
-  effectValue: 1
   multiplier: 0.5
+  defenseValue: 0
   attributes: []
   attackType: 0
-  hiddenNotes: 
+  animationEffect: {fileID: 11400000, guid: a1f6ae9f62d33b644b3bdc5b958339a4, type: 2}

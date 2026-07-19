@@ -32,5 +32,8 @@ namespace RPGTable.Core
         [Header("Combat Attributes")]
         public System.Collections.Generic.List<CombatAttribute> attributes = new System.Collections.Generic.List<CombatAttribute>();
         public AttackType attackType = AttackType.Melee;
+
+        [Header("Combat Animations")]
+        public RPGTable.Runtime.CombatAnimationEffect animationEffect;
     }
 }

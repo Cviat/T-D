@@ -17,10 +17,11 @@ MonoBehaviour:
   description: "\u0421 \u043D\u0435\u0431\u0435 \u043D\u0430 \u043F\u0440\u043E\u0442\u0438\u0432\u043D\u0438\u043A\u0430
     \u043F\u0430\u0434\u0430\u0435\u0442 \u0433\u043B\u044B\u0431\u0430 \u043D\u0430\u043D\u043E\u0441\u044F
     \u043A\u0430\u043B\u043E\u0441\u0430\u043B\u044C\u043D\u044B\u0439 \u0443\u0440\u043E\u043D"
-  cost: 2
+  cost: 6
   range: 6
   effectType: 0
   multiplier: 8
   defenseValue: 0
   attributes: []
   attackType: 2
+  animationEffect: {fileID: 11400000, guid: f66fc57e8fc63b449ab797b100a15d1b, type: 2}

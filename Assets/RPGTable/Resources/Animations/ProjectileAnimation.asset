@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 86fcfa908b77b0c4bbf121e8bbc159a0, type: 3}
+  m_Name: ProjectileAnimation
+  m_EditorClassIdentifier: Assembly-CSharp::RPGTable.Runtime.ProjectileAnimation
+  projectileSprite: {fileID: -6432515095548566038, guid: 695c48b241b02fe42a1379d0229dc075, type: 3}
+  stuckSprite: {fileID: 2564018197565956860, guid: cfea5f38bb32baf43962e415f324782e, type: 3}
+  speed: 30
+  durationAfterHit: 1
+  scale: 0.08

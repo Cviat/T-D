@@ -24,3 +24,4 @@ MonoBehaviour:
   attributes:
   - {fileID: 11400000, guid: dcb5a5d132793dc40a011ec1565dfe62, type: 2}
   attackType: 1
+  animationEffect: {fileID: 11400000, guid: d062799958262104182ee3c0f2d7e1fd, type: 2}

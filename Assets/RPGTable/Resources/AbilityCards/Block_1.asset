@@ -22,3 +22,4 @@ MonoBehaviour:
   defenseValue: 5
   attributes: []
   attackType: 3
+  animationEffect: {fileID: 11400000, guid: 429db65e01fd7384b856bf416ff8229b, type: 2}
