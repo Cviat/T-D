@@ -480,7 +480,49 @@ namespace RPGTable.Runtime.Networking
                 }
             }
 
-            var grid = GameObject.FindAnyObjectByType<RPGTable.Board.BoardGrid>();
+            RPGTable.Board.BoardGrid grid = null;
+            var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+            if (loader != null)
+            {
+                if (loader.Context != null && loader.Context.CurrentMapNode != null && player.currentMapId == loader.Context.CurrentMapNode.id)
+                {
+                    // Find the main GM grid (which has layer not equal to 31)
+#if UNITY_2023_1_OR_NEWER
+                    foreach (var bg in GameObject.FindObjectsByType<RPGTable.Board.BoardGrid>(FindObjectsSortMode.None))
+#else
+                    foreach (var bg in GameObject.FindObjectsOfType<RPGTable.Board.BoardGrid>())
+#endif
+                    {
+                        if (bg != null && bg.gameObject.layer != 31)
+                        {
+                            grid = bg;
+                            break;
+                        }
+                    }
+                }
+                else if (loader.PVManager != null && player.currentMapId == loader.PVManager.PlayerViewMapId)
+                {
+                    // Find the grid in the Player View hierarchy (which is on Layer 31)
+#if UNITY_2023_1_OR_NEWER
+                    foreach (var bg in GameObject.FindObjectsByType<RPGTable.Board.BoardGrid>(FindObjectsSortMode.None))
+#else
+                    foreach (var bg in GameObject.FindObjectsOfType<RPGTable.Board.BoardGrid>())
+#endif
+                    {
+                        if (bg != null && bg.gameObject.layer == 31)
+                        {
+                            grid = bg;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (grid == null)
+            {
+                grid = GameObject.FindAnyObjectByType<RPGTable.Board.BoardGrid>();
+            }
+
             if (grid == null)
             {
                 return false;
@@ -1126,6 +1168,16 @@ namespace RPGTable.Runtime.Networking
                         bool moved = false;
                         ExecuteOnMainThreadBlocking(() =>
                         {
+                            var player = RPGTable.Runtime.CampaignGameSession.FindPlayer(payload.playerId);
+                            var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+                            if (player != null && loader != null && loader.PVManager != null)
+                            {
+                                if (player.currentMapId != loader.PVManager.PlayerViewMapId)
+                                {
+                                    // Movement is blocked on inactive maps!
+                                    return;
+                                }
+                            }
                             moved = TryMovePlayerToken(payload.playerId, payload.dirX, payload.dirY);
                         });
 

@@ -39,16 +39,16 @@ namespace RPGTable.Runtime
 
             if (campaignData == null)
             {
-                Debug.LogWarning("[CampaignGraphWindow] Populate failed: campaignData is null.");
+
                 return;
             }
             if (campaignData.maps == null)
             {
-                Debug.LogWarning("[CampaignGraphWindow] Populate failed: campaignData.maps is null.");
+
                 return;
             }
 
-            Debug.Log($"[CampaignGraphWindow] Populate started. Maps count: {campaignData.maps.Length}, NodePrefab: {(nodePrefab != null ? "Assigned" : "Null")}");
+
 
             // 1. Spawn Nodes
             foreach (var node in campaignData.maps)
@@ -59,7 +59,7 @@ namespace RPGTable.Runtime
 
                 var isCurrent = node.id == activeNodeId;
 
-                Debug.Log($"[CampaignGraphWindow] Spawning node for map: {title}, Pos: {node.boardPosition}");
+
 
                 var nodeGo = Instantiate(nodePrefab, contentContainer, false);
                 nodeGo.transform.localScale = Vector3.one;
@@ -78,7 +78,7 @@ namespace RPGTable.Runtime
                 nodeRect.localPosition = new Vector3(nodeRect.localPosition.x, nodeRect.localPosition.y, 0f);
                 spawnedNodes[node.id] = nodeRect;
 
-                Debug.Log($"[CampaignGraphWindow] Spawned node: {title}, SizeDelta: {nodeRect.sizeDelta}, LocalPos: {nodeRect.localPosition}, LocalScale: {nodeRect.localScale}");
+
 
                 // Setup node visual card
                 var card = nodeGo.GetComponent<MapCardView>();
@@ -167,8 +167,7 @@ namespace RPGTable.Runtime
                 float yShifted = originalPos.y - maxY - margin;
                 pair.Value.anchoredPosition = new Vector2(xShifted, yShifted);
                 
-                Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(null, pair.Value.position);
-                Debug.Log($"[CampaignGraphWindow] Shifted node {pair.Key} position to: {pair.Value.anchoredPosition}, LocalPos: {pair.Value.localPosition}, ScreenPoint: {screenPoint}");
+
             }
 
             // Re-render links using the newly shifted node positions

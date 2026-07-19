@@ -79,68 +79,115 @@ namespace RPGTable.Runtime
                 return;
             }
 
-            if (context.Campaign?.links == null || context.CurrentMapNode == null)
-            {
-                return;
-            }
-
-            var data = mapLoader.GetMap(context.CurrentMapNode.mapPath);
-
-            if (data?.exitPoints == null)
+            if (context.Campaign?.links == null)
             {
                 return;
             }
 
             var activeTransitionKeys = new HashSet<string>();
 
-            if (context.TokenRoot == null)
+            if (CampaignGameSession.CurrentPlayers == null)
             {
                 return;
             }
 
-            foreach (var runtimeToken in context.TokenRoot.GetComponentsInChildren<CampaignRuntimeToken>())
+            // Find all tokens currently active in the scene (both GM main board tokens and Player View clone tokens)
+#if UNITY_2023_1_OR_NEWER
+            var allTokens = GameObject.FindObjectsByType<CampaignRuntimeToken>(FindObjectsSortMode.None);
+#else
+            var allTokens = GameObject.FindObjectsOfType<CampaignRuntimeToken>();
+#endif
+
+            foreach (var player in CampaignGameSession.CurrentPlayers)
             {
-                if (string.IsNullOrWhiteSpace(runtimeToken.PlayerId))
+                if (player == null || player.isDead || string.IsNullOrWhiteSpace(player.currentMapId))
                 {
                     continue;
                 }
 
-                var player = CampaignGameSession.FindPlayer(runtimeToken.PlayerId);
-
-                if (player == null)
+                if (!context.MapNodes.TryGetValue(player.currentMapId, out var mapNode))
                 {
                     continue;
                 }
 
-                if (player.currentMapId != context.CurrentMapNode.id)
+                var data = mapLoader.GetMap(mapNode.mapPath);
+                if (data?.exitPoints == null)
                 {
                     continue;
                 }
 
-                var boardToken = runtimeToken.GetComponent<BoardToken>();
-                var tokenCell = boardToken == null
-                    ? context.Grid.WorldToCell(runtimeToken.transform.position)
-                    : boardToken.gridPosition;
-                player.gridX = tokenCell.x;
-                player.gridY = tokenCell.y;
+                // Find the token representing this player on their current map
+                CampaignRuntimeToken activeToken = null;
+                foreach (var t in allTokens)
+                {
+                    if (t != null && t.PlayerId == player.id)
+                    {
+                        // If player is on the GM's active map, sync their grid position and use their main token
+                        if (context.CurrentMapNode != null && player.currentMapId == context.CurrentMapNode.id && !t.IsPlayerViewClone)
+                        {
+                            activeToken = t;
+                            var boardToken = t.GetComponent<BoardToken>();
+                            if (boardToken != null)
+                            {
+                                player.gridX = boardToken.gridPosition.x;
+                                player.gridY = boardToken.gridPosition.y;
+                            }
+                            break;
+                        }
+                        // If player is on the Player View active map, use their clone token
+                        var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
+                        if (loader != null && loader.PVManager != null && player.currentMapId == loader.PVManager.PlayerViewMapId && t.IsPlayerViewClone)
+                        {
+                            activeToken = t;
+                        }
+                    }
+                }
+
+                Vector3 positionToCheck;
+                if (activeToken != null)
+                {
+                    positionToCheck = activeToken.transform.position;
+                }
+                else
+                {
+                    // Fallback to cell coordinates if no physical token is loaded/found in scene
+                    if (context.Grid == null)
+                    {
+                        continue;
+                    }
+                    int footprint = 1;
+                    if (!string.IsNullOrEmpty(player.tokenPath))
+                    {
+                        var tokenData = RPGTable.TokenEditor.UserTokenStore.LoadToken(player.tokenPath);
+                        footprint = Mathf.Clamp(tokenData == null ? 1 : tokenData.footprintSize, 1, 5);
+                    }
+                    positionToCheck = context.Grid.CellToWorld(new Vector2Int(player.gridX, player.gridY)) +
+                        new Vector3(
+                            (footprint - 1) * context.Grid.cellSize * 0.5f,
+                            (footprint - 1) * context.Grid.cellSize * 0.5f,
+                            0f);
+                }
 
                 foreach (var exit in data.exitPoints)
                 {
-                    var contains = Contains(exit, runtimeToken.transform.position);
-                    
+                    var contains = Contains(exit, positionToCheck);
                     if (!contains)
                     {
                         continue;
                     }
 
-                    var link = FindLinkFrom(exit.id);
-                    var transitionKey = TransitionKey(player.id, context.CurrentMapNode.id, exit.id);
-                    activeTransitionKeys.Add(transitionKey);
-
-                    if (link != null && !ignoredTransitionKeys.Contains(transitionKey))
+                    var link = FindLinkFrom(player.currentMapId, exit.id);
+                    if (link != null)
                     {
-                        ShowTransitionPrompt(player, link);
-                        return;
+                        var transitionKey = TransitionKey(player.id, player.currentMapId, exit.id);
+                        activeTransitionKeys.Add(transitionKey);
+
+                        if (!ignoredTransitionKeys.Contains(transitionKey))
+                        {
+                            ShowTransitionPrompt(player, link);
+                            RemoveInactiveIgnoredTransitions(activeTransitionKeys);
+                            return;
+                        }
                     }
                 }
             }
@@ -210,11 +257,11 @@ namespace RPGTable.Runtime
             PendingPromptText = null;
         }
 
-        private SavedCampaignLinkData FindLinkFrom(string exitId)
+        private SavedCampaignLinkData FindLinkFrom(string mapId, string exitId)
         {
             foreach (var link in context.Campaign.links)
             {
-                if (link.fromMapId == context.CurrentMapNode.id && link.fromExitId == exitId)
+                if (link.fromMapId == mapId && link.fromExitId == exitId)
                 {
                     return link;
                 }
@@ -222,11 +269,11 @@ namespace RPGTable.Runtime
 
             foreach (var link in context.Campaign.links)
             {
-                if (link.toMapId == context.CurrentMapNode.id && link.toExitId == exitId)
+                if (link.toMapId == mapId && link.toExitId == exitId)
                 {
                     return new SavedCampaignLinkData
                     {
-                        fromMapId = context.CurrentMapNode.id,
+                        fromMapId = mapId,
                         fromExitId = exitId,
                         toMapId = link.fromMapId,
                         toExitId = link.fromExitId
