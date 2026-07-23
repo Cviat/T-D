@@ -7,6 +7,7 @@ import { renderSelf, startLobbyPolling, stopLobbyPolling } from './screens/lobby
 import { initCombatControls, startGamePolling, stopGamePolling } from './screens/combat-screen.js';
 import { initInventoryScreen } from './screens/inventory-screen.js';
 import { initCharacterEditorScreen } from './screens/character-editor-screen.js';
+import { initActionCardsScreen, initActionCardsControls } from './screens/action-cards-screen.js';
 
 const sessionRef = { current: null };
 
@@ -20,6 +21,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             await initInventoryScreen(sessionRef.current);
         } else if (routeName === 'character-editor') {
             await initCharacterEditorScreen(sessionRef.current);
+        } else if (routeName === 'action-cards') {
+            await initActionCardsScreen(sessionRef.current);
         }
     });
 
@@ -34,6 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, showScreen);
 
     initCombatControls(sessionRef);
+    initActionCardsControls(sessionRef);
 
     const restored = await restoreSession();
     if (restored) {

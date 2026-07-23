@@ -457,6 +457,11 @@ namespace RPGTable.Runtime.Networking
             return false;
         }
 
+        public bool TryMovePlayerTokenInternal(string playerId, int dirX, int dirY)
+        {
+            return TryMovePlayerToken(playerId, dirX, dirY);
+        }
+
         private static bool TryMovePlayerToken(string playerId, int dirX, int dirY)
         {
             if (dirX == 0 && dirY == 0)
@@ -728,31 +733,7 @@ namespace RPGTable.Runtime.Networking
 
         private void ServeStaticFile(string url, NetworkStream stream)
         {
-            if (url == "/") url = "/index.html";
-            
-            // Защита от выхода за пределы папки
-            if (url.Contains("..")) 
-            {
-                SendResponse(stream, 400, "Bad Request", "text/plain", Encoding.UTF8.GetBytes("Bad Request"));
-                return;
-            }
-
-            // Убираем параметры запроса (напр. ?v=1)
-            int queryIndex = url.IndexOf('?');
-            if (queryIndex != -1) url = url.Substring(0, queryIndex);
-
-            string filePath = System.IO.Path.Combine(cachedStreamingAssetsPath, "WebClient", url.TrimStart('/'));
-
-            if (System.IO.File.Exists(filePath))
-            {
-                byte[] content = System.IO.File.ReadAllBytes(filePath);
-                string mimeType = GetMimeType(filePath);
-                SendResponse(stream, 200, "OK", mimeType, content);
-            }
-            else
-            {
-                SendResponse(stream, 404, "Not Found", "text/plain", Encoding.UTF8.GetBytes("404 Not Found"));
-            }
+            HttpStaticServer.ServeStaticFile(url, stream, cachedStreamingAssetsPath);
         }
 
         private void ProcessApiRequest(string method, string url, string requestStr, NetworkStream stream)
@@ -1046,6 +1027,29 @@ namespace RPGTable.Runtime.Networking
                 return;
             }
 
+            if (method == "GET" && url.StartsWith("/api/icon/card?id="))
+            {
+                string cardId = Uri.UnescapeDataString(url.Substring("/api/icon/card?id=".Length));
+                byte[] imgData = null;
+                ExecuteOnMainThreadBlocking(() => {
+                    var card = Resources.Load<RPGTable.Runtime.ActionCards.ActionCard>($"ActionCards/{cardId}");
+                    if (card != null && card.icon != null && card.icon.texture != null)
+                    {
+                        imgData = GetTextureBytes(card.icon.texture);
+                    }
+                });
+
+                if (imgData != null)
+                {
+                    SendResponse(stream, 200, "OK", "image/png", imgData);
+                }
+                else
+                {
+                    SendResponse(stream, 404, "Not Found", "text/plain", Encoding.UTF8.GetBytes("Card icon not found"));
+                }
+                return;
+            }
+
             if (method == "GET" && url.StartsWith("/api/icon/item?title="))
             {
                 string title = Uri.UnescapeDataString(url.Substring("/api/icon/item?title=".Length));
@@ -1158,39 +1162,8 @@ namespace RPGTable.Runtime.Networking
                 return;
             }
 
-            if (method == "POST" && url == "/api/action/move")
+            if (GameNetworkRouter.RouteAction(method, url, requestStr, stream, this, ExecuteOnMainThreadBlocking))
             {
-                try
-                {
-                    var payload = JsonUtility.FromJson<MovePayload>(requestStr);
-                    if (payload != null && !string.IsNullOrEmpty(payload.playerId))
-                    {
-                        bool moved = false;
-                        ExecuteOnMainThreadBlocking(() =>
-                        {
-                            var player = RPGTable.Runtime.CampaignGameSession.FindPlayer(payload.playerId);
-                            var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
-                            if (player != null && loader != null && loader.PVManager != null)
-                            {
-                                if (player.currentMapId != loader.PVManager.PlayerViewMapId)
-                                {
-                                    // Movement is blocked on inactive maps!
-                                    return;
-                                }
-                            }
-                            moved = TryMovePlayerToken(payload.playerId, payload.dirX, payload.dirY);
-                        });
-
-                        string responseJson = moved
-                            ? "{\"status\":\"success\"}"
-                            : "{\"status\":\"blocked\"}";
-                        SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(responseJson));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogError($"[WebServerManager] move error: {ex}");
-                }
                 return;
             }
 
@@ -1371,234 +1344,7 @@ namespace RPGTable.Runtime.Networking
                 return;
             }
 
-            if (method == "POST" && url == "/api/action/transition")
-            {
-                try
-                {
-                    var payload = JsonUtility.FromJson<TransitionPayload>(requestStr);
-                    if (payload != null && !string.IsNullOrEmpty(payload.playerId))
-                    {
-                        ExecuteOnMainThreadBlocking(() => {
-#if UNITY_2023_1_OR_NEWER
-                            var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
-#else
-                            var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
-#endif
-                            if (loader != null && loader.PendingTransitionPlayerId == payload.playerId)
-                            {
-                                if (payload.action == "confirm")
-                                {
-                                    loader.HandleConfirmTransition();
-                                }
-                                else if (payload.action == "cancel")
-                                {
-                                    loader.HandleCancelTransition();
-                                }
-                            }
-                        });
-                        SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes("{\"status\":\"success\"}"));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogError($"[WebServerManager] transition error: {ex}");
-                }
-                return;
-            }
 
-            if (method == "POST" && (url == "/api/action/request-attack" || url == "/api/action/attack"))
-            {
-                try
-                {
-                    var payload = JsonUtility.FromJson<RequestAttackPayload>(requestStr);
-                    if (payload != null)
-                    {
-                        Debug.Log($"[WebServerManager] request-attack payload: playerId={payload.playerId}, targetId={payload.targetId}");
-                    }
-                    if (payload != null && !string.IsNullOrEmpty(payload.playerId) && !string.IsNullOrEmpty(payload.targetId))
-                    {
-                        bool success = false;
-                        string failReason = "unknown";
-                        ExecuteOnMainThreadBlocking(() => {
-                            var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
-                            if (loader != null)
-                            {
-                                var tokens = GameObject.FindObjectsByType<RPGTable.Runtime.CampaignRuntimeToken>(FindObjectsInactive.Exclude);
-                                var myToken = System.Linq.Enumerable.FirstOrDefault(tokens, t => !t.IsPlayerViewClone && t.PlayerId == payload.playerId);
-                                var targetToken = System.Linq.Enumerable.FirstOrDefault(tokens, t => !t.IsPlayerViewClone && t.RuntimeId == payload.targetId);
-                                
-                                if (myToken == null) Debug.LogWarning($"[WebServerManager] myToken not found for playerId={payload.playerId}");
-                                if (targetToken == null) Debug.LogWarning($"[WebServerManager] targetToken not found for targetId={payload.targetId}");
-                                
-                                if (myToken != null && targetToken != null)
-                                {
-                                    if (targetToken.IsDead)
-                                    {
-                                        failReason = "target is dead";
-                                    }
-                                    else
-                                    {
-                                        Debug.Log($"[WebServerManager] Calling loader.InitiateAttackSequence attacker={myToken.DisplayName}, target={targetToken.DisplayName}");
-                                        loader.InitiateAttackSequence(myToken, targetToken);
-                                        success = true;
-                                    }
-                                }
-                                else
-                                {
-                                    failReason = "token not found";
-                                }
-                            }
-                            else
-                            {
-                                failReason = "loader not found";
-                            }
-                        });
-                        string resp = success ? "{\"status\":\"success\"}" : $"{{\"status\":\"failed\",\"reason\":\"{failReason}\"}}";
-                        SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(resp));
-                    }
-                    else
-                    {
-                        SendResponse(stream, 400, "Bad Request", "text/plain", Encoding.UTF8.GetBytes("Invalid payload"));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogError($"[WebServerManager] request-attack error: {ex}");
-                    SendResponse(stream, 500, "Internal Server Error", "text/plain", Encoding.UTF8.GetBytes(ex.Message));
-                }
-                return;
-            }
-
-            if (method == "POST" && url == "/api/roll/submit")
-            {
-                try
-                {
-                    var payload = JsonUtility.FromJson<SubmitRollPayload>(requestStr);
-                    if (payload != null && !string.IsNullOrEmpty(payload.playerId))
-                    {
-                        bool success = false;
-                        ExecuteOnMainThreadBlocking(() => {
-                            var loader = GameObject.FindAnyObjectByType<RPGTable.Runtime.CampaignGameLoader>();
-                            if (loader != null)
-                            {
-                                success = loader.SubmitRoll(payload.playerId, payload.rollResult);
-                            }
-                        });
-                        string resp = success ? "{\"status\":\"success\"}" : "{\"status\":\"failed\"}";
-                        SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(resp));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogError($"[WebServerManager] roll/submit error: {ex}");
-                    SendResponse(stream, 500, "Internal Server Error", "text/plain", Encoding.UTF8.GetBytes(ex.Message));
-                }
-                return;
-            }
-
-            if (method == "POST" && url == "/api/roll/reroll")
-            {
-                try
-                {
-                    var payload = JsonUtility.FromJson<RerollPayload>(requestStr);
-                    if (payload != null && !string.IsNullOrEmpty(payload.playerId))
-                    {
-                        int newRoll = 0;
-                        ExecuteOnMainThreadBlocking(() => {
-                            var player = CampaignGameSession.FindPlayer(payload.playerId);
-                            if (player != null && player.rerollCoins > 0)
-                            {
-                                player.rerollCoins--;
-                                newRoll = UnityEngine.Random.Range(1, 7);
-                                CampaignGameSession.UpdateTokenCombatStats(
-                                    player.id, player.currentMapId,
-                                    player.currentHp, player.maxHp,
-                                    player.currentArmor, player.maxArmor,
-                                    player.currentMovementPoints, player.maxMovementPoints,
-                                    player.currentRolls, player.maxRolls,
-                                    player.activeWeaponIndex, player.rerollCoins,
-                                    player.statusEffects, player.isDead);
-                            }
-                        });
-                        string resp = newRoll > 0 
-                            ? $"{{\"status\":\"success\",\"rollResult\":{newRoll}}}"
-                            : "{\"status\":\"failed\",\"reason\":\"No coins left\"}";
-                        SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(resp));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogError($"[WebServerManager] roll/reroll error: {ex}");
-                    SendResponse(stream, 500, "Internal Server Error", "text/plain", Encoding.UTF8.GetBytes(ex.Message));
-                }
-                return;
-            }
-
-            if (method == "POST" && url == "/api/action/switch-weapon")
-            {
-                try
-                {
-                    var payload = JsonUtility.FromJson<SwitchWeaponPayload>(requestStr);
-                    if (payload != null && !string.IsNullOrEmpty(payload.playerId))
-                    {
-                        bool success = false;
-                        ExecuteOnMainThreadBlocking(() => {
-                            var player = CampaignGameSession.FindPlayer(payload.playerId);
-                            if (player != null)
-                            {
-                                player.activeWeaponIndex = player.activeWeaponIndex == 0 ? 1 : 0;
-                                CampaignGameSession.UpdateTokenCombatStats(
-                                    player.id, player.currentMapId,
-                                    player.currentHp, player.maxHp,
-                                    player.currentArmor, player.maxArmor,
-                                    player.currentMovementPoints, player.maxMovementPoints,
-                                    player.currentRolls, player.maxRolls,
-                                    player.activeWeaponIndex, player.rerollCoins,
-                                    player.statusEffects, player.isDead);
-                                success = true;
-                            }
-                        });
-                        string resp = success ? "{\"status\":\"success\"}" : "{\"status\":\"failed\"}";
-                        SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(resp));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogError($"[WebServerManager] switch-weapon error: {ex}");
-                    SendResponse(stream, 500, "Internal Server Error", "text/plain", Encoding.UTF8.GetBytes(ex.Message));
-                }
-                return;
-            }
-
-            if (method == "POST" && url == "/api/action/end-turn")
-            {
-                try
-                {
-                    var payload = JsonUtility.FromJson<EndTurnPayload>(requestStr);
-                    if (payload != null && !string.IsNullOrEmpty(payload.playerId))
-                    {
-                        bool success = false;
-                        ExecuteOnMainThreadBlocking(() => {
-                            if (RPGTable.Runtime.CampaignGameSession.IsCombatActive 
-                                && RPGTable.Runtime.CombatManager.Instance != null
-                                && RPGTable.Runtime.CombatManager.Instance.ActiveToken != null
-                                && RPGTable.Runtime.CombatManager.Instance.ActiveToken.PlayerId == payload.playerId)
-                            {
-                                RPGTable.Runtime.CombatManager.Instance.EndTokenTurn();
-                                success = true;
-                            }
-                        });
-                        string resp = success ? "{\"status\":\"success\"}" : "{\"status\":\"failed\"}";
-                        SendResponse(stream, 200, "OK", "application/json", Encoding.UTF8.GetBytes(resp));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogError($"[WebServerManager] end-turn error: {ex}");
-                    SendResponse(stream, 500, "Internal Server Error", "text/plain", Encoding.UTF8.GetBytes(ex.Message));
-                }
-                return;
-            }
 
             if (method == "GET" && url.StartsWith("/api/character/details?playerId="))
             {
@@ -1621,6 +1367,25 @@ namespace RPGTable.Runtime.Networking
                             foreach (var s in arr) clean.Add($"\"{JsonString(s)}\"");
                             return "[" + string.Join(",", clean) + "]";
                         };
+
+                        // Load action cards catalog
+                        var cardList = new List<string>();
+                        var cards = Resources.LoadAll<RPGTable.Runtime.ActionCards.ActionCard>("ActionCards");
+                        foreach (var card in cards)
+                        {
+                            if (card == null) continue;
+                            cardList.Add("{" +
+                                $"\"id\":\"{JsonString(card.id)}\"," +
+                                $"\"title\":\"{JsonString(card.title)}\"," +
+                                $"\"description\":\"{JsonString(card.description)}\"," +
+                                $"\"manaCost\":{card.manaCost}," +
+                                $"\"effectId\":\"{JsonString(card.effectId)}\"," +
+                                $"\"power\":{card.power.ToString(System.Globalization.CultureInfo.InvariantCulture)}," +
+                                $"\"radius\":{card.radius}," +
+                                $"\"duration\":{card.duration.ToString(System.Globalization.CultureInfo.InvariantCulture)}" +
+                                "}");
+                        }
+                        string actionCardsJson = string.Join(",", cardList);
 
                         responseJson = "{" +
                             "\"status\":\"success\"," +
@@ -1657,7 +1422,8 @@ namespace RPGTable.Runtime.Networking
                             $"\"eqBelt\":\"{JsonString(data.eqBelt)}\"," +
                             $"\"backpackSlots\":{makeArray(data.backpackSlots)}," +
                             $"\"allAbilities\":[{abilitiesJson}]," +
-                            $"\"allItems\":[{itemsJson}]" +
+                            $"\"allItems\":[{itemsJson}]," +
+                            $"\"actionCards\":[{actionCardsJson}]" +
                             "}";
                     }
                 });
@@ -2186,6 +1952,11 @@ namespace RPGTable.Runtime.Networking
                 case ".jpg": case ".jpeg": return "image/jpeg";
                 default: return "application/octet-stream";
             }
+        }
+
+        public void RecalculatePlayerRuntimeStatsInternal(CampaignPlayerData player)
+        {
+            RecalculatePlayerRuntimeStats(player);
         }
 
         private static void RecalculatePlayerRuntimeStats(CampaignPlayerData player)

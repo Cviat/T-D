@@ -60,6 +60,18 @@ namespace RPGTable.Runtime
                 worldCamera.cullingMask &= ~pvManager.PlayerViewLayerMaskValue;
             }
 
+            // Ensure ActionCardManager and VisualManager exist
+            if (GameObject.FindAnyObjectByType<RPGTable.Runtime.ActionCards.ActionCardManager>() == null)
+            {
+                var go = new GameObject("ActionCardManager");
+                go.AddComponent<RPGTable.Runtime.ActionCards.ActionCardManager>();
+            }
+            if (GameObject.FindAnyObjectByType<RPGTable.Runtime.ActionCards.ActionCardVisualManager>() == null)
+            {
+                var goVisual = new GameObject("ActionCardVisualManager");
+                goVisual.AddComponent<RPGTable.Runtime.ActionCards.ActionCardVisualManager>();
+            }
+
             ui.BuildUi(
                 onPromptConfirm: HandleConfirmTransition,
                 onPromptCancel: HandleCancelTransition,

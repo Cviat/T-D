@@ -472,5 +472,24 @@ namespace RPGTable.Runtime
                     statusEffects, isDead);
             }
         }
+        public void ApplyInvisibility(float duration)
+        {
+            StartCoroutine(InvisibilityRoutine(duration));
+        }
+
+        private System.Collections.IEnumerator InvisibilityRoutine(float duration)
+        {
+            var boardToken = GetComponent<RPGTable.Core.BoardToken>();
+            if (boardToken != null)
+            {
+                // Set semi-translucent color (alpha = 0.3)
+                boardToken.SetTint(new Color(1f, 1f, 1f, 0.3f));
+                
+                yield return new WaitForSeconds(duration);
+                
+                // Restore full opacity (alpha = 1.0)
+                boardToken.SetTint(new Color(1f, 1f, 1f, 1f));
+            }
+        }
     }
 }

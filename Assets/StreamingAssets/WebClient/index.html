@@ -168,10 +168,52 @@
             </div>
 
             <footer class="game-footer">
-                <button id="weapon-button" class="button secondary" type="button">Сменить оружие</button>
-                <button id="settings-button" class="button secondary" type="button">Персонаж</button>
-                <button id="inventory-button" class="button secondary" type="button">Инвентарь</button>
+                <button id="weapon-button" class="button secondary" type="button" style="padding: 10px 4px; font-size: 11px;">Оружие</button>
+                <button id="cards-button" class="button secondary" type="button" style="padding: 10px 4px; font-size: 11px; border-color: #ebd670; color: #ebd670;">Карты</button>
+                <button id="settings-button" class="button secondary" type="button" style="padding: 10px 4px; font-size: 11px;">Персонаж</button>
+                <button id="inventory-button" class="button secondary" type="button" style="padding: 10px 4px; font-size: 11px;">Инвент.</button>
             </footer>
+        </section>
+
+        <!-- Overlay Action Cards Screen panel -->
+        <section id="screen-action-cards" class="screen">
+            <header class="screen-header">
+                <p class="eyebrow">Заклинания & Действия</p>
+                <h1>Игровые карты</h1>
+                <p class="muted">Выберите карту, укажите цель на сетке (при необходимости) и разыграйте её.</p>
+            </header>
+
+            <div class="panel">
+                <div class="panel-title">Ваша колода</div>
+                <div id="deck-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-height: 380px; overflow-y: auto; padding-right: 4px;">
+                    <!-- Action Cards will populate here -->
+                </div>
+            </div>
+
+            <!-- Focus Card Detail & Play form -->
+            <div id="selected-card-panel" class="panel" style="display: none; border: 2px solid #ebd670; background: rgba(15,12,10,0.95); margin-top: 15px; text-align: center;">
+                <h3 id="selected-card-title" style="color: #ebd670; font-family: 'Cinzel', serif; margin-bottom: 6px; font-size: 18px;">Название карты</h3>
+                <p id="selected-card-desc" style="font-size: 13px; color: #e2d2c2; margin-bottom: 12px;">Описание эффекта карты</p>
+                
+                <!-- Target inputs for Fireball and similar spells -->
+                <div id="card-target-inputs" style="display: none; justify-content: center; gap: 10px; margin-bottom: 12px;">
+                    <label style="display: flex; flex-direction: column; align-items: center; font-size: 11px; color: #aaa;">
+                        <span>Коорд. X</span>
+                        <input id="card-target-x" type="number" value="0" style="width: 60px; padding: 4px; text-align: center; background: #000; border: 1px solid #555; color: #fff; border-radius: 4px;">
+                    </label>
+                    <label style="display: flex; flex-direction: column; align-items: center; font-size: 11px; color: #aaa;">
+                        <span>Коорд. Y</span>
+                        <input id="card-target-y" type="number" value="0" style="width: 60px; padding: 4px; text-align: center; background: #000; border: 1px solid #555; color: #fff; border-radius: 4px;">
+                    </label>
+                </div>
+
+                <div style="display: flex; gap: 8px;">
+                    <button id="play-card-confirm" class="button primary" style="flex: 1;" type="button">Разыграть</button>
+                    <button id="play-card-cancel" class="button secondary" style="flex: 1;" type="button">Отмена</button>
+                </div>
+            </div>
+
+            <button class="button secondary" data-route="game" type="button" style="margin-bottom: 20px; margin-top: 15px; width: 100%;">Назад</button>
         </section>
 
         <section id="screen-inventory" class="screen">

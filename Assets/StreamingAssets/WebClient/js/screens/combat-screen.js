@@ -87,6 +87,7 @@ export function initCombatControls(sessionRef) {
     document.getElementById('focus-camera-button').addEventListener('click', () => focusCamera(sessionRef));
     document.getElementById('inventory-button').addEventListener('click', () => window.dispatchEvent(new CustomEvent('route', { detail: 'inventory' })));
     document.getElementById('settings-button').addEventListener('click', () => window.dispatchEvent(new CustomEvent('route', { detail: 'character-editor' })));
+    document.getElementById('cards-button').addEventListener('click', () => window.dispatchEvent(new CustomEvent('route', { detail: 'action-cards' })));
     
     // Switch weapon and End Turn buttons
     document.getElementById('weapon-button').addEventListener('click', () => switchWeapon(sessionRef));
